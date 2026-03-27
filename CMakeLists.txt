@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.5)
+
+project(Penumbra VERSION 1.0)
+
+cmake_policy(SET CMP0072 NEW)
+set(OpenGL_GL_PREFERENCE GLVND)
+
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(glm REQUIRED)
+
+add_executable(Penumbra
+        src/main.cpp
+        src/mesh.cpp
+        src/glad.c
+        src/stb_image.cpp
+        dependencies/imgui/imgui.cpp
+        dependencies/imgui/imgui_draw.cpp
+        dependencies/imgui/imgui_tables.cpp
+        dependencies/imgui/imgui_widgets.cpp
+        dependencies/imgui/imgui_impl_glfw.cpp
+        dependencies/imgui/imgui_impl_opengl3.cpp
+)
+
+target_include_directories(Penumbra PRIVATE
+        src
+        dependencies
+        dependencies/imgui
+)
+
+target_link_libraries(Penumbra glfw OpenGL::GL glm::glm dl)
