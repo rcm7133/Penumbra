@@ -4,13 +4,16 @@
 #include "camera.h"
 #include "gbuffer.h"
 #include "quad.h"
+#include "profiler.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
 
-constexpr int MAX_SHADOW_LIGHTS = 2;
-int SHADOW_WIDTH = 1024;
-int SHADOW_HEIGHT = 1024;
+// Shadow settings
+constexpr int MAX_SHADOW_LIGHTS = 3;
+int SHADOW_RESOLUTION = 2048;
+int PCF_KERNEL_SIZE = 3;
+bool PCF_ENABLED = true;
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -19,29 +22,15 @@ float sensitivityX = 5.0f;
 float sensitivityY = 5.0f;
 bool firstMouse  = true;
 bool cursorEnabled = false;
-
-void MouseCallback(GLFWwindow* window, double xpos, double ypos)
-{
-    if (firstMouse) {
-        lastMouseX = xpos;
-        lastMouseY = ypos;
-        firstMouse = false;
-    }
-    float xOffset = (xpos - lastMouseX) * sensitivityX;
-    float yOffset = (lastMouseY - ypos) * sensitivityY;
-    lastMouseX = xpos;
-    lastMouseY = ypos;
-    if (!cursorEnabled)
-        gCamera->ProcessMouse(xOffset, yOffset);
-}
-
+bool tabWasPressed = false;
 
 // Forward declarations
 unsigned int MakeShaderModule(const std::string& filePath, unsigned int moduleType);
 unsigned int MakeShaderProgram(const std::string& vertexFilepath, const std::string& fragmentFilepath);
 std::shared_ptr<Scene> CreateScene();
-void GUI(std::shared_ptr<Scene> scene);
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler);
 void RenderShadowMap(unsigned int shader, const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene);
+void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 
 int main()
 {
@@ -80,6 +69,8 @@ int main()
     camera.transform.rotation.y = 250.0f;
     gCamera = &camera;
 
+    Profiler profiler;
+
     // Lock cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, MouseCallback);
@@ -101,10 +92,6 @@ int main()
     unsigned int gBufferShader  = MakeShaderProgram("../shaders/geometryVert.glsl",  "../shaders/geometryFrag.glsl");
     unsigned int lightingShader = MakeShaderProgram("../shaders/lightingVert.glsl", "../shaders/lightingFrag.glsl");
     unsigned int shadowShader = MakeShaderProgram("../shaders/shadowVert.glsl", "../shaders/shadowFrag.glsl");
-
-    // Cache shadow shader locs
-    int shadow_modelLoc = glGetUniformLocation(shadowShader, "model");
-    int shadow_lightSpaceLoc = glGetUniformLocation(shadowShader, "lightSpaceMatrix");
 
     // Cache geometry shader locs
     int gBuf_model      = glGetUniformLocation(gBufferShader, "model");
@@ -146,7 +133,6 @@ int main()
 
     // Start scene
     scene->Start();
-
     int shadowLightCount = 0;
 
     // Initialize shadowed lights
@@ -165,7 +151,7 @@ int main()
         glBindTexture(GL_TEXTURE_2D, light->shadowMap);
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-            SHADOW_WIDTH, SHADOW_HEIGHT,
+                     SHADOW_RESOLUTION, SHADOW_RESOLUTION,
             0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -194,6 +180,7 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
+	profiler.Collect();
         float currentTime = glfwGetTime();
         float deltaTime   = currentTime - lastFrame;
         lastFrame         = currentTime;
@@ -209,20 +196,22 @@ int main()
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
-        if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
-        {
-            cursorEnabled = !cursorEnabled;
+	bool tabPressed = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
+	if (tabPressed && !tabWasPressed)
+	{
+		cursorEnabled = !cursorEnabled;
 
-            if (cursorEnabled)
-            {
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            }
-            else
-            {
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                firstMouse = true;
-            }
-        }
+		if (cursorEnabled)
+		{
+		    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+		else
+		{
+		    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		    firstMouse = true;
+		}
+	}
+	tabWasPressed = tabPressed;
         if (!cursorEnabled)
             camera.ProcessKeyboard(window, deltaTime);
         glm::mat4 view = camera.GetViewMatrix();
@@ -231,47 +220,65 @@ int main()
         scene->Update(deltaTime);
 
         // -----------------------------------------------
-        // REALTIME SHADOWS
+        // PASS 0: REALTIME SHADOWS
         // -----------------------------------------------
+	profiler.Begin("Shadow Pass");
         int shadowIndex = 0;
-
         glUseProgram(shadowShader);
 
         for (auto& obj : scene->objects) {
-            if (!obj->light || !obj->light->castsShadow)
-                continue;
+		if (!obj->light || !obj->light->castsShadow) continue;
+		if (shadowIndex >= MAX_SHADOW_LIGHTS) break;
 
-            if (shadowIndex >= MAX_SHADOW_LIGHTS)
-                break;
+		auto& light = obj->light;
+	        glm::mat4 lightProj, lightView;
 
-            auto& light = obj->light;
+		if (light->type == LightType::Directional)
+		{
+			lightProj = glm::ortho(-10.f, 10.f, -10.f, 10.f, 0.1f, 50.f);
+			lightView = glm::lookAt(
+			    obj->transform.position,
+			    obj->transform.position + light->direction,
+			    glm::vec3(0, 1, 0)
+			);
+		}
 
-            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
-            glClear(GL_DEPTH_BUFFER_BIT);
+		else if (light->type == LightType::Spot)
+		{
+			lightProj = glm::perspective(
+			    glm::acos(light->outerCutoff) * 2.0f, // FOV from cone angle
+			    1.0f, 0.1f, 50.f
+			);
 
-            glEnable(GL_DEPTH_TEST);
-            glEnable(GL_CULL_FACE);
-            glCullFace(GL_FRONT);
+			glm::vec3 up = (glm::abs(light->direction.y) > 0.99f)
+			    ? glm::vec3(1, 0, 0)
+			    : glm::vec3(0, 1, 0);
 
-            glm::vec3 lightPos = obj->transform.position;
-            glm::vec3 target   = glm::vec3(0.0f, 0.0f, 0.0f);
-            glm::vec3 up       = glm::vec3(0.0f, 1.0f, 0.0f);
-            glm::mat4 lightView = glm::lookAt(lightPos, target, up);
+			lightView = glm::lookAt(
+			    obj->transform.position,
+			    obj->transform.position + light->direction,
+			    up
+			);
+		}
 
-            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
-            glViewport(0,0,SHADOW_WIDTH,SHADOW_HEIGHT);
-            glClear(GL_DEPTH_BUFFER_BIT);
+		light->lightSpaceMatrix = lightProj * lightView;
 
-            RenderShadowMap(shadowShader, lightView, scene);
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, SHADOW_RESOLUTION, SHADOW_RESOLUTION);
+		glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		RenderShadowMap(shadowShader, light->lightSpaceMatrix, scene);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		shadowIndex++;
         }
-
+	profiler.End("Shadow Pass");
 
         // -----------------------------------------------
-        // GEOMETRY PASS — render scene into G-Buffer
+        // PASS 1: GEOMETRY PASS — render scene into G-Buffer
         // -----------------------------------------------
-        gbuffer.Bind();
+	profiler.Begin("Geometry Pass");
+	glViewport(0, 0, w, h);
+	gbuffer.Bind();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
@@ -280,16 +287,42 @@ int main()
         glUniformMatrix4fv(gBuf_view, 1, GL_FALSE, glm::value_ptr(view));
         scene->RenderGeometry(gBufferShader, gBuf_model, gBuf_shininess);
         gbuffer.Unbind();
+	profiler.End("Geometry Pass");
 
         // -----------------------------------------------
-        // LIGHTING PASS — fullscreen quad reads G-Buffer
+        // PASS 2: LIGHTING PASS — fullscreen quad reads G-Buffer
         // -----------------------------------------------
+	profiler.Begin("Lighting Pass");
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(lightingShader);
+
+	glUniform1i(glGetUniformLocation(lightingShader, "pcfKernelSize"), PCF_KERNEL_SIZE);
+	glUniform1i(glGetUniformLocation(lightingShader, "shadowLightCount"), shadowIndex);
+	glUniform1i(glGetUniformLocation(lightingShader, "pcfEnabled"), PCF_ENABLED ? 1 : 0);
 
         glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
         glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
         glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, gbuffer.gDiffuse);
+
+	// Shadow maps on slots 3+
+	shadowIndex = 0;
+	for (auto& obj : scene->objects)
+	{
+		if (!obj->light || !obj->light->castsShadow) continue;
+		if (shadowIndex >= MAX_SHADOW_LIGHTS) break;
+
+		glActiveTexture(GL_TEXTURE3 + shadowIndex);
+		glBindTexture(GL_TEXTURE_2D, obj->light->shadowMap);
+
+		std::string name = "shadowMap[" + std::to_string(shadowIndex) + "]";
+		glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), 3 + shadowIndex);
+
+		std::string lsm = "lightSpaceMatrix[" + std::to_string(shadowIndex) + "]";
+		glUniformMatrix4fv(glGetUniformLocation(lightingShader, lsm.c_str()),
+		1, GL_FALSE, glm::value_ptr(obj->light->lightSpaceMatrix));
+
+		shadowIndex++;
+	}
 
         glUniform3f(light_cameraPos,
             camera.transform.position.x,
@@ -297,11 +330,10 @@ int main()
             camera.transform.position.z);
 
         scene->UploadLights(lightingShader);
-
         quad.Draw();
+	profiler.End("Lighting Pass");
 
-        GUI(scene);
-
+	GUI(scene, deltaTime, profiler);
         glfwSwapBuffers(window);
     }
 
@@ -333,23 +365,35 @@ void RenderShadowMap(unsigned int shader, const glm::mat4& lightSpaceMatrix, std
     }
 }
 
-void GUI(std::shared_ptr<Scene> scene)
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler)
 {
     // Start ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGuiIO& io = ImGui::GetIO();
+    // Performance window
+    ImGui::Begin("Performance");
+    ImGui::Text("FPS: %.0f", 1.0f / deltaTime);
+    ImGui::Text("Frame Time: %.2f ms", deltaTime * 1000.0f);
+    ImGui::Separator();
+    profiler.DrawGUI();
+    ImGui::End();
 
+    // Graphics Settings
+    ImGui::Begin("Graphics Settings");
+    ImGui::Checkbox("PCF Shadows", &PCF_ENABLED);
+    if (PCF_ENABLED)
+        ImGui::SliderInt("PCF Kernel Size", &PCF_KERNEL_SIZE, 1, 9);
+    ImGui::End();
+
+    // Scene editor
     ImGui::Begin("Scene");
-    ImGui::Text("Hello");
+    ImGuiIO& io = ImGui::GetIO();
     for (std::shared_ptr<GameObject> obj : scene->objects) {
         ImGui::Checkbox(obj->name.c_str(), &obj->enabled);
     }
-
     ImGui::Separator();
-
     ImGui::End();
 
     ImGui::Render();
@@ -383,33 +427,36 @@ std::shared_ptr<Scene> CreateScene()
     std::shared_ptr<Orbiter> orb = std::make_shared<Orbiter>("Orbiter");
     orb->light = std::make_shared<Light>();
     orb->light->color = glm::vec3(1.0f, 1.0f, 1.0f);
-    orb->orbitCenter = glm::vec3(0.0f, 2.25f, 0.0f);
+	orb->orbitCenter  = glm::vec3(0.0f, 2.25f, 0.0f);
     orb->light->intensity = 0.5f;
-    orb->orbitRadius = 1.0f;
+    orb->light->castsShadow = true;
+    orb->light->type = LightType::Spot;
+    orb->orbitRadius = 0.25f;
     orb->orbitSpeed = 45.0f;
     scene->Add(orb);
 
     std::shared_ptr<Orbiter> orb2 = std::make_shared<Orbiter>("Orbiter 2");
     orb2->light = std::make_shared<Light>();
     orb2->light->color  = glm::vec3(1.0f, 1.0f, 1.0f);
-    orb2->orbitCenter  = glm::vec3(0.0f, 2.5f, 0.0f);
+	orb2->orbitCenter  = glm::vec3(0.0f, 2.25f, 0.0f);
     orb2->light->intensity = 0.5f;
-    orb2->orbitRadius   = 0.75f;
+    //orb2->light->castsShadow = true;
+    orb2->orbitRadius   = 0.25f;
     orb2->orbitSpeed    = 25.0f;
-    scene->Add(orb2);
+    //scene->Add(orb2);
 
     std::shared_ptr<Orbiter> orb3 = std::make_shared<Orbiter>("Orbiter 3");
     orb3->light = std::make_shared<Light>();
-    orb3->orbitCenter  = glm::vec3(0.0f, 2.5f, 0.0f);
+    orb3->orbitCenter  = glm::vec3(0.0f, 2.25f, 0.0f);
     orb3->light->color  = glm::vec3(1.0f, 1.0f, 1.0f);
     orb3->light->intensity = 0.5f;
+    //orb3->light->castsShadow = true;
     orb3->orbitRadius   = 1.15f;
     orb3->orbitSpeed    = 35.0f;
-    scene->Add(orb3);
+    //scene->Add(orb3);
 
     return scene;
 }
-
 
 unsigned int MakeShaderModule(const std::string& filePath, unsigned int moduleType)
 {
@@ -482,4 +529,20 @@ unsigned int MakeShaderProgram(const std::string& vertexFilepath, const std::str
     }
 
     return program;
+}
+
+void MouseCallback(GLFWwindow* window, double xpos, double ypos)
+{
+	ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+	if (firstMouse) {
+		lastMouseX = xpos;
+		lastMouseY = ypos;
+		firstMouse = false;
+	}
+	float xOffset = (xpos - lastMouseX) * sensitivityX;
+	float yOffset = (lastMouseY - ypos) * sensitivityY;
+	lastMouseX = xpos;
+	lastMouseY = ypos;
+	if (!cursorEnabled)
+		gCamera->ProcessMouse(xOffset, yOffset);
 }
