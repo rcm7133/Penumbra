@@ -15,6 +15,8 @@ int SHADOW_HEIGHT = 1024;
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
 float lastMouseY = 540.0f;
+float sensitivityX = 5.0f;
+float sensitivityY = 5.0f;
 bool firstMouse  = true;
 bool cursorEnabled = false;
 
@@ -25,8 +27,8 @@ void MouseCallback(GLFWwindow* window, double xpos, double ypos)
         lastMouseY = ypos;
         firstMouse = false;
     }
-    float xOffset =  (xpos - lastMouseX);
-    float yOffset =  (lastMouseY - ypos);
+    float xOffset = (xpos - lastMouseX) * sensitivityX;
+    float yOffset = (lastMouseY - ypos) * sensitivityY;
     lastMouseX = xpos;
     lastMouseY = ypos;
     if (!cursorEnabled)
@@ -447,6 +449,8 @@ unsigned int MakeShaderModule(const std::string& filePath, unsigned int moduleTy
 unsigned int MakeShaderProgram(const std::string& vertexFilepath, const std::string& fragmentFilepath)
 {
     std::vector<unsigned int> modules;
+	std::cout << vertexFilepath << std::endl;
+	std::cout << fragmentFilepath << std::endl;
     // Create Vertex and Fragment Modules
     modules.push_back(MakeShaderModule(vertexFilepath, GL_VERTEX_SHADER));
     modules.push_back(MakeShaderModule(fragmentFilepath, GL_FRAGMENT_SHADER));

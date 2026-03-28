@@ -17,9 +17,12 @@ Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float sh
     // Process OBJ file
     while (std::getline(file, line))
     {
+	if (!line.empty() && line.back() == '\r')
+	    line.pop_back();
         std::istringstream ss(line);
         std::string token;
         ss >> token;
+
         // Positon
         if (token == "v")
         {
@@ -51,6 +54,9 @@ Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float sh
                 std::istringstream fss(faceToken);
                 unsigned int pi, ti, ni;
                 fss >> pi >> ti >> ni;
+
+		if (pi == 0 || ti == 0 || ni == 0) continue;
+		if (pi > positions.size() || ti > texCoords.size() || ni > normals.size()) continue;
 
                 // OBJ indices are 1-based
                 glm::vec3 pos    = positions[pi - 1];
