@@ -45,3 +45,31 @@ public:
 
     }
 };
+
+class RotatingLight : public GameObject
+{
+public:
+    float rotationSpeed = 90.0f;      // degrees per second
+    float rotationAngle = 0.0f;       // current rotation angle
+
+    RotatingLight(const std::string& name = "RotatingLight") : GameObject(name) {}
+
+    void Update(float deltaTime) override
+    {
+        rotationAngle += rotationSpeed * deltaTime;
+        if (rotationAngle >= 360.0f)
+            rotationAngle -= 360.0f;
+
+        // Apply rotation around Y axis
+        transform.rotation.y = rotationAngle;
+
+        // Update light direction to match rotation
+        if (light) {
+            light->direction = transform.Forward();
+        }
+    }
+
+    void Start() override {
+
+    }
+};

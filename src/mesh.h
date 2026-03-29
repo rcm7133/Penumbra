@@ -6,7 +6,7 @@ class Mesh
 public:
     Material material;
 
-    Mesh(const std::string& filePath, const std::string& texturePath, float shininess);
+    Mesh(const std::string& filePath, const std::string& texturePath, float shininess, const std::string& normalMapPath);
     ~Mesh();
     void Draw();
     int vertexCount;
@@ -17,5 +17,6 @@ private:
     unsigned int textureID;
     void Setup(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
     void LoadTexture(const std::string& path);
+    void LoadNormalMap(const std::string& path);
     float m_shininess;
 };

@@ -64,11 +64,14 @@ public:
     }
 
     void RenderGeometry(unsigned int gBufferShader, int modelLoc, int shininessLoc) const {
+    	int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
+
         for (const auto& obj : objects) {
             if (!obj->enabled || !obj->mesh) continue;
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
                 glm::value_ptr(obj->transform.GetMatrix()));
             glUniform1f(shininessLoc, obj->mesh->GetShininess());
+        	glUniform1i(hasNormalMapLoc, obj->mesh->material.hasNormalMap ? 1 : 0);
             obj->mesh->Draw();
         }
     }

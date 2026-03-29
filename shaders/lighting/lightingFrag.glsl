@@ -28,8 +28,12 @@ uniform int shadowLightCount;
 uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
 uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
 
+// PCF
 uniform int pcfKernelSize;
 uniform int pcfEnabled;
+// SSAO
+uniform sampler2D ssaoTexture;
+uniform bool ssaoEnabled;
 
 // Sample realtime shadow map
 float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
@@ -74,7 +78,12 @@ void main()
     float shine  = texture(gAlbedo,   fragUV).a * 512.0;
 
     vec3 viewDir = normalize(cameraPos - fragPos);
-    vec3 result  = ambientMultiplier * albedo;
+
+    // SSAO
+    vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
+    float ao = ssaoEnabled ? texture(ssaoTexture, screenUV).r : 1.0;
+
+    vec3 result = ambientMultiplier * albedo * ao;
 
     for (int i = 0; i < lightCount; i++)
     {
