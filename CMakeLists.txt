@@ -22,6 +22,7 @@ add_executable(Penumbra
         dependencies/imgui/imgui_widgets.cpp
         dependencies/imgui/imgui_impl_glfw.cpp
         dependencies/imgui/imgui_impl_opengl3.cpp
+        src/profiler.h
 )
 
 target_include_directories(Penumbra PRIVATE
@@ -36,6 +37,8 @@ target_link_libraries(Penumbra
         glm::glm
 )
 
+target_compile_definitions(Penumbra PRIVATE NOMINMAX)
+target_compile_features(Penumbra PRIVATE cxx_std_23)
 
 if(UNIX)
     target_link_libraries(Penumbra dl)
