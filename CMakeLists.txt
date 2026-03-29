@@ -37,6 +37,7 @@ target_link_libraries(Penumbra
         glm::glm
 )
 
+target_compile_definitions(Penumbra PRIVATE NOMINMAX)
 target_compile_features(Penumbra PRIVATE cxx_std_23)
 
 if(UNIX)

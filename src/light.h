@@ -3,7 +3,8 @@
 
 enum class LightType {
     Directional,
-    Spot
+    Spot,
+    Point
 };
 
 struct Light
@@ -25,4 +26,7 @@ struct Light
     unsigned int shadowMap = 0;
 
     glm::mat4 lightSpaceMatrix = glm::mat4(1.0f);
+
+    unsigned int shadowCubemap = 0;
+    unsigned int shadowCubeFBO = 0;
 };
