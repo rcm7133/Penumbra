@@ -16,6 +16,8 @@ add_executable(Penumbra
         src/mesh.cpp
         src/glad.c
         src/stb_image.cpp
+        src/renderer.cpp
+        src/settings.cpp
         dependencies/imgui/imgui.cpp
         dependencies/imgui/imgui_draw.cpp
         dependencies/imgui/imgui_tables.cpp

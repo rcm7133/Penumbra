@@ -43,9 +43,10 @@ void main()
         // Get depth of scene at that screen position in view space
         float sampleDepth = (view * vec4(texture(gPosition, offset.xy).xyz, 1.0)).z;
 
-        // Range check to avoid halo artifacts
-        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
-        occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+        float angleBias = max(bias, bias * (1.0 - dot(normal, TBN * samples[i])));
+        float diff = abs(fragPos.z - sampleDepth);
+        float rangeCheck = smoothstep(0.0, 1.0, radius / diff) * smoothstep(radius * 2.0, radius * 0.5, diff);
+        occlusion += (sampleDepth >= samplePos.z + angleBias ? 1.0 : 0.0) * rangeCheck;
     }
 
     fragColor = 1.0 - (occlusion / float(kernelSize));

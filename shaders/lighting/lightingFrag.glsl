@@ -28,6 +28,9 @@ uniform int shadowLightCount;
 uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
 uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
 
+uniform float shadowNormalOffset;
+uniform float shadowBias;
+
 // PCF
 uniform int pcfKernelSize;
 uniform int pcfEnabled;
@@ -36,9 +39,11 @@ uniform sampler2D ssaoTexture;
 uniform bool ssaoEnabled;
 
 // Sample realtime shadow map
-float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
+float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 toLight)
 {
-    vec4 fragPosLightSpace = lsm * vec4(fragPos, 1.0);
+    float nDotL = dot(normal, toLight);
+    vec3 offsetPos = fragPos + normal * (shadowNormalOffset * (1.0 - nDotL));
+    vec4 fragPosLightSpace = lsm * vec4(offsetPos, 1.0);
     vec3 proj = fragPosLightSpace.xyz / fragPosLightSpace.w;
     proj = proj * 0.5 + 0.5;
     if (proj.z > 1.0) return 0.0;
@@ -50,7 +55,7 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
     if (pcfEnabled == 0)
     {
         float closestDepth = texture(map, proj.xy).r;
-        return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+        return currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
     }
 
     // Sample a kernel and average the closest depth
@@ -62,7 +67,7 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
         for (int y = -halfKernel; y <= halfKernel; y++)
         {
             float closestDepth = texture(map, proj.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
+            shadow += currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
             sampleCount++;
         }
     }
@@ -119,8 +124,7 @@ void main()
         float shadow = 0.0;
         if (i < shadowLightCount)
         {
-            float bias = max(0.001 * (1.0 - dot(normal, lightDir_i)), 0.005);
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, bias);
+            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
         }
 
         result += (1.0 - shadow) * (diffuse + specular);
