@@ -3,6 +3,7 @@
 #include "mesh.h"
 #include "transform.h"
 #include "light.h"
+#include "particles/particleSystem.h"
 
 class GameObject
 {
@@ -10,6 +11,7 @@ public:
     Transform transform;
     std::shared_ptr<Mesh> mesh = nullptr;
     std::shared_ptr<Light> light   = nullptr;
+    std::shared_ptr<ParticleSystem> particleSystem = nullptr;
     bool enabled = true;
 
     std::string name = "GameObject";

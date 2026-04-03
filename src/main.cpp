@@ -4,6 +4,8 @@
 #include "camera.h"
 #include "renderer.h"
 #include "profiler.h"
+#include "particles/particleSystem.h"
+#include "particles/particleSystemManager.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
@@ -75,9 +77,10 @@ int main()
     glViewport(0, 0, w, h);
     glEnable(GL_DEPTH_TEST);
 
+	//--------------------------
     // Create renderer and scene
+	// -------------------------
     Renderer renderer(w, h, projection);
-
     std::shared_ptr<Scene> scene = CreateScene();
     renderer.AssignDefaultShader(scene);
     scene->Start();
@@ -234,7 +237,6 @@ std::shared_ptr<Scene> CreateScene()
 {
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
-
 	std::shared_ptr<GameObject> corridor = std::make_shared<GameObject>("Corridor");
 	corridor->mesh = std::make_shared<Mesh>(
 		"../assets/models/corridor.obj",
@@ -305,6 +307,12 @@ std::shared_ptr<Scene> CreateScene()
 	light2->orbitCenter = glm::vec3(-15.0f, 0.25f, -0.03f);
 	light2->orbitRadius = 0.2f;
 	scene->Add(light2);
+
+	// Particles
+	std::shared_ptr<GameObject> particles = std::make_shared<GameObject>("Particles");
+	particles->particleSystem = std::make_shared<ParticleSystem>(particles->transform.position, 1000);
+	ParticleSystemManager::Instance().Register(particles->particleSystem);
+	scene->Add(particles);
 
     return scene;
 }

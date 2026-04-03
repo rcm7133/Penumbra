@@ -29,6 +29,7 @@ add_executable(Penumbra
 
 target_include_directories(Penumbra PRIVATE
         src
+        src/particles
         dependencies
         dependencies/imgui
 )

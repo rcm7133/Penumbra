@@ -22,22 +22,34 @@
   </component>
   <component name="CMakeSettings" AUTO_RELOAD="true">
     <configurations>
-      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" GENERATION_OPTIONS="&quot;C:\Program Files\JetBrains\CLion 2025.2.1\bin\cmake\win\x64\bin\cmake.exe&quot; `   -DCMAKE_BUILD_TYPE=Release `   &quot;-DCMAKE_MAKE_PROGRAM=C:/Program Files/JetBrains/CLion 2025.2.1/bin/ninja/win/x64/ninja.exe&quot; `   -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake `   -G Ninja `   -S C:\Users\m16ga\code\Penumbra `   -B C:\Users\m16ga\code\Penumbra\cmake-build-release" />
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" GENERATION_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=C:/Users/m16ga/vcpkg/scripts/buildsystems/vcpkg.cmake" />
       <configuration PROFILE_NAME="Release" ENABLED="true" CONFIG_NAME="Release" />
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/dependencies/stb_image_write.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/fxaa/fxaaFrag.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/renderer.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/renderer.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/particles/particle.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/particles/particleSystem.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/particles/particleSystemManager.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/fog/fogCompositeFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogCompositeFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/fog/fogVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogVert.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/fxaa/fxaaFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fxaa/fxaaFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingVert.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/passthrough/passthroughFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/passthrough/passthroughFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/shadows/shadowFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/shadows/shadowFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/shadows/shadowVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/shadows/shadowVert.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/ssao/ssaoBlurFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssao/ssaoBlurFrag.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/ssao/ssaoFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssao/ssaoFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gameobject.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/gameobject.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particle.h" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/particles/particleCompute.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,11 +74,10 @@
     <setting file="file://$PROJECT_DIR$/src/material.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/mesh.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/mesh.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/particles/particleSystem.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/particles/particleSystemManager.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/quad.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/renderer.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/renderer.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/scene.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/settings.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/transform.h" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectApplicationVersion">
@@ -101,24 +112,22 @@
     &quot;RunOnceActivity.west.config.association.type.startup.service&quot;: &quot;true&quot;,
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/dependencies&quot;,
+    &quot;last_opened_file_path&quot;: &quot;//wsl.localhost/Ubuntu/home/firefly/code/Penumbra&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;CPPToolchains&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;CMakeSettings&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\dependencies" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\normals" />
+      <recent name="C:\Users\m16ga\code\Penumbra\shaders\compute\particles" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\particles" />
       <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\Penumbra\dependencies" />
       <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\SSAO\models" />
       <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\SSAO" />
@@ -133,7 +142,7 @@
     <configuration name="SSAOProject" type="CMakeListConfigurationType" factoryName="CMakeListConfigurationFactory" temporary="true">
       <method v="2" />
     </configuration>
-    <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-release/" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
+    <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -165,13 +174,10 @@
       <workItem from="1774233118112" duration="5446000" />
       <workItem from="1774273015335" duration="14468000" />
       <workItem from="1774651515319" duration="929000" />
-      <workItem from="1774753197608" duration="4668000" />
-      <workItem from="1774803468078" duration="5358000" />
-      <workItem from="1774808908253" duration="2238000" />
-      <workItem from="1774925239543" duration="1904000" />
-      <workItem from="1775009958434" duration="605000" />
-      <workItem from="1775015179323" duration="1644000" />
-      <workItem from="1775079751860" duration="12482000" />
+      <workItem from="1775105357276" duration="1054000" />
+      <workItem from="1775180114387" duration="1036000" />
+      <workItem from="1775181263725" duration="431000" />
+      <workItem from="1775229983874" duration="1104000" />
     </task>
     <servers />
   </component>
