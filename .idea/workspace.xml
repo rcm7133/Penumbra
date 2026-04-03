@@ -28,27 +28,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/particles/particle.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/particles/particleSystem.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/particles/particleSystemManager.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/particles/particleLitFrag.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/particles/particleUnlitFrag.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/particles/particleVert.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/shaderutils.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/shaderutils.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/fog/fogCompositeFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogCompositeFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/fog/fogVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogVert.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/fxaa/fxaaFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fxaa/fxaaFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingVert.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/passthrough/passthroughFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/passthrough/passthroughFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/shadows/shadowFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/shadows/shadowFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/shadows/shadowVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/shadows/shadowVert.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/ssao/ssaoBlurFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssao/ssaoBlurFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/ssao/ssaoFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssao/ssaoFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gameobject.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/gameobject.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/compute/particles/particleCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/particles/particleCompute.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/camera.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/camera.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/particle.h" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/particles/particleCompute.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particles/particleSystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/particles/particleSystem.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particles/particleSystemManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/particles/particleSystemManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -60,6 +53,13 @@
     <option name="formatViaClangd" value="false" />
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="shader-template" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -177,7 +177,7 @@
       <workItem from="1775105357276" duration="1054000" />
       <workItem from="1775180114387" duration="1036000" />
       <workItem from="1775181263725" duration="431000" />
-      <workItem from="1775229983874" duration="1104000" />
+      <workItem from="1775229983874" duration="19832000" />
     </task>
     <servers />
   </component>

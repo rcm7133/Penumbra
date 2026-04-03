@@ -96,8 +96,15 @@ void Renderer::CreateLitFBO()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+    glGenRenderbuffers(1, &litDepthRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, litDepthRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+
     glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, litTexture, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, litDepthRBO);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -190,15 +197,17 @@ void Renderer::CreateSSAO()
 
 void Renderer::LoadShaders()
 {
-    gBufferShader      = MakeShaderProgram("../shaders/geometry/geometryVert.glsl",    "../shaders/geometry/geometryFrag.glsl");
-    lightingShader     = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/lighting/lightingFrag.glsl");
-    shadowShader       = MakeShaderProgram("../shaders/shadows/shadowVert.glsl",        "../shaders/shadows/shadowFrag.glsl");
-    fogShader          = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogFrag.glsl");
-    passthroughShader  = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/passthrough/passthroughFrag.glsl");
-    fogCompositeShader = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogCompositeFrag.glsl");
-    ssaoShader         = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoFrag.glsl");
-    ssaoBlurShader     = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoBlurFrag.glsl");
-    fxaaShader         = MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
+    gBufferShader      = ShaderUtils::MakeShaderProgram("../shaders/geometry/geometryVert.glsl",    "../shaders/geometry/geometryFrag.glsl");
+    lightingShader     = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/lighting/lightingFrag.glsl");
+    shadowShader       = ShaderUtils::MakeShaderProgram("../shaders/shadows/shadowVert.glsl",        "../shaders/shadows/shadowFrag.glsl");
+    fogShader          = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogFrag.glsl");
+    passthroughShader  = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/passthrough/passthroughFrag.glsl");
+    fogCompositeShader = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogCompositeFrag.glsl");
+    ssaoShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoFrag.glsl");
+    ssaoBlurShader     = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoBlurFrag.glsl");
+    fxaaShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
+    particleLitShader   = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleLitFrag.glsl");
+    particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
 }
 
 void Renderer::CacheUniforms()
@@ -277,7 +286,10 @@ void Renderer::RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profile
     // Pass 2 — lighting
     LightingPass(camera, scene, shadowCount, profiler);
 
-    // Pass 3 — fog (or passthrough)
+    // Pass 3 - particles
+    ParticlePass(camera, scene, shadowCount, profiler);
+
+    // Pass 4 — fog (or passthrough)
     if (FOG_ENABLED)
         FogPass(camera, scene, shadowCount, profiler);
     else
@@ -554,6 +566,79 @@ void Renderer::FXAAPass(Profiler& profiler)
     profiler.End("FXAA Pass");
 }
 
+void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler)
+{
+    profiler.Begin("Particle Pass");
+    glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.FBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, litFBO);
+    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(0x8861); // GL_POINT_SPRITE constant removed from core headers
+
+    glm::mat4 view = camera.GetViewMatrix();
+
+    for (auto& obj: scene->objects)
+    {
+        if (!obj->particleSystem || !obj->enabled)
+            continue;
+
+        auto& ps = obj->particleSystem;
+        unsigned int shader = ps->IsLit() ? particleLitShader : particleUnlitShader;
+        glUseProgram(shader);
+
+        // Set shader uniforms
+        glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform3f(glGetUniformLocation(shader, "cameraPos"), camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
+
+        // Bind lighting and shadow map data if the particles are lit
+        if (ps->IsLit())
+        {
+            int shadowIndex = 0;
+            // Get shadow lights for shadow maps
+            for (auto& potentialShadowLight : scene->objects) {
+                // Make sure candidate is on, it has a light, and can cast shadows
+                if (!potentialShadowLight->light || !potentialShadowLight->enabled || !potentialShadowLight->light->castsShadow)
+                    continue;
+                // stop if the number of shadow lights is more than or = the max
+                if (shadowIndex >= MAX_SHADOW_LIGHTS) break;
+                // Get Shadow map from light
+                glActiveTexture(GL_TEXTURE0 + shadowIndex);
+                glBindTexture(GL_TEXTURE_2D, potentialShadowLight->light->shadowMap);
+                // Set shadow map index uniform
+                std::string name = "shadowMap[" + std::to_string(shadowIndex) + "]";
+                glUniform1i(glGetUniformLocation(shader, name.c_str()), shadowIndex);
+                // Let light space matrix uniform
+                std::string lsm = "lightSpaceMatrix[" + std::to_string(shadowIndex) + "]";
+                glUniformMatrix4fv(glGetUniformLocation(shader, lsm.c_str()),
+                                   1, GL_FALSE, glm::value_ptr(potentialShadowLight->light->lightSpaceMatrix));
+            }
+
+            glUniform1i(glGetUniformLocation(shader, "shadowLightCount"), shadowCount);
+            scene->UploadLights(shader);
+        }
+
+        // Bind particle SSBO and draw particle system
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ps->GetSSBO());
+        glBindVertexArray(ps->GetDummyVAO());
+        glDrawArrays(GL_POINTS, 0, ps->GetCount());
+    }
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    glBindVertexArray(0);
+
+    profiler.End("Particle Pass");
+}
+
 
 void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene)
 {
@@ -570,64 +655,6 @@ void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_pt
         obj->mesh->Draw();
     }
 }
-
-
-unsigned int Renderer::MakeShaderModule(const std::string& filePath, unsigned int moduleType)
-{
-    std::ifstream file(filePath);
-    if (!file.is_open())
-    {
-        std::cerr << "Failed to open shader file: " << filePath << std::endl;
-        return 0;
-    }
-
-    std::stringstream ss;
-    std::string line;
-    while (std::getline(file, line))
-        ss << line << "\n";
-
-    std::string src = ss.str();
-    const char* srcPtr = src.c_str();
-
-    unsigned int shader = glCreateShader(moduleType);
-    glShaderSource(shader, 1, &srcPtr, NULL);
-    glCompileShader(shader);
-
-    int success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        char log[1024];
-        glGetShaderInfoLog(shader, 1024, NULL, log);
-        std::cerr << "Shader compilation error:\n" << log << std::endl;
-    }
-    return shader;
-}
-
-unsigned int Renderer::MakeShaderProgram(const std::string& vertexPath, const std::string& fragmentPath)
-{
-    unsigned int vert = MakeShaderModule(vertexPath, GL_VERTEX_SHADER);
-    unsigned int frag = MakeShaderModule(fragmentPath, GL_FRAGMENT_SHADER);
-
-    unsigned int program = glCreateProgram();
-    glAttachShader(program, vert);
-    glAttachShader(program, frag);
-    glLinkProgram(program);
-
-    int success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success)
-    {
-        char log[1024];
-        glGetProgramInfoLog(program, 1024, NULL, log);
-        std::cerr << "Program link error:\n" << log << std::endl;
-    }
-
-    glDeleteShader(vert);
-    glDeleteShader(frag);
-    return program;
-}
-
 
 // 3D Perlin noise texture
 unsigned int Renderer::GenerateNoiseTexture(int size)

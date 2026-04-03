@@ -6,6 +6,7 @@
 #include "scene.h"
 #include "camera.h"
 #include "profiler.h"
+#include "shaderutils.h"
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;
@@ -74,6 +75,7 @@ private:
     unsigned int fogNoiseTexture;
     unsigned int fxaaFBO;
     unsigned int fxaaTexture;
+    unsigned int litDepthRBO;
 
     // Shaders
     unsigned int gBufferShader;
@@ -85,6 +87,8 @@ private:
     unsigned int ssaoShader;
     unsigned int ssaoBlurShader;
     unsigned int fxaaShader;
+    unsigned int particleLitShader;
+    unsigned int particleUnlitShader;
 
     // Geometry shader caches
     int gBuf_model, gBuf_view, gBuf_projection, gBuf_normalMat;
@@ -109,12 +113,9 @@ private:
     void FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
     void PassthroughPass();
     void FXAAPass(Profiler& profiler);
+    void ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene);
-
-    // Shader helpers
-    static unsigned int MakeShaderModule(const std::string& filePath, unsigned int moduleType);
-    static unsigned int MakeShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
 
     std::vector<glm::vec3> ssaoKernelCache;
     static unsigned int GenerateNoiseTexture(int size);

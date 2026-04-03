@@ -23,6 +23,9 @@ int SSAO_KERNEL_SIZE = 16;
 
 // FXAA Settings. Inspired by NVIDIA FXAA paper: https://developer.download.nvidia.com/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf
 bool FXAA_ENABLED = true;
-float FXAA_EDGE_THRESHOLD = 0.125f; // 1/4 low quality, 1/8 high quality
+float FXAA_EDGE_THRESHOLD = 0.125f;      // 1/4 low quality, 1/8 high quality
 float FXAA_EDGE_THRESHOLD_MIN = 0.0625f; // 1/16
+
+// Camera
+float CAMERA_SPEED = 1.5f;
 

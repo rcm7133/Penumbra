@@ -19,6 +19,9 @@ bool firstMouse  = true;
 bool cursorEnabled = false;
 bool tabWasPressed = false;
 
+Profiler profiler;
+ParticleSystemManager particleManager;
+
 std::shared_ptr<Scene> CreateScene();
 void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
@@ -37,6 +40,10 @@ int main()
 
     lastMouseX = mode->width  / 2.0f;
     lastMouseY = mode->height / 2.0f;
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow(mode->width, mode->height, "Penumbra", monitor, NULL);
     glfwMakeContextCurrent(window);
@@ -59,8 +66,6 @@ int main()
     Camera camera(glm::vec3(0.5, 1, 3));
     camera.transform.rotation.y = 250.0f;
     gCamera = &camera;
-
-    Profiler profiler;
 
     // Lock cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -128,6 +133,7 @@ int main()
 
         glfwPollEvents();
         scene->Update(deltaTime);
+    	particleManager.Update(deltaTime);
 
         renderer.RenderFrame(camera, scene, profiler);
 
@@ -222,10 +228,77 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     // Scene editor
     ImGui::Begin("Scene");
+	ImGui::SliderFloat("Camera Speed", &CAMERA_SPEED, 0.1f, 5.0f);
     ImGuiIO& io = ImGui::GetIO();
     for (std::shared_ptr<GameObject> obj : scene->objects) {
-        ImGui::Checkbox(obj->name.c_str(), &obj->enabled);
+    ImGui::PushID(obj->name.c_str());
+
+    if (ImGui::CollapsingHeader(obj->name.c_str())) {
+        ImGui::Checkbox("Enabled", &obj->enabled);
+
+        // Transform (always present)
+        if (ImGui::TreeNode("Transform")) {
+            ImGui::DragFloat3("Position", &obj->transform.position.x, 0.01f);
+            ImGui::DragFloat3("Rotation", &obj->transform.rotation.x, 0.1f);
+            ImGui::DragFloat3("Scale",    &obj->transform.scale.x, 0.01f);
+            ImGui::TreePop();
+        }
+
+        // Light
+        if (obj->light) {
+            if (ImGui::TreeNode("Light")) {
+                ImGui::ColorEdit3("Color", &obj->light->color.x);
+                ImGui::DragFloat("Intensity", &obj->light->intensity, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat3("Direction", &obj->light->direction.x, 0.01f);
+                ImGui::Checkbox("Casts Shadow", &obj->light->castsShadow);
+
+                const char* types[] = { "Directional", "Spot", "Point" };
+                int current = static_cast<int>(obj->light->type);
+                if (ImGui::Combo("Type", &current, types, IM_ARRAYSIZE(types)))
+                    obj->light->type = static_cast<LightType>(current);
+
+                if (obj->light->type == LightType::Spot) {
+                    float innerDeg = glm::degrees(glm::acos(obj->light->innerCutoff));
+                    float outerDeg = glm::degrees(glm::acos(obj->light->outerCutoff));
+                    if (ImGui::DragFloat("Inner Cutoff", &innerDeg, 0.1f, 0.0f, 90.0f))
+                        obj->light->innerCutoff = glm::cos(glm::radians(innerDeg));
+                    if (ImGui::DragFloat("Outer Cutoff", &outerDeg, 0.1f, 0.0f, 90.0f))
+                        obj->light->outerCutoff = glm::cos(glm::radians(outerDeg));
+                }
+                ImGui::TreePop();
+            }
+        }
+
+        // Particle System
+        if (obj->particleSystem) {
+            if (ImGui::TreeNode("Particle System")) {
+                auto& ps = obj->particleSystem;
+                ImGui::DragFloat3("Position", &ps->position.x, 0.01f);
+                ImGui::DragFloat3("Bounds Min", &ps->boundsMin.x, 0.1f);
+                ImGui::DragFloat3("Bounds Max", &ps->boundsMax.x, 0.1f);
+                ImGui::ColorEdit4("Start Color", &ps->startColor.x);
+                ImGui::ColorEdit4("End Color", &ps->endColor.x);
+                ImGui::DragFloat("Speed", &ps->speed, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Min Size", &ps->minSize, 0.01f, 0.001f, 50.0f);
+                ImGui::DragFloat("Max Size", &ps->maxSize, 0.01f, 0.001f, 50.0f);
+                ImGui::DragFloat("Min Lifetime", &ps->minLifetime, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Max Lifetime", &ps->maxLifetime, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Fade In Time", &ps->fadeInTime, 0.1f, 0.0f, 10.0f);
+                ImGui::Text("Particles: %d", ps->GetCount());
+                ImGui::TreePop();
+            }
+        }
+
+        // Mesh
+        if (obj->mesh) {
+            if (ImGui::TreeNode("Mesh")) {
+
+            }
+        }
     }
+
+    ImGui::PopID();
+}
     ImGui::Separator();
     ImGui::End();
 
@@ -282,9 +355,8 @@ std::shared_ptr<Scene> CreateScene()
 		);
 	scene->Add(debris);
 
-	std::shared_ptr<Orbiter> light = std::make_shared<Orbiter>("Red Light");
+	std::shared_ptr<Orbiter> light = std::make_shared<Orbiter>("Light");
 	light->light = std::make_shared<Light>();
-	//light->rotationSpeed = 30.0f;
 	light->light->color = glm::vec3(1.0f, 0.0f, 0.0f);
 	light->light->intensity = 1.0f;
 	light->light->type = LightType::Spot;
@@ -295,27 +367,36 @@ std::shared_ptr<Scene> CreateScene()
 	light->orbitRadius = 0.2f;
 	scene->Add(light);
 
-	std::shared_ptr<Orbiter> light2 = std::make_shared<Orbiter>("Green Light");
+	std::shared_ptr<GameObject> light2 = std::make_shared<GameObject>("Directional Light");
 	light2->light = std::make_shared<Light>();
-	//light->rotationSpeed = 30.0f;
-	light2->light->color = glm::vec3(0.0f, 1.0f, 0.0f);
+	//light2->rotationSpeed = 30.0f;
+	light2->light->color = glm::vec3(1.0f, 0.0f, 0.0f);
 	light2->light->intensity = 1.0f;
-	light2->light->type = LightType::Spot;
+	light2->light->type = LightType::Directional;
 	light2->light->castsShadow = true;
-	light2->light->direction = glm::vec3(1.0f, 0.0f, 0.0f);
-	light2->transform.position = glm::vec3(-12.0f, 0.4f, -0.03f);
-	light2->orbitCenter = glm::vec3(-15.0f, 0.25f, -0.03f);
-	light2->orbitRadius = 0.2f;
-	scene->Add(light2);
+	light2->light->direction = glm::vec3(0.0f, -1.0f, 0.0f);
+	light2->transform.position = glm::vec3(-6.0f, 2.25f, -0.015f);
+	//scene->Add(light2);
 
 	// Particles
 	std::shared_ptr<GameObject> particles = std::make_shared<GameObject>("Particles");
-	particles->particleSystem = std::make_shared<ParticleSystem>(particles->transform.position, 1000);
-	ParticleSystemManager::Instance().Register(particles->particleSystem);
+	particles->particleSystem = std::make_shared<ParticleSystem>(particles->transform.position, 1000000, true);
+	particles->particleSystem->position = glm::vec3(-15.0f, 0.0f, -0.015f);
+	particles->particleSystem->boundsMin = glm::vec3(-2.0f, 0.0f, -2.0f);
+	particles->particleSystem->boundsMax = glm::vec3(15.0f, 2.5f,  2.0f);
+	particles->particleSystem->minLifetime = 10.0f;
+	particles->particleSystem->maxLifetime = 15.0f;
+	particles->particleSystem->startColor = glm::vec4(0.8f, 0.8f, 0.8f, 0.9f);
+	particles->particleSystem->endColor   = glm::vec4(0.8f, 0.8f, 0.8f, 0.0f);
+	particles->particleSystem->speed      = 0.1f;
+	particles->particleSystem->minSize    = 0.05f;
+	particles->particleSystem->maxSize    = 0.1f;
+	particleManager.Register(particles->particleSystem);
 	scene->Add(particles);
 
     return scene;
 }
+
 
 void MouseCallback(GLFWwindow* window, double xpos, double ypos)
 {

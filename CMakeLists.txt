@@ -18,6 +18,7 @@ add_executable(Penumbra
         src/stb_image.cpp
         src/renderer.cpp
         src/settings.cpp
+        src/shaderutils.cpp
         dependencies/imgui/imgui.cpp
         dependencies/imgui/imgui_draw.cpp
         dependencies/imgui/imgui_tables.cpp

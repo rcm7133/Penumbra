@@ -1,11 +1,12 @@
 #pragma once
 #include "config.h"
 
+extern float CAMERA_SPEED;
+
 class Camera
 {
 public:
     Transform transform;
-    float speed       = 3.0f;
     float sensitivity = 0.001f;
 
     Camera(glm::vec3 startPos = glm::vec3(0, 1, 3)) {
@@ -21,7 +22,7 @@ public:
     }
 
     void ProcessKeyboard(GLFWwindow* window, float deltaTime) {
-        float velocity = speed * deltaTime;
+        float velocity = CAMERA_SPEED * deltaTime;
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
             transform.position += transform.Forward() * velocity;
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
