@@ -1,4 +1,8 @@
 #version 430 core
+#include "../common/lights.glsl"
+
+
+
 in vec2 fragUV;
 out vec4 screenColor;
 
@@ -7,27 +11,6 @@ uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
 uniform vec3  cameraPos;
 uniform float ambientMultiplier;
-
-#define MAX_TOTAL_LIGHTS 16
-#define MAX_SHADOW_LIGHTS 3
-
-#define LIGHT_DIRECTIONAL 0
-#define LIGHT_SPOT        1
-
-// All lights
-uniform int lightCount;
-uniform vec3 lightPos[MAX_TOTAL_LIGHTS];
-uniform vec3 lightColor[MAX_TOTAL_LIGHTS];
-uniform float lightIntensity[MAX_TOTAL_LIGHTS];
-uniform vec3  lightDir[MAX_TOTAL_LIGHTS];
-uniform float innerCutoff[MAX_TOTAL_LIGHTS];
-uniform float outerCutoff[MAX_TOTAL_LIGHTS];
-uniform int   lightType[MAX_TOTAL_LIGHTS];
-// Realtime Shadow Lights
-uniform int shadowLightCount;
-uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
-uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
-
 uniform float shadowNormalOffset;
 uniform float shadowBias;
 
@@ -38,7 +21,6 @@ uniform int pcfEnabled;
 uniform sampler2D ssaoTexture;
 uniform bool ssaoEnabled;
 
-// Sample realtime shadow map
 float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 toLight)
 {
     float nDotL = dot(normal, toLight);
@@ -58,8 +40,6 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 t
         return currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
     }
 
-    // Sample a kernel and average the closest depth
-    // Percentage Closer Filtering
     int halfKernel = pcfKernelSize / 2;
     int sampleCount = 0;
     for (int x = -halfKernel; x <= halfKernel; x++)
@@ -71,7 +51,6 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 t
             sampleCount++;
         }
     }
-
     return shadow / float(sampleCount);
 }
 
@@ -84,7 +63,6 @@ void main()
 
     vec3 viewDir = normalize(cameraPos - fragPos);
 
-    // SSAO
     vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
     float ao = ssaoEnabled ? texture(ssaoTexture, screenUV).r : 1.0;
 
@@ -96,36 +74,37 @@ void main()
         float attenuation = 1.0;
         float spotEffect  = 1.0;
 
-        if (lightType[i] == LIGHT_DIRECTIONAL)
+        if (lights[i].type == LIGHT_DIRECTIONAL)
         {
-            lightDir_i  = normalize(-lightDir[i]);
-            attenuation = 1.0;
+            lightDir_i  = normalize(-lights[i].direction);
+        }
+        else if (lights[i].type == LIGHT_POINT)
+        {
+            lightDir_i = normalize(lights[i].position - fragPos);
+            float dist = length(lights[i].position - fragPos);
+            attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
         }
         else // SPOT
         {
-            lightDir_i = normalize(lightPos[i] - fragPos);
-            float dist = length(lightPos[i] - fragPos);
-            // Quadradic attenuation curve (inverse square)
-            // https://wiki.ogre3d.org/tiki-index.php?page=-Point+Light+Attenuation
+            lightDir_i = normalize(lights[i].position - fragPos);
+            float dist = length(lights[i].position - fragPos);
             attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
 
-            float theta = dot(lightDir_i, normalize(-lightDir[i]));
-            float epsilon = innerCutoff[i] - outerCutoff[i];
-            spotEffect = clamp((theta - outerCutoff[i]) / epsilon, 0.0, 1.0);
+            float theta = dot(lightDir_i, normalize(-lights[i].direction));
+            float epsilon = lights[i].innerCutoff - lights[i].outerCutoff;
+            spotEffect = clamp((theta - lights[i].outerCutoff) / epsilon, 0.0, 1.0);
         }
 
         vec3  halfwayDir = normalize(lightDir_i + viewDir);
         float lambert = max(dot(normal, lightDir_i), 0.0);
-        vec3  diffuse = lambert * lightColor[i] * lightIntensity[i] * albedo * attenuation * spotEffect;
+        vec3  diffuse = lambert * lights[i].color * lights[i].intensity * albedo * attenuation * spotEffect;
 
         float spec = pow(max(dot(normal, halfwayDir), 0.0), shine);
-        vec3  specular = spec * lightColor[i] * lightIntensity[i] * attenuation * spotEffect;
+        vec3  specular = spec * lights[i].color * lights[i].intensity * attenuation * spotEffect;
 
         float shadow = 0.0;
         if (i < shadowLightCount)
-        {
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
-        }
+        shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
 
         result += (1.0 - shadow) * (diffuse + specular);
     }

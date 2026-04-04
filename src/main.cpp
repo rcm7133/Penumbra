@@ -288,13 +288,14 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
                 ImGui::TreePop();
             }
         }
-
+		/*
         // Mesh
         if (obj->mesh) {
             if (ImGui::TreeNode("Mesh")) {
-
+				obj->mesh->
             }
         }
+        */
     }
 
     ImGui::PopID();
@@ -380,7 +381,7 @@ std::shared_ptr<Scene> CreateScene()
 
 	// Particles
 	std::shared_ptr<GameObject> particles = std::make_shared<GameObject>("Particles");
-	particles->particleSystem = std::make_shared<ParticleSystem>(particles->transform.position, 1000000, true);
+	particles->particleSystem = std::make_shared<ParticleSystem>(particles->transform.position, 10000, true);
 	particles->particleSystem->position = glm::vec3(-15.0f, 0.0f, -0.015f);
 	particles->particleSystem->boundsMin = glm::vec3(-2.0f, 0.0f, -2.0f);
 	particles->particleSystem->boundsMax = glm::vec3(15.0f, 2.5f,  2.0f);

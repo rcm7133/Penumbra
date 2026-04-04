@@ -76,46 +76,35 @@ public:
         }
     }
 
-    void UploadLights(unsigned int shader) const {
-	    std::vector<glm::vec3> positions, colors, directions;
-	    std::vector<float> intensities, innerCutoffs, outerCutoffs;
-	    std::vector<int> types;
+	void UploadLights(unsigned int shader) const {
+    	// Shadow casters first, then non-shadow lights
+    	std::vector<std::shared_ptr<GameObject>> lightObjects;
 
-	    // Shadow casters
-	    for (const auto& obj : objects) {
-		    if (!obj->enabled || !obj->light || !obj->light->castsShadow) continue;
-		    positions.push_back(obj->transform.position);
-		    colors.push_back(obj->light->color);
-		    intensities.push_back(obj->light->intensity);
-		    directions.push_back(obj->light->direction);
-		    innerCutoffs.push_back(obj->light->innerCutoff);
-		    outerCutoffs.push_back(obj->light->outerCutoff);
-		    types.push_back(static_cast<int>(obj->light->type));
-	    }
-	    // Non shadow lights
-	    for (const auto& obj : objects) {
-		    if (!obj->enabled || !obj->light || obj->light->castsShadow) continue;
-		    positions.push_back(obj->transform.position);
-		    colors.push_back(obj->light->color);
-		    intensities.push_back(obj->light->intensity);
-		    directions.push_back(obj->light->direction);
-		    innerCutoffs.push_back(obj->light->innerCutoff);
-		    outerCutoffs.push_back(obj->light->outerCutoff);
-		    types.push_back(static_cast<int>(obj->light->type));
-	    }
+    	for (const auto& obj : objects)
+    		if (obj->enabled && obj->light && obj->light->castsShadow)
+    			lightObjects.push_back(obj);
 
-	    int count = positions.size();
-	    glUniform1i(glGetUniformLocation(shader, "lightCount"), count);
-	    for (int i = 0; i < count; i++) {
-		    std::string idx = std::to_string(i);
-		    glUniform3fv(glGetUniformLocation(shader, ("lightPos["      + idx + "]").c_str()), 1, glm::value_ptr(positions[i]));
-		    glUniform3fv(glGetUniformLocation(shader, ("lightColor["    + idx + "]").c_str()), 1, glm::value_ptr(colors[i]));
-		    glUniform1f (glGetUniformLocation(shader, ("lightIntensity["+ idx + "]").c_str()), intensities[i]);
-		    glUniform3fv(glGetUniformLocation(shader, ("lightDir["      + idx + "]").c_str()), 1, glm::value_ptr(directions[i]));
-		    glUniform1f (glGetUniformLocation(shader, ("innerCutoff["   + idx + "]").c_str()), innerCutoffs[i]);
-		    glUniform1f (glGetUniformLocation(shader, ("outerCutoff["   + idx + "]").c_str()), outerCutoffs[i]);
-		    glUniform1i (glGetUniformLocation(shader, ("lightType["     + idx + "]").c_str()), types[i]);
-	    }
+    	for (const auto& obj : objects)
+    		if (obj->enabled && obj->light && !obj->light->castsShadow)
+    			lightObjects.push_back(obj);
+
+    	int count = static_cast<int>(lightObjects.size());
+    	glUniform1i(glGetUniformLocation(shader, "lightCount"), count);
+
+    	for (int i = 0; i < count; i++) {
+    		auto& obj = lightObjects[i];
+    		auto& light = obj->light;
+    		std::string p = "lights[" + std::to_string(i) + "].";
+
+    		glUniform3fv(glGetUniformLocation(shader, (p + "position").c_str()),    1, glm::value_ptr(obj->transform.position));
+    		glUniform3fv(glGetUniformLocation(shader, (p + "color").c_str()),       1, glm::value_ptr(light->color));
+    		glUniform3fv(glGetUniformLocation(shader, (p + "direction").c_str()),   1, glm::value_ptr(light->direction));
+    		glUniform1f (glGetUniformLocation(shader, (p + "intensity").c_str()),   light->intensity);
+    		glUniform1f (glGetUniformLocation(shader, (p + "innerCutoff").c_str()), light->innerCutoff);
+    		glUniform1f (glGetUniformLocation(shader, (p + "outerCutoff").c_str()), light->outerCutoff);
+    		glUniform1i (glGetUniformLocation(shader, (p + "type").c_str()),        static_cast<int>(light->type));
+    		glUniform1i (glGetUniformLocation(shader, (p + "castsShadow").c_str()), light->castsShadow ? 1 : 0);
+    	}
     }
 
     std::shared_ptr<GameObject> GetObject(const std::string& name) {

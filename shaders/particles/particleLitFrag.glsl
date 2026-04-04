@@ -1,28 +1,10 @@
 #version 430 core
-
+#include "../common/lights.glsl"
 in vec4 vColor;
 in float vLifeRatio;
 in vec3 vWorldPos;
 
 out vec4 FragColor;
-
-#define MAX_TOTAL_LIGHTS 16
-#define MAX_SHADOW_LIGHTS 3
-#define LIGHT_DIRECTIONAL 0
-#define LIGHT_SPOT 1
-
-uniform int lightCount;
-uniform vec3 lightPos[MAX_TOTAL_LIGHTS];
-uniform vec3 lightColor[MAX_TOTAL_LIGHTS];
-uniform float lightIntensity[MAX_TOTAL_LIGHTS];
-uniform vec3  lightDir[MAX_TOTAL_LIGHTS];
-uniform float innerCutoff[MAX_TOTAL_LIGHTS];
-uniform float outerCutoff[MAX_TOTAL_LIGHTS];
-uniform int   lightType[MAX_TOTAL_LIGHTS];
-
-uniform int shadowLightCount;
-uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
-uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
 
 float ShadowCalc(int idx, vec3 worldPos)
 {
@@ -42,7 +24,7 @@ void main() {
     float dist = length(coord);
 
     if (dist > 0.5)
-        discard;
+    discard;
 
     float alpha = smoothstep(0.5, 0.0, dist);
     alpha *= vLifeRatio;
@@ -55,28 +37,32 @@ void main() {
         float attenuation = 1.0;
         float spotEffect = 1.0;
 
-        if (lightType[i] == LIGHT_DIRECTIONAL)
+        if (lights[i].type == LIGHT_DIRECTIONAL)
         {
-            toLight     = normalize(-lightDir[i]);
-            attenuation = 1.0;
+            toLight     = normalize(-lights[i].direction);
         }
-
-        else
+        else if (lights[i].type == LIGHT_POINT)
         {
-            toLight = normalize(lightPos[i] - vWorldPos);
-            float d = length(lightPos[i] - vWorldPos);
+            toLight = normalize(lights[i].position - vWorldPos);
+            float d = length(lights[i].position - vWorldPos);
+            attenuation = 1.0 / (1.0 + 0.09 * d + 0.032 * d * d);
+        }
+        else // SPOT
+        {
+            toLight = normalize(lights[i].position - vWorldPos);
+            float d = length(lights[i].position - vWorldPos);
             attenuation = 1.0 / (1.0 + 0.09 * d + 0.032 * d * d);
 
-            float theta   = dot(toLight, normalize(-lightDir[i]));
-            float epsilon = innerCutoff[i] - outerCutoff[i];
-            spotEffect    = clamp((theta - outerCutoff[i]) / epsilon, 0.0, 1.0);
+            float theta   = dot(toLight, normalize(-lights[i].direction));
+            float epsilon = lights[i].innerCutoff - lights[i].outerCutoff;
+            spotEffect    = clamp((theta - lights[i].outerCutoff) / epsilon, 0.0, 1.0);
         }
 
         float shadow = 0.0;
         if (i < shadowLightCount)
-            shadow = ShadowCalc(i, vWorldPos);
+        shadow = ShadowCalc(i, vWorldPos);
 
-        litResult += lightColor[i] * lightIntensity[i] * attenuation * spotEffect * (1.0 - shadow);
+        litResult += lights[i].color * lights[i].intensity * attenuation * spotEffect * (1.0 - shadow);
     }
 
     FragColor = vec4(vColor.rgb * litResult, vColor.a * alpha);
