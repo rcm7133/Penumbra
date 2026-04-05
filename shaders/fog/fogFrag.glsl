@@ -29,6 +29,15 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
     return currentDepth - bias > closestDepth ? 1.0 : 0.0;
 }
 
+float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float farPlane)
+{
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight) / farPlane;
+    float closestDepth = texture(cubeMap, fragToLight).r;
+    float bias = 0.005;
+    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+}
+
 vec3 Raymarch(vec3 rayStart, vec3 rayEnd, out float finalTransmittance)
 {
     finalTransmittance = 1.0;
@@ -61,6 +70,7 @@ vec3 Raymarch(vec3 rayStart, vec3 rayEnd, out float finalTransmittance)
             {
                 float dist = length(lights[i].position - samplePos);
                 atten = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+                atten *= 1.0 - smoothstep(lights[i].radius * 0.75, lights[i].radius, dist);
             }
             else // SPOT
             {
@@ -77,7 +87,12 @@ vec3 Raymarch(vec3 rayStart, vec3 rayEnd, out float finalTransmittance)
 
             float shadow = 0.0;
             if (i < shadowLightCount)
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], samplePos, 0.0001);
+            {
+                if (lights[i].type == LIGHT_POINT)
+                shadow = SamplePointShadow(shadowCubeMap[i], samplePos, lights[i].position, lightFarPlane[i]);
+                else
+                shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], samplePos, 0.0001);
+            }
 
             lighting += lights[i].color * lights[i].intensity * atten * (1.0 - shadow);
         }

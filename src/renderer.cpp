@@ -53,28 +53,75 @@ void Renderer::InitShadowMaps(std::shared_ptr<Scene> scene)
 
         auto& light = obj->light;
 
-        glGenFramebuffers(1, &light->shadowFBO);
-        glGenTextures(1, &light->shadowMap);
-        glBindTexture(GL_TEXTURE_2D, light->shadowMap);
+        if (light->type == LightType::Point)
+        {
+            glGenFramebuffers(1, &light->shadowCubeFBO);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-                     SHADOW_RESOLUTION, SHADOW_RESOLUTION,
-                     0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            // Color cubemap (stores linear depth)
+            glGenTextures(1, &light->shadowCubemap);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, light->shadowCubemap);
+            for (int i = 0; i < 6; i++)
+            {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_R32F,
+                             POINT_SHADOW_RESOLUTION, POINT_SHADOW_RESOLUTION,
+                             0, GL_RED, GL_FLOAT, NULL);
+            }
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+            // Depth cubemap (must also be layered for geometry shader)
+            glGenTextures(1, &light->shadowCubeDepthRBO);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, light->shadowCubeDepthRBO);
+            for (int i = 0; i < 6; i++)
+            {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
+                             POINT_SHADOW_RESOLUTION, POINT_SHADOW_RESOLUTION,
+                             0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            }
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        float borderColor[] = {1, 1, 1, 1};
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+            // Attach both as layered
 
-        glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                               GL_TEXTURE_2D, light->shadowMap, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowCubeFBO);
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, light->shadowCubemap, 0);
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, light->shadowCubeDepthRBO, 0);
+
+            GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            if (status != GL_FRAMEBUFFER_COMPLETE)
+                std::cerr << "Point shadow FBO INCOMPLETE: 0x" << std::hex << status << std::dec << std::endl;
+            else
+                std::cerr << "Point shadow FBO complete" << std::endl;
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        else
+        {
+            // 2D shadow map
+            glGenFramebuffers(1, &light->shadowFBO);
+            glGenTextures(1, &light->shadowMap);
+            glBindTexture(GL_TEXTURE_2D, light->shadowMap);
+
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+                         SHADOW_RESOLUTION, SHADOW_RESOLUTION,
+                         0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+            float borderColor[] = {1, 1, 1, 1};
+            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                   GL_TEXTURE_2D, light->shadowMap, 0);
+            glReadBuffer(GL_NONE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
 
         count++;
     }
@@ -208,6 +255,11 @@ void Renderer::LoadShaders()
     fxaaShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
     particleLitShader   = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleLitFrag.glsl");
     particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
+    pointShadowShader = ShaderUtils::MakeShaderProgram(
+    "../shaders/shadows/pointShadowVert.glsl",
+    "../shaders/shadows/pointShadowGeom.glsl",
+    "../shaders/shadows/pointShadowFrag.glsl"
+    );
 }
 
 void Renderer::CacheUniforms()
@@ -311,33 +363,91 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
         if (idx >= MAX_SHADOW_LIGHTS) break;
 
         auto& light = obj->light;
-        glm::mat4 lightProj, lightView;
 
-        if (light->type == LightType::Directional)
+        if (light->type == LightType::Point)
         {
-            lightProj = glm::ortho(-5.f, 5.f, -2.f, 2.f, 0.1f, 30.f);
-            glm::vec3 up = (glm::abs(light->direction.y) > 0.99f)
-                ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
-            lightView = glm::lookAt(obj->transform.position,
-                                    obj->transform.position + light->direction, up);
+            glUseProgram(pointShadowShader);
+
+            float aspect = 1.0f;
+            float near = 0.1f;
+            float far = light->radius;
+            glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
+
+            glm::vec3 pos = obj->transform.position;
+            glm::mat4 shadowTransforms[6] = {
+                shadowProj * glm::lookAt(pos, pos + glm::vec3( 1, 0, 0), glm::vec3(0,-1, 0)),
+                shadowProj * glm::lookAt(pos, pos + glm::vec3(-1, 0, 0), glm::vec3(0,-1, 0)),
+                shadowProj * glm::lookAt(pos, pos + glm::vec3( 0, 1, 0), glm::vec3(0, 0, 1)),
+                shadowProj * glm::lookAt(pos, pos + glm::vec3( 0,-1, 0), glm::vec3(0, 0,-1)),
+                shadowProj * glm::lookAt(pos, pos + glm::vec3( 0, 0, 1), glm::vec3(0,-1, 0)),
+                shadowProj * glm::lookAt(pos, pos + glm::vec3( 0, 0,-1), glm::vec3(0,-1, 0)),
+            };
+
+            for (int i = 0; i < 6; i++)
+            {
+                std::string name = "shadowMatrices[" + std::to_string(i) + "]";
+                glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, name.c_str()),
+                                   1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
+            }
+
+            glUniform3fv(glGetUniformLocation(pointShadowShader, "lightPos"), 1, glm::value_ptr(pos));
+            glUniform1f(glGetUniformLocation(pointShadowShader, "farPlane"), far);
+
+            glViewport(0, 0, POINT_SHADOW_RESOLUTION, POINT_SHADOW_RESOLUTION);
+            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowCubeFBO);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+            for (auto& renderObj : scene->objects)
+            {
+                if (!renderObj->mesh || !renderObj->enabled) continue;
+                glm::mat4 model = renderObj->transform.GetMatrix();
+                glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
+                                   1, GL_FALSE, glm::value_ptr(model));
+                renderObj->mesh->Draw();
+            }
+
+            float pixel;
+            glReadPixels(POINT_SHADOW_RESOLUTION/2, POINT_SHADOW_RESOLUTION/2, 1, 1, GL_RED, GL_FLOAT, &pixel);
+            std::cerr << "Cubemap center: " << pixel << std::endl;
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-        else if (light->type == LightType::Spot)
+        else
         {
-            lightProj = glm::perspective(glm::acos(light->outerCutoff) * 2.0f,
-                                         1.0f, 0.1f, 50.f);
-            glm::vec3 up = (glm::abs(light->direction.y) > 0.99f)
-                ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
-            lightView = glm::lookAt(obj->transform.position,
-                                    obj->transform.position + light->direction, up);
+            // Existing directional/spot shadow code
+            glUseProgram(shadowShader);
+            glm::mat4 lightProj, lightView;
+
+            if (light->type == LightType::Directional)
+            {
+                lightProj = glm::ortho(-5.f, 5.f, -2.f, 2.f, 0.1f, 30.f);
+                glm::vec3 up = (glm::abs(light->direction.y) > 0.99f)
+                    ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+                lightView = glm::lookAt(obj->transform.position,
+                                        obj->transform.position + light->direction, up);
+            }
+            else if (light->type == LightType::Spot)
+            {
+                lightProj = glm::perspective(glm::acos(light->outerCutoff) * 2.0f,
+                                             1.0f, 0.1f, 50.f);
+                glm::vec3 up = (glm::abs(light->direction.y) > 0.99f)
+                    ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+                lightView = glm::lookAt(obj->transform.position,
+                                        obj->transform.position + light->direction, up);
+            }
+
+            light->lightSpaceMatrix = lightProj * lightView;
+
+            glViewport(0, 0, SHADOW_RESOLUTION, SHADOW_RESOLUTION);
+            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            RenderShadowMap(light->lightSpaceMatrix, scene);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-
-        light->lightSpaceMatrix = lightProj * lightView;
-
-        glViewport(0, 0, SHADOW_RESOLUTION, SHADOW_RESOLUTION);
-        glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        RenderShadowMap(light->lightSpaceMatrix, scene);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         idx++;
     }
@@ -412,6 +522,7 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     glUniform1i(glGetUniformLocation(lightingShader, "pcfEnabled"), PCF_ENABLED ? 1 : 0);
     glUniform1f(glGetUniformLocation(lightingShader, "shadowBias"), SHADOW_BIAS);
     glUniform1f(glGetUniformLocation(lightingShader, "shadowNormalOffset"), SHADOW_NORMAL_OFFSET);
+    glUniform1f(glGetUniformLocation(lightingShader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
 
     glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
     glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
@@ -436,8 +547,38 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
         si++;
     }
 
+    int cubeStart = 3 + si;
+    int ci = 0;
+    for (auto& obj : scene->objects)
+    {
+        if (!obj->light || !obj->light->castsShadow) continue;
+        if (ci >= MAX_SHADOW_LIGHTS) break;
+
+        glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
+        if (obj->light->type == LightType::Point)
+            glBindTexture(GL_TEXTURE_CUBE_MAP, obj->light->shadowCubemap);
+        else
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0); // no cubemap for non-point lights
+
+        std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
+        glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), cubeStart + ci);
+        ci++;
+    }
+
+    int fi = 0;
+    for (auto& obj : scene->objects)
+    {
+        if (!obj->light || !obj->light->castsShadow) continue;
+        if (fi >= MAX_SHADOW_LIGHTS) break;
+
+        float fp = (obj->light->type == LightType::Point) ? obj->light->radius : 50.0f;
+        std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
+        glUniform1f(glGetUniformLocation(lightingShader, name.c_str()), fp);
+        fi++;
+    }
+
     // SSAO on next available slot
-    int ssaoSlot = 3 + si;
+    int ssaoSlot = cubeStart + ci;
     glActiveTexture(GL_TEXTURE0 + ssaoSlot);
     glBindTexture(GL_TEXTURE_2D, SSAO_ENABLED ? ssaoBlurTexture : 0);
     glUniform1i(glGetUniformLocation(lightingShader, "ssaoTexture"), ssaoSlot);
@@ -489,6 +630,38 @@ void Renderer::FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowC
                            1, GL_FALSE, glm::value_ptr(obj->light->lightSpaceMatrix));
         si++;
     }
+
+    int cubeStart = 3 + si;
+    int ci = 0;
+    for (auto& obj : scene->objects)
+    {
+        if (!obj->light || !obj->light->castsShadow) continue;
+        if (ci >= MAX_SHADOW_LIGHTS) break;
+
+        glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
+        if (obj->light->type == LightType::Point)
+            glBindTexture(GL_TEXTURE_CUBE_MAP, obj->light->shadowCubemap);
+        else
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+        std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
+        glUniform1i(glGetUniformLocation(fogShader, name.c_str()), cubeStart + ci);
+        ci++;
+    }
+
+    int fi = 0;
+    for (auto& obj : scene->objects)
+    {
+        if (!obj->light || !obj->light->castsShadow) continue;
+        if (fi >= MAX_SHADOW_LIGHTS) break;
+
+        float fp = (obj->light->type == LightType::Point) ? obj->light->radius : 50.0f;
+        std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
+        glUniform1f(glGetUniformLocation(fogShader, name.c_str()), fp);
+        fi++;
+    }
+
+    glUniform1f(glGetUniformLocation(fogShader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
 
     glUniform3f(glGetUniformLocation(fogShader, "cameraPos"),
                 camera.transform.position.x,
@@ -603,25 +776,58 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
         if (ps->IsLit())
         {
             int shadowIndex = 0;
-            // Get shadow lights for shadow maps
             for (auto& potentialShadowLight : scene->objects) {
-                // Make sure candidate is on, it has a light, and can cast shadows
                 if (!potentialShadowLight->light || !potentialShadowLight->enabled || !potentialShadowLight->light->castsShadow)
                     continue;
-                // stop if the number of shadow lights is more than or = the max
                 if (shadowIndex >= MAX_SHADOW_LIGHTS) break;
-                // Get Shadow map from light
+
                 glActiveTexture(GL_TEXTURE0 + shadowIndex);
-                glBindTexture(GL_TEXTURE_2D, potentialShadowLight->light->shadowMap);
-                // Set shadow map index uniform
+                if (potentialShadowLight->light->type == LightType::Point)
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                else
+                    glBindTexture(GL_TEXTURE_2D, potentialShadowLight->light->shadowMap);
+
                 std::string name = "shadowMap[" + std::to_string(shadowIndex) + "]";
                 glUniform1i(glGetUniformLocation(shader, name.c_str()), shadowIndex);
-                // Let light space matrix uniform
+
                 std::string lsm = "lightSpaceMatrix[" + std::to_string(shadowIndex) + "]";
                 glUniformMatrix4fv(glGetUniformLocation(shader, lsm.c_str()),
                                    1, GL_FALSE, glm::value_ptr(potentialShadowLight->light->lightSpaceMatrix));
+                shadowIndex++;
             }
 
+            // Cubemaps after 2D maps
+            int cubeStart = shadowIndex;
+            int ci = 0;
+            for (auto& potentialShadowLight : scene->objects) {
+                if (!potentialShadowLight->light || !potentialShadowLight->enabled || !potentialShadowLight->light->castsShadow)
+                    continue;
+                if (ci >= MAX_SHADOW_LIGHTS) break;
+
+                glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
+                if (potentialShadowLight->light->type == LightType::Point)
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, potentialShadowLight->light->shadowCubemap);
+                else
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+                std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
+                glUniform1i(glGetUniformLocation(shader, name.c_str()), cubeStart + ci);
+                ci++;
+            }
+
+            int fi = 0;
+            for (auto& obj : scene->objects)
+            {
+                if (!obj->light || !obj->light->castsShadow) continue;
+                if (fi >= MAX_SHADOW_LIGHTS) break;
+
+                float fp = (obj->light->type == LightType::Point) ? obj->light->radius : 50.0f;
+                std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
+                glUniform1f(glGetUniformLocation(shader, name.c_str()), fp);
+                fi++;
+            }
+
+            glUniform1f(glGetUniformLocation(shader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
             glUniform1i(glGetUniformLocation(shader, "shadowLightCount"), shadowCount);
             scene->UploadLights(shader);
         }

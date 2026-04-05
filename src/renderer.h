@@ -10,6 +10,8 @@
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;
+extern int POINT_SHADOW_RESOLUTION;
+extern float POINT_SHADOW_FAR_PLANE;
 extern int PCF_KERNEL_SIZE;
 extern bool PCF_ENABLED;
 extern int MAX_SHADOW_LIGHTS;
@@ -89,6 +91,7 @@ private:
     unsigned int fxaaShader;
     unsigned int particleLitShader;
     unsigned int particleUnlitShader;
+    unsigned int pointShadowShader;
 
     // Geometry shader caches
     int gBuf_model, gBuf_view, gBuf_projection, gBuf_normalMat;

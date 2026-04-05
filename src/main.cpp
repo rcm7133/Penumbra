@@ -63,7 +63,7 @@ int main()
         100.0f
     );
 
-    Camera camera(glm::vec3(0.5, 1, 3));
+    Camera camera(glm::vec3(-8, 1, 1));
     camera.transform.rotation.y = 250.0f;
     gCamera = &camera;
 
@@ -190,7 +190,10 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     if (PCF_ENABLED)
         ImGui::SliderInt("PCF Kernel Size", &PCF_KERNEL_SIZE, 1, 9);
 
+	ImGui::SliderFloat("Point Shadow Far Plane", &POINT_SHADOW_FAR_PLANE, 1.0f, 3000.0f);
+
     ImGui::End();
+
 
 
 	ImGui::Begin("Buffer Preview");
@@ -265,6 +268,9 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
                     if (ImGui::DragFloat("Outer Cutoff", &outerDeg, 0.1f, 0.0f, 90.0f))
                         obj->light->outerCutoff = glm::cos(glm::radians(outerDeg));
                 }
+            	if (obj->light->type == LightType::Point) {
+            		ImGui::DragFloat("Radius", &obj->light->radius, 0.1f, 0.1f, 100.0f);
+            	}
                 ImGui::TreePop();
             }
         }
@@ -356,7 +362,7 @@ std::shared_ptr<Scene> CreateScene()
 		);
 	scene->Add(debris);
 
-	std::shared_ptr<Orbiter> light = std::make_shared<Orbiter>("Light");
+	std::shared_ptr<GameObject> light = std::make_shared<GameObject>("Light");
 	light->light = std::make_shared<Light>();
 	light->light->color = glm::vec3(1.0f, 0.0f, 0.0f);
 	light->light->intensity = 1.0f;
@@ -364,8 +370,6 @@ std::shared_ptr<Scene> CreateScene()
 	light->light->castsShadow = true;
 	light->light->direction = glm::vec3(-1.0f, 0.0f, 0.0f);
 	light->transform.position = glm::vec3(-6.0f, 0.25f, -0.015f);
-	light->orbitCenter = glm::vec3(-6.0f, 0.25f, -0.015f);
-	light->orbitRadius = 0.2f;
 	scene->Add(light);
 
 	std::shared_ptr<GameObject> light2 = std::make_shared<GameObject>("Directional Light");

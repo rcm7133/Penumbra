@@ -54,6 +54,15 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 t
     return shadow / float(sampleCount);
 }
 
+float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float farPlane)
+{
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight) / farPlane;
+    float closestDepth = texture(cubeMap, fragToLight).r;
+    float bias = 0.005;
+    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+}
+
 void main()
 {
     vec3 fragPos = texture(gPosition, fragUV).rgb;
@@ -83,6 +92,7 @@ void main()
             lightDir_i = normalize(lights[i].position - fragPos);
             float dist = length(lights[i].position - fragPos);
             attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+            attenuation *= 1.0 - smoothstep(lights[i].radius * 0.75, lights[i].radius, dist);
         }
         else // SPOT
         {
@@ -104,7 +114,12 @@ void main()
 
         float shadow = 0.0;
         if (i < shadowLightCount)
-        shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
+        {
+            if (lights[i].type == LIGHT_POINT)
+            shadow = SamplePointShadow(shadowCubeMap[i], fragPos, lights[i].position, lightFarPlane[i]);
+            else
+            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
+        }
 
         result += (1.0 - shadow) * (diffuse + specular);
     }

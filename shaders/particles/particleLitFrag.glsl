@@ -19,6 +19,15 @@ float ShadowCalc(int idx, vec3 worldPos)
     return current - 0.005 > closest ? 1.0 : 0.0;
 }
 
+float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float farPlane)
+{
+    vec3 fragToLight = fragPos - lightPos;
+    float currentDepth = length(fragToLight) / farPlane;
+    float closestDepth = texture(cubeMap, fragToLight).r;
+    float bias = 0.005;
+    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+}
+
 void main() {
     vec2 coord = gl_PointCoord - vec2(0.5);
     float dist = length(coord);
@@ -39,13 +48,14 @@ void main() {
 
         if (lights[i].type == LIGHT_DIRECTIONAL)
         {
-            toLight     = normalize(-lights[i].direction);
+            toLight  = normalize(-lights[i].direction);
         }
         else if (lights[i].type == LIGHT_POINT)
         {
             toLight = normalize(lights[i].position - vWorldPos);
             float d = length(lights[i].position - vWorldPos);
             attenuation = 1.0 / (1.0 + 0.09 * d + 0.032 * d * d);
+            attenuation *= 1.0 - smoothstep(lights[i].radius * 0.75, lights[i].radius, d);
         }
         else // SPOT
         {
@@ -60,7 +70,12 @@ void main() {
 
         float shadow = 0.0;
         if (i < shadowLightCount)
-        shadow = ShadowCalc(i, vWorldPos);
+        {
+            if (lights[i].type == LIGHT_POINT)
+            shadow = SamplePointShadow(shadowCubeMap[i], vWorldPos, lights[i].position, lightFarPlane[i]);
+            else
+            shadow = ShadowCalc(i, vWorldPos);
+        }
 
         litResult += lights[i].color * lights[i].intensity * attenuation * spotEffect * (1.0 - shadow);
     }

@@ -103,7 +103,7 @@ public:
     		glUniform1f (glGetUniformLocation(shader, (p + "innerCutoff").c_str()), light->innerCutoff);
     		glUniform1f (glGetUniformLocation(shader, (p + "outerCutoff").c_str()), light->outerCutoff);
     		glUniform1i (glGetUniformLocation(shader, (p + "type").c_str()),        static_cast<int>(light->type));
-    		glUniform1i (glGetUniformLocation(shader, (p + "castsShadow").c_str()), light->castsShadow ? 1 : 0);
+    	    glUniform1f(glGetUniformLocation(shader, (p + "radius").c_str()), light->radius);
     	}
     }
 

@@ -51,6 +51,35 @@ namespace ShaderUtils {
         return program;
     }
 
+    unsigned int MakeShaderProgram(const std::string& vertexPath,
+                                const std::string& geometryPath,
+                                const std::string& fragmentPath)
+    {
+        unsigned int vert = MakeShaderModule(vertexPath, GL_VERTEX_SHADER);
+        unsigned int geom = MakeShaderModule(geometryPath, GL_GEOMETRY_SHADER);
+        unsigned int frag = MakeShaderModule(fragmentPath, GL_FRAGMENT_SHADER);
+
+        unsigned int program = glCreateProgram();
+        glAttachShader(program, vert);
+        glAttachShader(program, geom);
+        glAttachShader(program, frag);
+        glLinkProgram(program);
+
+        int success;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        if (!success)
+        {
+            char log[1024];
+            glGetProgramInfoLog(program, 1024, NULL, log);
+            std::cerr << "Program link error:\n" << log << std::endl;
+        }
+
+        glDeleteShader(vert);
+        glDeleteShader(geom);
+        glDeleteShader(frag);
+        return program;
+    }
+
     unsigned int MakeShaderModule(const std::string& filePath, unsigned int moduleType)
     {
         std::string src = ReadFileWithIncludes(filePath);

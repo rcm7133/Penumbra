@@ -13,7 +13,7 @@ struct Light {
     float innerCutoff;
     float outerCutoff;
     int type;
-    bool castsShadow;
+    float radius;
 };
 
 uniform int lightCount;
@@ -21,4 +21,6 @@ uniform Light lights[MAX_TOTAL_LIGHTS];
 
 uniform int shadowLightCount;
 uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
+uniform samplerCube shadowCubeMap[MAX_SHADOW_LIGHTS];
 uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
+uniform float lightFarPlane[MAX_SHADOW_LIGHTS];

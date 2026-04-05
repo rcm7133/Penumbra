@@ -29,4 +29,7 @@ struct Light
 
     unsigned int shadowCubemap = 0;
     unsigned int shadowCubeFBO = 0;
+    unsigned int shadowCubeDepthRBO = 0;
+
+    float radius = 5.0f;
 };

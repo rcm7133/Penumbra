@@ -28,13 +28,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/shaders/common/lights.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/shadows/pointShadowFrag.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/shadows/pointShadowGeom.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/shadows/pointShadowVert.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/common/lights.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/common/lights.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/particles/particleLitFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/particles/particleLitFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/light.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/light.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/renderer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/shaderutils.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/shaderutils.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/shaderutils.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/shaderutils.h" afterDir="false" />
     </list>
@@ -171,7 +178,9 @@
       <workItem from="1775105357276" duration="1054000" />
       <workItem from="1775180114387" duration="1036000" />
       <workItem from="1775181263725" duration="431000" />
-      <workItem from="1775229983874" duration="23799000" />
+      <workItem from="1775229983874" duration="35604000" />
+      <workItem from="1775275148169" duration="662000" />
+      <workItem from="1775349901004" duration="118000" />
     </task>
     <servers />
   </component>
