@@ -62,13 +62,10 @@ public:
         if (rotationAngle >= 360.0f)
             rotationAngle -= 360.0f;
 
-        // Apply rotation around Y axis
-        transform.rotation.y = rotationAngle;
+        transform.rotation = glm::angleAxis(glm::radians(rotationAngle), glm::vec3(0, 1, 0));
 
-        // Update light direction to match rotation
-        if (light) {
+        if (light)
             light->direction = transform.Forward();
-        }
     }
 
     void Start() override {

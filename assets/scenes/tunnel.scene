@@ -1,0 +1,245 @@
+{
+    "objects": [
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/corridor.obj",
+                "normalMap": "../assets/textures/normals/corridorNormal.jpg",
+                "shininess": 32.0,
+                "texture": "../assets/textures/corridor.jpg"
+            },
+            "name": "Corridor",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/cables.obj",
+                "normalMap": "../assets/textures/normals/rubberNormal.jpg",
+                "shininess": 32.0,
+                "texture": "../assets/textures/rubber.jpg"
+            },
+            "name": "Cables",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/cableholder.obj",
+                "normalMap": "../assets/textures/normals/metalNormal.jpg",
+                "shininess": 32.0,
+                "texture": "../assets/textures/metal.jpg"
+            },
+            "name": "Cable Holder",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/barrels.obj",
+                "normalMap": "../assets/textures/normals/barrelNormal.png",
+                "shininess": 32.0,
+                "texture": "../assets/textures/barrel.png"
+            },
+            "name": "Barrels",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/debris.obj",
+                "normalMap": "../assets/textures/normals/metalNormal.jpg",
+                "shininess": 32.0,
+                "texture": "../assets/textures/barrel.png"
+            },
+            "name": "Debris",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "RotatingLight",
+            "enabled": true,
+            "light": {
+                "castsShadow": true,
+                "color": [
+                    1.0,
+                    0.0,
+                    0.0
+                ],
+                "direction": [
+                    -0.16921359300613403,
+                    0.0,
+                    0.9855793714523315
+                ],
+                "innerCutoffDeg": 12.5,
+                "intensity": 1.0,
+                "outerCutoffDeg": 35.5,
+                "radius": 5.0,
+                "type": "Spot"
+            },
+            "name": "Light",
+            "rotationAngle": 170.25790405273438,
+            "rotationSpeed": 90.0,
+            "transform": {
+                "position": [
+                    -6.0,
+                    0.25,
+                    -0.014999999664723873
+                ],
+                "rotation": [
+                    180.0,
+                    9.742098808288574,
+                    180.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "name": "Particles",
+            "particleSystem": {
+                "boundsMax": [
+                    15.0,
+                    2.5,
+                    2.0
+                ],
+                "boundsMin": [
+                    -2.0,
+                    0.0,
+                    -2.0
+                ],
+                "endColor": [
+                    0.800000011920929,
+                    0.800000011920929,
+                    0.800000011920929,
+                    0.0
+                ],
+                "fadeInTime": 1.0,
+                "lit": true,
+                "maxLifetime": 15.0,
+                "maxParticles": 10000,
+                "maxSize": 0.10000000149011612,
+                "minLifetime": 10.0,
+                "minSize": 0.05000000074505806,
+                "position": [
+                    -15.0,
+                    0.0,
+                    -0.014999999664723873
+                ],
+                "speed": 0.10000000149011612,
+                "startColor": [
+                    0.800000011920929,
+                    0.800000011920929,
+                    0.800000011920929,
+                    0.8999999761581421
+                ]
+            },
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        }
+    ]
+}

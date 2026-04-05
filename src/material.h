@@ -10,4 +10,8 @@ struct Material
     float shininess = 32.0f;
     float ambientMultiplier = 0.15f;
     glm::vec3 ambientColor = glm::vec3(1.0f);
+
+    std::string modelPath;
+    std::string texturePath;
+    std::string normalMapPath;
 };

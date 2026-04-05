@@ -8,6 +8,8 @@ class Camera
 public:
     Transform transform;
     float sensitivity = 0.001f;
+    float yaw   = 0.0f;
+    float pitch = 0.0f;
 
     Camera(glm::vec3 startPos = glm::vec3(0, 1, 3)) {
         transform.position = startPos;
@@ -38,10 +40,10 @@ public:
     }
 
     void ProcessMouse(float xOffset, float yOffset) {
-        transform.rotation.y += xOffset * sensitivity;  // yaw
-        transform.rotation.x += yOffset * sensitivity;  // pitch
+        yaw   += xOffset * sensitivity;
+        pitch += yOffset * sensitivity;
+        pitch = glm::clamp(pitch, -89.0f, 89.0f);
 
-        // Clamp pitch
-        transform.rotation.x = glm::clamp(transform.rotation.x, -89.0f, 89.0f);
+        transform.rotation = glm::quat(glm::radians(glm::vec3(pitch, -yaw, 0.0f)));
     }
 };

@@ -16,6 +16,10 @@ public:
         }
     }
 
+    void Reset() {
+        systems.clear();
+    }
+
     const std::vector<std::shared_ptr<ParticleSystem>>& GetSystems() const { return systems; }
 
 private:

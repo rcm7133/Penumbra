@@ -1,0 +1,32 @@
+#pragma once
+#include "../config.h"
+#include "../scene.h"
+#include "../gameobject.h"
+#include "../particles/particleSystemManager.h"
+#include "../../dependencies/nlohmann/json.hpp"
+
+class SceneLoader {
+public:
+    static std::shared_ptr<Scene> Load(const std::string& filePath, ParticleSystemManager& particleManager);
+    static void Save(const std::shared_ptr<Scene>& scene, const std::string& filePath);
+
+private:
+    using json = nlohmann::json;
+
+    // Serialization Helper Functions
+    static json SerializeVec3(const glm::vec3& v);
+    static json SerializeVec4(const glm::vec4& v);
+    static json SerializeTransform(const Transform& t);
+    static json SerializeMesh(const Mesh& m);
+    static json SerializeLight(const Light& l);
+    static json SerializeParticleSystem(const ParticleSystem& ps);
+    static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
+
+    static glm::vec3 DeserializeVec3(const json& j);
+    static glm::vec4 DeserializeVec4(const json& j);
+    static void DeserializeTransform(const json& j, Transform& t);
+    static std::shared_ptr<Mesh> DeserializeMesh(const json& j);
+    static std::shared_ptr<Light> DeserializeLight(const json& j);
+    static std::shared_ptr<ParticleSystem> DeserializeParticleSystem(const json& j, const glm::vec3& ownerPos, ParticleSystemManager& particleManager);
+    static std::shared_ptr<GameObject> DeserializeGameObject(const json& j, ParticleSystemManager& particleManager);
+};

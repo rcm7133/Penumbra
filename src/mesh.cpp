@@ -4,6 +4,11 @@
 
 Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float shininess, const std::string& normalMapPath)
 {
+    material.modelPath = filePath;
+    material.texturePath = texturePath;
+    material.normalMapPath = normalMapPath;
+
+
     std::vector<glm::vec3> positions;
     std::vector<glm::vec2> texCoords;
     std::vector<glm::vec3> normals;

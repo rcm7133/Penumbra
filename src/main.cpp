@@ -6,6 +6,7 @@
 #include "profiler.h"
 #include "particles/particleSystem.h"
 #include "particles/particleSystemManager.h"
+#include "utils/sceneLoader.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
@@ -25,6 +26,7 @@ ParticleSystemManager particleManager;
 std::shared_ptr<Scene> CreateScene();
 void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
+void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& pm);
 
 int main()
 {
@@ -64,7 +66,8 @@ int main()
     );
 
     Camera camera(glm::vec3(-8, 1, 1));
-    camera.transform.rotation.y = 250.0f;
+	camera.yaw   = 250.0f;
+	camera.pitch = 0.0f;
     gCamera = &camera;
 
     // Lock cursor
@@ -86,7 +89,7 @@ int main()
     // Create renderer and scene
 	// -------------------------
     Renderer renderer(w, h, projection);
-    std::shared_ptr<Scene> scene = CreateScene();
+	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/tunnel.scene", particleManager);
     renderer.AssignDefaultShader(scene);
     scene->Start();
     renderer.InitShadowMaps(scene);
@@ -232,6 +235,10 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     // Scene editor
     ImGui::Begin("Scene");
 	ImGui::SliderFloat("Camera Speed", &CAMERA_SPEED, 0.1f, 5.0f);
+	if (ImGui::Button("Save Scene"))
+		SceneLoader::Save(scene, "../assets/scenes/tunnel.scene");
+	if (ImGui::Button("Reload Scene"))
+		ReloadScene(scene, renderer, particleManager);
     ImGuiIO& io = ImGui::GetIO();
     for (std::shared_ptr<GameObject> obj : scene->objects) {
     ImGui::PushID(obj->name.c_str());
@@ -240,12 +247,16 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
         ImGui::Checkbox("Enabled", &obj->enabled);
 
         // Transform (always present)
-        if (ImGui::TreeNode("Transform")) {
-            ImGui::DragFloat3("Position", &obj->transform.position.x, 0.01f);
-            ImGui::DragFloat3("Rotation", &obj->transform.rotation.x, 0.1f);
-            ImGui::DragFloat3("Scale",    &obj->transform.scale.x, 0.01f);
-            ImGui::TreePop();
-        }
+    	if (ImGui::TreeNode("Transform")) {
+    		ImGui::DragFloat3("Position", &obj->transform.position.x, 0.01f);
+
+    		glm::vec3 euler = obj->transform.GetEulerDegrees();
+    		if (ImGui::DragFloat3("Rotation", &euler.x, 0.1f))
+    			obj->transform.SetEulerDegrees(euler);
+
+    		ImGui::DragFloat3("Scale", &obj->transform.scale.x, 0.01f);
+    		ImGui::TreePop();
+    	}
 
         // Light
         if (obj->light) {
@@ -313,95 +324,20 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-std::shared_ptr<Scene> CreateScene()
+void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& pm)
 {
-    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
-
-	std::shared_ptr<GameObject> corridor = std::make_shared<GameObject>("Corridor");
-	corridor->mesh = std::make_shared<Mesh>(
-		"../assets/models/corridor.obj",
-		"../assets/textures/corridor.jpg",
-		0,
-		"../assets/textures/normals/corridorNormal.jpg"
-		);
-	scene->Add(corridor);
-
-	std::shared_ptr<GameObject> cables = std::make_shared<GameObject>("Cables");
-	cables->mesh = std::make_shared<Mesh>(
-		"../assets/models/cables.obj",
-		"../assets/textures/rubber.jpg",
-		32,
-		"../assets/textures/normals/rubberNormal.jpg"
-		);
-	scene->Add(cables);
-
-	std::shared_ptr<GameObject> cableHolder = std::make_shared<GameObject>("Cable Holder");
-	cableHolder->mesh = std::make_shared<Mesh>(
-		"../assets/models/cableholder.obj",
-		"../assets/textures/metal.jpg",
-		12,
-		"../assets/textures/normals/metalNormal.jpg"
-		);
-	scene->Add(cableHolder);
-
-	std::shared_ptr<GameObject> barrels = std::make_shared<GameObject>("Barrels");
-	barrels->mesh = std::make_shared<Mesh>(
-		"../assets/models/barrels.obj",
-		"../assets/textures/barrel.png",
-		12,
-		"../assets/textures/normals/barrelNormal.png"
-		);
-	scene->Add(barrels);
-
-	std::shared_ptr<GameObject> debris = std::make_shared<GameObject>("Debris");
-	debris->mesh = std::make_shared<Mesh>(
-		"../assets/models/debris.obj",
-		"../assets/textures/barrel.png",
-		12,
-		"../assets/textures/normals/metalNormal.jpg"
-		);
-	scene->Add(debris);
-
-	std::shared_ptr<GameObject> light = std::make_shared<GameObject>("Light");
-	light->light = std::make_shared<Light>();
-	light->light->color = glm::vec3(1.0f, 0.0f, 0.0f);
-	light->light->intensity = 1.0f;
-	light->light->type = LightType::Spot;
-	light->light->castsShadow = true;
-	light->light->direction = glm::vec3(-1.0f, 0.0f, 0.0f);
-	light->transform.position = glm::vec3(-6.0f, 0.25f, -0.015f);
-	scene->Add(light);
-
-	std::shared_ptr<GameObject> light2 = std::make_shared<GameObject>("Directional Light");
-	light2->light = std::make_shared<Light>();
-	//light2->rotationSpeed = 30.0f;
-	light2->light->color = glm::vec3(1.0f, 0.0f, 0.0f);
-	light2->light->intensity = 1.0f;
-	light2->light->type = LightType::Directional;
-	light2->light->castsShadow = true;
-	light2->light->direction = glm::vec3(0.0f, -1.0f, 0.0f);
-	light2->transform.position = glm::vec3(-6.0f, 2.25f, -0.015f);
-	//scene->Add(light2);
-
-	// Particles
-	std::shared_ptr<GameObject> particles = std::make_shared<GameObject>("Particles");
-	particles->particleSystem = std::make_shared<ParticleSystem>(particles->transform.position, 10000, true);
-	particles->particleSystem->position = glm::vec3(-15.0f, 0.0f, -0.015f);
-	particles->particleSystem->boundsMin = glm::vec3(-2.0f, 0.0f, -2.0f);
-	particles->particleSystem->boundsMax = glm::vec3(15.0f, 2.5f,  2.0f);
-	particles->particleSystem->minLifetime = 10.0f;
-	particles->particleSystem->maxLifetime = 15.0f;
-	particles->particleSystem->startColor = glm::vec4(0.8f, 0.8f, 0.8f, 0.9f);
-	particles->particleSystem->endColor   = glm::vec4(0.8f, 0.8f, 0.8f, 0.0f);
-	particles->particleSystem->speed      = 0.1f;
-	particles->particleSystem->minSize    = 0.05f;
-	particles->particleSystem->maxSize    = 0.1f;
-	particleManager.Register(particles->particleSystem);
-	scene->Add(particles);
-
-    return scene;
+	pm.Reset();
+	scene = SceneLoader::Load("../assets/scenes/tunnel.scene", particleManager);
+	if (!scene) {
+		std::cerr << "Reload failed, creating empty scene" << std::endl;
+		scene = std::make_shared<Scene>();
+		return;
+	}
+	renderer.AssignDefaultShader(scene);
+	scene->Start();
+	renderer.InitShadowMaps(scene);
+	std::cout << "Scene reloaded" << std::endl;
 }
-
 
 void MouseCallback(GLFWwindow* window, double xpos, double ypos)
 {

@@ -10,6 +10,7 @@ endif()
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
+find_package(Jolt CONFIG REQUIRED)
 
 add_executable(Penumbra
         src/main.cpp
@@ -19,6 +20,7 @@ add_executable(Penumbra
         src/renderer.cpp
         src/settings.cpp
         src/shaderutils.cpp
+        src/utils/sceneLoader.cpp
         dependencies/imgui/imgui.cpp
         dependencies/imgui/imgui_draw.cpp
         dependencies/imgui/imgui_tables.cpp
@@ -30,24 +32,26 @@ add_executable(Penumbra
 
 target_include_directories(Penumbra PRIVATE
         src
+        stc/utils
         src/particles
         dependencies
         dependencies/imgui
 )
 
-target_link_libraries(Penumbra
+target_link_libraries(Penumbra PRIVATE
         glfw
         OpenGL::GL
         glm::glm
+        Jolt::Jolt
 )
 
 target_compile_definitions(Penumbra PRIVATE NOMINMAX)
 target_compile_features(Penumbra PRIVATE cxx_std_23)
 
 if(UNIX)
-    target_link_libraries(Penumbra dl)
+    target_link_libraries(Penumbra PRIVATE dl)
 endif()
 
 if(WIN32)
-    target_link_libraries(Penumbra gdi32 user32)
+    target_link_libraries(Penumbra PRIVATE gdi32 user32)
 endif()
