@@ -28,21 +28,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/assets/scenes/tunnel.scene" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dependencies/nlohmann/json.hpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/physics/rigidbody.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/sphere.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/metalSphere.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/normals/metalSphereNormal.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/physics/physicsSystem.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/colliderDebugRenderer.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/colliderDebugRenderer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/camera.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/camera.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/scenes/tunnel.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/tunnel.scene" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/camera.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/camera.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/gameobject.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/gameobject.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gbuffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/gbuffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/glad.c" beforeDir="false" afterPath="$PROJECT_DIR$/dependencies/glad/glad.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/light.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/light.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/material.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/material.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/mesh.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/mesh.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/particles/particleSystemManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/particles/particleSystemManager.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/transform.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/transform.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/material.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/material.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mesh.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/mesh.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/mesh.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/mesh.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particles/particleSystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/particles/particleSystem.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/physics/rigidbody.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/physics/rigidbody.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/quad.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/quad.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shaderutils.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/shaderutils.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/shaderutils.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/shaderutils.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/stb_image.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/stb_image.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -129,11 +143,11 @@
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nlohmann" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\src\utils" />
-      <recent name="C:\Users\m16ga\code\Penumbra\shaders\compute\particles" />
-      <recent name="C:\Users\m16ga\code\Penumbra\src\particles" />
-      <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\Penumbra\dependencies" />
-      <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\SSAO\models" />
+      <recent name="C:\Users\m16ga\code\Penumbra\dependencies\glad" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\normals" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
@@ -182,7 +196,7 @@
       <workItem from="1775181263725" duration="431000" />
       <workItem from="1775229983874" duration="35604000" />
       <workItem from="1775275148169" duration="662000" />
-      <workItem from="1775349901004" duration="5932000" />
+      <workItem from="1775349901004" duration="10124000" />
     </task>
     <servers />
   </component>

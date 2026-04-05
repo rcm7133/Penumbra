@@ -2,6 +2,7 @@
 #include "../config.h"
 #include "../scene.h"
 #include "../gameobject.h"
+#include "../physics/rigidbody.h"
 #include "../particles/particleSystemManager.h"
 #include "../../dependencies/nlohmann/json.hpp"
 
@@ -21,6 +22,7 @@ private:
     static json SerializeLight(const Light& l);
     static json SerializeParticleSystem(const ParticleSystem& ps);
     static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
+    static json SerializeRigidBody(const RigidBody& rb);
 
     static glm::vec3 DeserializeVec3(const json& j);
     static glm::vec4 DeserializeVec4(const json& j);
@@ -29,4 +31,5 @@ private:
     static std::shared_ptr<Light> DeserializeLight(const json& j);
     static std::shared_ptr<ParticleSystem> DeserializeParticleSystem(const json& j, const glm::vec3& ownerPos, ParticleSystemManager& particleManager);
     static std::shared_ptr<GameObject> DeserializeGameObject(const json& j, ParticleSystemManager& particleManager);
+    static std::shared_ptr<RigidBody> DeserializeRigidBody(const json& j);
 };

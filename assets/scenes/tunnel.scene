@@ -151,9 +151,9 @@
                     0.0
                 ],
                 "direction": [
-                    -0.16921359300613403,
+                    0.9987587928771973,
                     0.0,
-                    0.9855793714523315
+                    -0.04980790615081787
                 ],
                 "innerCutoffDeg": 12.5,
                 "intensity": 1.0,
@@ -162,7 +162,7 @@
                 "type": "Spot"
             },
             "name": "Light",
-            "rotationAngle": 170.25790405273438,
+            "rotationAngle": 272.85498046875,
             "rotationSpeed": 90.0,
             "transform": {
                 "position": [
@@ -171,9 +171,9 @@
                     -0.014999999664723873
                 ],
                 "rotation": [
-                    180.0,
-                    9.742098808288574,
-                    180.0
+                    0.0,
+                    -87.14501190185547,
+                    0.0
                 ],
                 "scale": [
                     1.0,
@@ -227,6 +227,126 @@
                 "position": [
                     0.0,
                     0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/sphere.obj",
+                "normalMap": "../assets/textures/normals/metalSphereNormal.jpg",
+                "shininess": 32.0,
+                "texture": "../assets/textures/metalSphere.jpg"
+            },
+            "name": "Sphere",
+            "rigidBody": {
+                "capsuleHalfHeight": 0.6000000238418579,
+                "friction": 0.5,
+                "halfExtent": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "mass": 10.0,
+                "motion": "Dynamic",
+                "radius": 0.25,
+                "restitution": 0.30000001192092896,
+                "shape": "Sphere"
+            },
+            "transform": {
+                "position": [
+                    -11.319999694824219,
+                    0.25,
+                    3.2365994329097703e-09
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.27000001072883606,
+                    0.25,
+                    0.25
+                ]
+            }
+        },
+        {
+                    "class": "GameObject",
+                    "enabled": true,
+                    "mesh": {
+                        "model": "../assets/models/sphere.obj",
+                        "normalMap": "../assets/textures/normals/metalSphereNormal.jpg",
+                        "shininess": 32.0,
+                        "texture": "../assets/textures/metalSphere.jpg"
+                    },
+                    "name": "Sphere 2",
+                    "rigidBody": {
+                        "capsuleHalfHeight": 0.6000000238418579,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.5,
+                            0.5,
+                            0.5
+                        ],
+                        "mass": 10.0,
+                        "motion": "Dynamic",
+                        "radius": 0.25,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Sphere"
+                    },
+                    "transform": {
+                        "position": [
+                            -11.5,
+                            2.25,
+                            3.2365994329097703e-09
+                        ],
+                        "rotation": [
+                            0.0,
+                            -0.0,
+                            0.0
+                        ],
+                        "scale": [
+                            0.27000001072883606,
+                            0.25,
+                            0.25
+                        ]
+                    }
+                },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "name": "Floor Collider",
+            "rigidBody": {
+                "capsuleHalfHeight": 0.5,
+                "friction": 0.5,
+                "halfExtent": [
+                    10.0,
+                    0.5,
+                    5.0
+                ],
+                "mass": 1.0,
+                "motion": "Static",
+                "radius": 0.5,
+                "restitution": 0.30000001192092896,
+                "shape": "Box"
+            },
+            "transform": {
+                "position": [
+                    -11.0,
+                    -0.5,
                     0.0
                 ],
                 "rotation": [

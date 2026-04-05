@@ -1,4 +1,4 @@
-#include "config.h"
+#include "../config.h"
 #include "mesh.h"
 #include "stb_image.h"
 

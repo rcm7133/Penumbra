@@ -1,12 +1,14 @@
 #include "config.h"
-#include "mesh.h"
+#include "rendering/mesh.h"
 #include "scene.h"
-#include "camera.h"
-#include "renderer.h"
+#include "rendering/camera.h"
+#include "rendering/renderer.h"
 #include "profiler.h"
 #include "particles/particleSystem.h"
 #include "particles/particleSystemManager.h"
 #include "utils/sceneLoader.h"
+#include "rendering/colliderDebugRenderer.h"
+#include "physics/physicsSystem.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
@@ -20,13 +22,15 @@ bool firstMouse  = true;
 bool cursorEnabled = false;
 bool tabWasPressed = false;
 
+extern bool DEBUG_COLLIDERS;
+
 Profiler profiler;
 ParticleSystemManager particleManager;
 
 std::shared_ptr<Scene> CreateScene();
-void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer);
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
-void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& pm);
+void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& particleManager, PhysicsWorld& physics);
 
 int main()
 {
@@ -70,6 +74,7 @@ int main()
 	camera.pitch = 0.0f;
     gCamera = &camera;
 
+
     // Lock cursor
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, MouseCallback);
@@ -93,6 +98,14 @@ int main()
     renderer.AssignDefaultShader(scene);
     scene->Start();
     renderer.InitShadowMaps(scene);
+	// Create collider debug renderer
+	ColliderDebugRenderer debugRenderer;
+	debugRenderer.Init();
+
+	// Physics System
+	PhysicsWorld physics;
+	physics.Init();
+	physics.RegisterScene(scene);
 
     double lastTime = glfwGetTime();
     int frameCount = 0;
@@ -135,25 +148,52 @@ int main()
             camera.ProcessKeyboard(window, deltaTime);
 
         glfwPollEvents();
+    	// Update scene
         scene->Update(deltaTime);
+    	physics.Update(deltaTime);
+    	physics.SyncTransforms(scene);
     	particleManager.Update(deltaTime);
-
+		// Render
         renderer.RenderFrame(camera, scene, profiler);
+    	if (DEBUG_COLLIDERS)
+    	{
+    		glm::vec3 green(0, 1, 0);
+    		for (const auto& obj : scene->objects)
+    		{
+    			if (!obj->rigidBody) continue;
+    			auto& rb = obj->rigidBody;
+    			auto& t = obj->transform;
 
-        GUI(scene, deltaTime, profiler, renderer);
+    			switch (rb->shapeType)
+    			{
+    				case RigidBody::Box:
+    					debugRenderer.AddBox(t.position, t.rotation, rb->halfExtent, green);
+    					break;
+    				case RigidBody::Sphere:
+    					debugRenderer.AddSphere(t.position, rb->radius, green);
+    					break;
+    				case RigidBody::Capsule:
+    					debugRenderer.AddCapsule(t.position, t.rotation, rb->capsuleHalfHeight, rb->radius, green);
+    					break;
+    			}
+    		}
+    		debugRenderer.Render(camera.GetViewMatrix(), projection);
+    	}
+
+        GUI(scene, deltaTime, profiler, renderer, physics);
         glfwSwapBuffers(window);
     }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
+	physics.Shutdown();
     glfwTerminate();
 
     return 0;
 }
 
-void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer)
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics)
 {
     // Start ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -238,7 +278,8 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	if (ImGui::Button("Save Scene"))
 		SceneLoader::Save(scene, "../assets/scenes/tunnel.scene");
 	if (ImGui::Button("Reload Scene"))
-		ReloadScene(scene, renderer, particleManager);
+		ReloadScene(scene, renderer, particleManager, physics);
+	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
     ImGuiIO& io = ImGui::GetIO();
     for (std::shared_ptr<GameObject> obj : scene->objects) {
     ImGui::PushID(obj->name.c_str());
@@ -313,6 +354,40 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
             }
         }
         */
+
+    	if (obj->rigidBody) {
+    		if (ImGui::TreeNode("Rigid Body")) {
+    			auto& rb = obj->rigidBody;
+
+    			const char* motions[] = { "Static", "Dynamic", "Kinematic" };
+    			int curMotion = static_cast<int>(rb->motion);
+    			if (ImGui::Combo("Motion", &curMotion, motions, IM_ARRAYSIZE(motions)))
+    				rb->motion = static_cast<BodyMotion>(curMotion);
+
+    			const char* shapes[] = { "Box", "Sphere", "Mesh", "Capsule" };
+    			int curShape = static_cast<int>(rb->shapeType);
+    			if (ImGui::Combo("Shape", &curShape, shapes, IM_ARRAYSIZE(shapes)))
+    				rb->shapeType = static_cast<RigidBody::ShapeType>(curShape);
+
+    			if (rb->shapeType == RigidBody::Box)
+    				ImGui::DragFloat3("Half Extent", &rb->halfExtent.x, 0.01f, 0.01f, 100.0f);
+    			if (rb->shapeType == RigidBody::Sphere || rb->shapeType == RigidBody::Capsule)
+    				ImGui::DragFloat("Radius", &rb->radius, 0.01f, 0.01f, 50.0f);
+    			if (rb->shapeType == RigidBody::Capsule)
+    				ImGui::DragFloat("Half Height", &rb->capsuleHalfHeight, 0.01f, 0.01f, 50.0f);
+
+    			ImGui::DragFloat("Mass", &rb->mass, 0.1f, 0.01f, 1000.0f);
+    			ImGui::DragFloat("Friction", &rb->friction, 0.01f, 0.0f, 1.0f);
+    			ImGui::DragFloat("Restitution", &rb->restitution, 0.01f, 0.0f, 1.0f);
+
+    			if (ImGui::Button("Apply Changes")) {
+    				physics.RemoveBody(rb);
+    				physics.AddBody(obj);
+    			}
+
+    			ImGui::TreePop();
+    		}
+    	}
     }
 
     ImGui::PopID();
@@ -324,19 +399,15 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& pm)
+void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer,
+				 ParticleSystemManager& particleManager, PhysicsWorld& physics)
 {
-	pm.Reset();
+	particleManager.Reset();
 	scene = SceneLoader::Load("../assets/scenes/tunnel.scene", particleManager);
-	if (!scene) {
-		std::cerr << "Reload failed, creating empty scene" << std::endl;
-		scene = std::make_shared<Scene>();
-		return;
-	}
 	renderer.AssignDefaultShader(scene);
 	scene->Start();
 	renderer.InitShadowMaps(scene);
-	std::cout << "Scene reloaded" << std::endl;
+	physics.RegisterScene(scene);
 }
 
 void MouseCallback(GLFWwindow* window, double xpos, double ypos)

@@ -1,6 +1,6 @@
 #include "renderer.h"
 #define STB_PERLIN_IMPLEMENTATION
-#include "../dependencies/stb_perlin.h"
+#include "../../dependencies/stb_perlin.h"
 
 
 // Construction and destruction

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "config.h"
+#include "../config.h"
 #include "gbuffer.h"
 #include "quad.h"
-#include "scene.h"
+#include "../scene.h"
 #include "camera.h"
-#include "profiler.h"
+#include "../profiler.h"
 #include "shaderutils.h"
 
 // Shadow settings

@@ -97,6 +97,25 @@ json SceneLoader::SerializeGameObject(const std::shared_ptr<GameObject>& obj) {
     if (obj->particleSystem)
         j["particleSystem"] = SerializeParticleSystem(*obj->particleSystem);
 
+    if (obj->rigidBody)
+        j["rigidBody"] = SerializeRigidBody(*obj->rigidBody);
+
+    return j;
+}
+
+json SceneLoader::SerializeRigidBody(const RigidBody& rb) {
+    json j;
+    const char* motionNames[] = { "Static", "Dynamic", "Kinematic" };
+    const char* shapeNames[]  = { "Box", "Sphere", "Mesh", "Capsule" };
+
+    j["motion"]    = motionNames[static_cast<int>(rb.motion)];
+    j["shape"]     = shapeNames[static_cast<int>(rb.shapeType)];
+    j["halfExtent"] = SerializeVec3(rb.halfExtent);
+    j["radius"]    = rb.radius;
+    j["capsuleHalfHeight"] = rb.capsuleHalfHeight;
+    j["mass"]      = rb.mass;
+    j["friction"]  = rb.friction;
+    j["restitution"] = rb.restitution;
     return j;
 }
 
@@ -234,7 +253,33 @@ std::shared_ptr<GameObject> SceneLoader::DeserializeGameObject(
         obj->particleSystem = DeserializeParticleSystem(
             j["particleSystem"], obj->transform.position, particleManager);
 
+    if (j.contains("rigidBody"))
+        obj->rigidBody = DeserializeRigidBody(j["rigidBody"]);
+
     return obj;
+}
+
+std::shared_ptr<RigidBody> SceneLoader::DeserializeRigidBody(const json& j) {
+    auto rb = std::make_shared<RigidBody>();
+
+    std::string motionStr = j.value("motion", "Static");
+    if (motionStr == "Dynamic")       rb->motion = BodyMotion::Dynamic;
+    else if (motionStr == "Kinematic") rb->motion = BodyMotion::Kinematic;
+    else                               rb->motion = BodyMotion::Static;
+
+    std::string shapeStr = j.value("shape", "Box");
+    if (shapeStr == "Sphere")       rb->shapeType = RigidBody::Sphere;
+    else if (shapeStr == "Capsule") rb->shapeType = RigidBody::Capsule;
+    else if (shapeStr == "Mesh")    rb->shapeType = RigidBody::Mesh;
+    else                            rb->shapeType = RigidBody::Box;
+
+    if (j.contains("halfExtent")) rb->halfExtent = DeserializeVec3(j["halfExtent"]);
+    rb->radius            = j.value("radius", 0.5f);
+    rb->capsuleHalfHeight = j.value("capsuleHalfHeight", 0.5f);
+    rb->mass              = j.value("mass", 1.0f);
+    rb->friction          = j.value("friction", 0.5f);
+    rb->restitution       = j.value("restitution", 0.3f);
+    return rb;
 }
 
 std::shared_ptr<Scene> SceneLoader::Load(const std::string& filepath, ParticleSystemManager& particleManager) {

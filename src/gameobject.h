@@ -1,9 +1,10 @@
 #pragma once
 #include "config.h"
-#include "mesh.h"
+#include "rendering/mesh.h"
 #include "transform.h"
-#include "light.h"
+#include "rendering/light.h"
 #include "particles/particleSystem.h"
+#include "physics/rigidbody.h"
 
 class GameObject
 {
@@ -12,6 +13,7 @@ public:
     std::shared_ptr<Mesh> mesh = nullptr;
     std::shared_ptr<Light> light   = nullptr;
     std::shared_ptr<ParticleSystem> particleSystem = nullptr;
+    std::shared_ptr<RigidBody> rigidBody = nullptr;
     bool enabled = true;
 
     std::string name = "GameObject";

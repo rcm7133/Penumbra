@@ -10,9 +10,10 @@ struct RigidBody {
     JPH::BodyID bodyID;
     BodyMotion motion = BodyMotion::Static;
 
-    enum ShapeType { Box, Sphere, Mesh } shapeType = Box;
+    enum ShapeType { Box, Sphere, Mesh, Capsule } shapeType = Box;
     glm::vec3 halfExtent = glm::vec3(0.5f);  // for box
-    float radius = 0.5f;                      // for sphere
+    float radius = 0.5f;                           // for sphere
+    float capsuleHalfHeight = 0.5f;
     float mass = 1.0f;
     float friction = 0.5f;
     float restitution = 0.3f;

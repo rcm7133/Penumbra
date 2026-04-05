@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "../config.h"
 
 extern float CAMERA_SPEED;
 
