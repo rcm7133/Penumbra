@@ -12,6 +12,10 @@ public:
     static std::shared_ptr<Scene> Load(const std::string& filePath, ParticleSystemManager& particleManager);
     static void Save(const std::shared_ptr<Scene>& scene, const std::string& filePath);
 
+    static void SavePrefab(const std::shared_ptr<GameObject>& obj, const std::string& directory = "../assets/prefabs/");
+    static std::shared_ptr<GameObject> LoadPrefab(const std::string& filepath, ParticleSystemManager& particleManager);
+    static std::vector<std::string> ListPrefabs(const std::string& directory = "../assets/prefabs/");
+
 private:
     using json = nlohmann::json;
 

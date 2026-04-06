@@ -28,7 +28,7 @@ add_executable(Penumbra
         dependencies/imgui/imgui_widgets.cpp
         dependencies/imgui/imgui_impl_glfw.cpp
         dependencies/imgui/imgui_impl_opengl3.cpp
-        src/profiler.h
+        src/utils/profiler.h
 )
 
 target_include_directories(Penumbra PRIVATE

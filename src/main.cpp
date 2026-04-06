@@ -3,7 +3,7 @@
 #include "scene.h"
 #include "rendering/camera.h"
 #include "rendering/renderer.h"
-#include "profiler.h"
+#include "../utils/profiler.h"
 #include "particles/particleSystem.h"
 #include "particles/particleSystemManager.h"
 #include "utils/sceneLoader.h"
@@ -211,6 +211,8 @@ int main()
 
 void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics)
 {
+	static std::vector<std::shared_ptr<GameObject>> deleteQueue;
+
     // Start ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -270,7 +272,6 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			float previewWidth = ImGui::GetContentRegionAvail().x;
     			float aspect = 9.0f / 16.0f;
     			ImVec2 size(previewWidth, previewWidth * aspect);
-    			// Flip Y since OpenGL textures are bottom-up
     			ImVec2 pos = ImGui::GetCursorScreenPos();
     			ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(0, 0, 0, 255));
     			ImGui::Image((ImTextureID)(intptr_t)tex, size, ImVec2(0, 1), ImVec2(1, 0));
@@ -291,12 +292,76 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	if (ImGui::Button("Reload Scene"))
 		ReloadScene(scene, renderer, particleManager, physics);
 	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
-    ImGuiIO& io = ImGui::GetIO();
-    for (std::shared_ptr<GameObject> obj : scene->objects) {
-    ImGui::PushID(obj->name.c_str());
+
+	// Prefab spawner
+	ImGui::Separator();
+	static std::vector<std::string> prefabList = SceneLoader::ListPrefabs();
+	if (ImGui::Button("Refresh"))
+		prefabList = SceneLoader::ListPrefabs();
+	ImGui::SameLine();
+	static int selectedPrefab = -1;
+	std::vector<std::string> prefabNames;
+	for (const auto& p : prefabList)
+		prefabNames.push_back(std::filesystem::path(p).stem().string());
+
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
+	if (ImGui::BeginCombo("##Prefabs", selectedPrefab >= 0 ? prefabNames[selectedPrefab].c_str() : "Add Prefab...")) {
+		for (int i = 0; i < (int)prefabNames.size(); i++) {
+			if (ImGui::Selectable(prefabNames[i].c_str(), selectedPrefab == i))
+				selectedPrefab = i;
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Add") && selectedPrefab >= 0 && selectedPrefab < (int)prefabList.size()) {
+		auto obj = SceneLoader::LoadPrefab(prefabList[selectedPrefab], particleManager);
+		if (obj) {
+			scene->Add(obj);
+			renderer.AssignDefaultShader(scene);
+			renderer.InitShadowMaps(scene);
+		}
+	}
+	ImGui::Separator();
+
+    for (int i = 0; i < (int)scene->objects.size(); i++) {
+        auto& obj = scene->objects[i];
+        ImGui::PushID(i);
 
     if (ImGui::CollapsingHeader(obj->name.c_str())) {
         ImGui::Checkbox("Enabled", &obj->enabled);
+
+    	static int editingIndex = -1;
+    	static char renameBuffer[128];
+    	if (editingIndex != i) {
+    		ImGui::Text("Name: %s", obj->name.c_str());
+    		ImGui::SameLine();
+    		if (ImGui::Button("Rename")) {
+    			editingIndex = i;
+    			strncpy(renameBuffer, obj->name.c_str(), sizeof(renameBuffer) - 1);
+    			renameBuffer[sizeof(renameBuffer) - 1] = '\0';
+    		}
+    	} else {
+    		ImGui::SetNextItemWidth(200);
+    		ImGui::InputText("Name", renameBuffer, sizeof(renameBuffer));
+    		ImGui::SameLine();
+    		if (ImGui::Button("Apply")) {
+    			obj->name = renameBuffer;
+    			editingIndex = -1;
+    		}
+    		ImGui::SameLine();
+    		if (ImGui::Button("Cancel"))
+    			editingIndex = -1;
+    	}
+
+    	// Save as prefab
+    	if (ImGui::Button("Save as Prefab")) {
+    		SceneLoader::SavePrefab(obj);
+    		prefabList = SceneLoader::ListPrefabs();
+    	}
+
+    	ImGui::SameLine();
+    	if (ImGui::Button("Delete"))
+    		deleteQueue.push_back(obj);
 
         // Transform (always present)
     	if (ImGui::TreeNode("Transform")) {
@@ -356,14 +421,6 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
                 ImGui::TreePop();
             }
         }
-		/*
-        // Mesh
-        if (obj->mesh) {
-            if (ImGui::TreeNode("Mesh")) {
-				obj->mesh->
-            }
-        }
-        */
 
     	if (obj->fogVolume) {
     		if (ImGui::TreeNode("Fog Volume##component")) {
@@ -416,6 +473,14 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 }
     ImGui::Separator();
     ImGui::End();
+
+	// Process deletions
+	for (auto& obj : deleteQueue) {
+		scene->objects.erase(
+			std::remove(scene->objects.begin(), scene->objects.end(), obj),
+			scene->objects.end());
+	}
+	deleteQueue.clear();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

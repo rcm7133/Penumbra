@@ -257,9 +257,8 @@ void Renderer::LoadShaders()
     particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
     pointShadowShader = ShaderUtils::MakeShaderProgram(
     "../shaders/shadows/pointShadowVert.glsl",
-    "../shaders/shadows/pointShadowGeom.glsl",
     "../shaders/shadows/pointShadowFrag.glsl"
-    );
+);
 }
 
 void Renderer::CacheUniforms()
@@ -367,13 +366,13 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
         if (light->type == LightType::Point)
         {
             glUseProgram(pointShadowShader);
+            glEnable(GL_DEPTH_TEST);
 
-            float aspect = 1.0f;
             float near = 0.1f;
             float far = light->radius;
-            glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
-
+            glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), 1.0f, near, far);
             glm::vec3 pos = obj->transform.position;
+
             glm::mat4 shadowTransforms[6] = {
                 shadowProj * glm::lookAt(pos, pos + glm::vec3( 1, 0, 0), glm::vec3(0,-1, 0)),
                 shadowProj * glm::lookAt(pos, pos + glm::vec3(-1, 0, 0), glm::vec3(0,-1, 0)),
@@ -383,37 +382,42 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
                 shadowProj * glm::lookAt(pos, pos + glm::vec3( 0, 0,-1), glm::vec3(0,-1, 0)),
             };
 
-            for (int i = 0; i < 6; i++)
-            {
-                std::string name = "shadowMatrices[" + std::to_string(i) + "]";
-                glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, name.c_str()),
-                                   1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
-            }
-
             glUniform3fv(glGetUniformLocation(pointShadowShader, "lightPos"), 1, glm::value_ptr(pos));
             glUniform1f(glGetUniformLocation(pointShadowShader, "farPlane"), far);
 
             glViewport(0, 0, POINT_SHADOW_RESOLUTION, POINT_SHADOW_RESOLUTION);
-            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowCubeFBO);
-            glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-            glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-            for (auto& renderObj : scene->objects)
+            for (int face = 0; face < 6; face++)
             {
-                if (!renderObj->mesh || !renderObj->enabled) continue;
-                glm::mat4 model = renderObj->transform.GetMatrix();
-                glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
-                                   1, GL_FALSE, glm::value_ptr(model));
-                renderObj->mesh->Draw();
+                glBindFramebuffer(GL_FRAMEBUFFER, light->shadowCubeFBO);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                       GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                                       light->shadowCubemap, 0);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                       GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                                       light->shadowCubeDepthRBO, 0);
+
+                glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+                glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+                glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "lightSpaceMatrix"),
+                                   1, GL_FALSE, glm::value_ptr(shadowTransforms[face]));
+
+                for (auto& renderObj : scene->objects)
+                {
+                    if (!renderObj->mesh || !renderObj->enabled) continue;
+                    glm::mat4 model = renderObj->transform.GetMatrix();
+                    glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
+                                       1, GL_FALSE, glm::value_ptr(model));
+                    renderObj->mesh->Draw();
+                }
             }
 
-            float pixel;
-            glReadPixels(POINT_SHADOW_RESOLUTION/2, POINT_SHADOW_RESOLUTION/2, 1, 1, GL_RED, GL_FLOAT, &pixel);
-            std::cerr << "Cubemap center: " << pixel << std::endl;
-
+            // Restore layered attachment for cubemap sampling
+            glBindFramebuffer(GL_FRAMEBUFFER, light->shadowCubeFBO);
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, light->shadowCubemap, 0);
+            glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, light->shadowCubeDepthRBO, 0);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
         else

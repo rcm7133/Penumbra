@@ -2,6 +2,59 @@
 
 using json = nlohmann::json;
 
+void SceneLoader::SavePrefab(const std::shared_ptr<GameObject>& obj, const std::string& directory) {
+    json root = SerializeGameObject(obj);
+
+    // Use the object's name as the filename, replacing spaces with underscores
+    std::string filename = obj->name;
+    std::replace(filename.begin(), filename.end(), ' ', '_');
+    std::string filepath = directory + filename + ".prefab";
+
+    std::ofstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "SceneLoader::SavePrefab - Failed to open: " << filepath << std::endl;
+        return;
+    }
+
+    file << root.dump(4);
+    file.close();
+    std::cout << "Prefab saved to " << filepath << std::endl;
+}
+
+std::shared_ptr<GameObject> SceneLoader::LoadPrefab(const std::string& filepath, ParticleSystemManager& particleManager) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "SceneLoader::LoadPrefab - Failed to open: " << filepath << std::endl;
+        return nullptr;
+    }
+
+    json root;
+    try {
+        file >> root;
+    } catch (const json::parse_error& e) {
+        std::cerr << "SceneLoader::LoadPrefab - Parse error: " << e.what() << std::endl;
+        return nullptr;
+    }
+
+    auto obj = DeserializeGameObject(root, particleManager);
+    if (obj)
+        std::cout << "Prefab loaded from " << filepath << std::endl;
+
+    return obj;
+}
+
+std::vector<std::string> SceneLoader::ListPrefabs(const std::string& directory) {
+    std::vector<std::string> prefabs;
+    if (!std::filesystem::exists(directory)) return prefabs;
+
+    for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+        if (entry.path().extension() == ".prefab")
+            prefabs.push_back(entry.path().string());
+    }
+    std::sort(prefabs.begin(), prefabs.end());
+    return prefabs;
+}
+
 json SceneLoader::SerializeVec3(const glm::vec3 &v) { return {v.x, v.y, v.z}; }
 
 json SceneLoader::SerializeVec4(const glm::vec4 &v) { return {v.x, v.y, v.z, v.w}; }

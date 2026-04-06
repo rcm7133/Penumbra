@@ -141,7 +141,7 @@
             }
         },
         {
-            "class": "RotatingLight",
+            "class": "GameObject",
             "enabled": true,
             "light": {
                 "castsShadow": true,
@@ -162,8 +162,6 @@
                 "type": "Spot"
             },
             "name": "Light",
-            "rotationAngle": 13.77032470703125,
-            "rotationSpeed": 90.0,
             "transform": {
                 "position": [
                     -6.0,
@@ -210,11 +208,6 @@
                 "maxSize": 0.10000000149011612,
                 "minLifetime": 10.0,
                 "minSize": 0.05000000074505806,
-                "position": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
                 "speed": 0.10000000149011612,
                 "startColor": [
                     0.800000011920929,
@@ -267,14 +260,14 @@
             },
             "transform": {
                 "position": [
-                    -2.2375333309173584,
-                    0.22999997437000275,
-                    0.18672685325145721
+                    -2.4543685913085938,
+                    0.2900002896785736,
+                    0.29027244448661804
                 ],
                 "rotation": [
-                    16.873409271240234,
-                    -9.11246109008789,
-                    42.1544075012207
+                    17.05393409729004,
+                    -9.27515697479248,
+                    42.63070297241211
                 ],
                 "scale": [
                     0.27000001072883606,
@@ -310,12 +303,12 @@
             "transform": {
                 "position": [
                     -45.53289031982422,
-                    -35640.19140625,
+                    -60519.76953125,
                     0.00012272033200133592
                 ],
                 "rotation": [
                     0.0001991247700061649,
-                    -0.00029067337163724005,
+                    -0.0002906734007410705,
                     179.27854919433594
                 ],
                 "scale": [
@@ -365,14 +358,14 @@
         {
             "class": "GameObject",
             "enabled": true,
-            "name": "Floor Collider",
+            "name": "Left Wall Collider",
             "rigidBody": {
                 "capsuleHalfHeight": 0.5,
                 "friction": 0.5,
                 "halfExtent": [
-                    10.0,
-                    0.5,
-                    5.0
+                    9.609999656677246,
+                    0.30000001192092896,
+                    1.090000033378601
                 ],
                 "mass": 1.0,
                 "motion": "Static",
@@ -382,8 +375,80 @@
             },
             "transform": {
                 "position": [
-                    -11.0,
-                    -0.5,
+                    -8.989999771118164,
+                    1.1299999952316284,
+                    1.350000023841858
+                ],
+                "rotation": [
+                    90.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "name": "Right Wall Collider",
+            "rigidBody": {
+                "capsuleHalfHeight": 0.5,
+                "friction": 0.5,
+                "halfExtent": [
+                    9.609999656677246,
+                    0.30000001192092896,
+                    1.090000033378601
+                ],
+                "mass": 1.0,
+                "motion": "Static",
+                "radius": 0.5,
+                "restitution": 0.30000001192092896,
+                "shape": "Box"
+            },
+            "transform": {
+                "position": [
+                    -8.989999771118164,
+                    1.1299999952316284,
+                    -1.350000023841858
+                ],
+                "rotation": [
+                    90.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "name": "Floor Collider",
+            "rigidBody": {
+                "capsuleHalfHeight": 0.5,
+                "friction": 0.5,
+                "halfExtent": [
+                    9.609999656677246,
+                    0.30000001192092896,
+                    1.090000033378601
+                ],
+                "mass": 1.0,
+                "motion": "Static",
+                "radius": 0.5,
+                "restitution": 0.30000001192092896,
+                "shape": "Box"
+            },
+            "transform": {
+                "position": [
+                    -8.989999771118164,
+                    -0.23999999463558197,
                     0.0
                 ],
                 "rotation": [

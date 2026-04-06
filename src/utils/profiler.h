@@ -1,9 +1,9 @@
 #pragma once
-#include "config.h"
+#include "../config.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include "../dependencies/imgui/imgui.h"
+#include "../../dependencies/imgui/imgui.h"
 
 struct ProfilerEntry
 {

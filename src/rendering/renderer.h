@@ -5,7 +5,7 @@
 #include "quad.h"
 #include "../scene.h"
 #include "camera.h"
-#include "../profiler.h"
+#include "../utils/profiler.h"
 #include "shaderutils.h"
 
 // Shadow settings

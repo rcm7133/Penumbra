@@ -28,19 +28,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/shaders/common/fog.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/fogVolume.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/utils/GUI/gui.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/scenes/tunnel.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/tunnel.scene" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/compute/particles/particleCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/particles/particleCompute.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gameobject.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/gameobject.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/shadows/pointShadowGeom.glsl" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/particles/particleSystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/particles/particleSystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/particles/particleSystemManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/particles/particleSystemManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/profiler.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/profiler.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/GUI/gui.h" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
     </list>
@@ -137,15 +133,15 @@
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
+    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="SSAOProject" type="CMakeListConfigurationType" factoryName="CMakeListConfigurationFactory" temporary="true">
       <method v="2" />
     </configuration>
     <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -184,6 +180,7 @@
       <workItem from="1775275148169" duration="662000" />
       <workItem from="1775349901004" duration="10337000" />
       <workItem from="1775425716067" duration="7036000" />
+      <workItem from="1775487327437" duration="1944000" />
     </task>
     <servers />
   </component>
