@@ -152,29 +152,45 @@ int main()
         scene->Update(deltaTime);
     	physics.Update(deltaTime);
     	physics.SyncTransforms(scene);
-    	particleManager.Update(deltaTime);
 		// Render
         renderer.RenderFrame(camera, scene, profiler);
     	if (DEBUG_COLLIDERS)
     	{
     		glm::vec3 green(0, 1, 0);
+    		glm::vec3 blue(0, 0.5, 1);
     		for (const auto& obj : scene->objects)
     		{
-    			if (!obj->rigidBody) continue;
-    			auto& rb = obj->rigidBody;
-    			auto& t = obj->transform;
+    			if (obj->rigidBody) {
+    				auto& rb = obj->rigidBody;
+    				auto& t = obj->transform;
+    				switch (rb->shapeType)
+    				{
+    					case RigidBody::Box:
+    						debugRenderer.AddBox(t.position, t.rotation, rb->halfExtent, green);
+    						break;
+    					case RigidBody::Sphere:
+    						debugRenderer.AddSphere(t.position, rb->radius, green);
+    						break;
+    					case RigidBody::Capsule:
+    						debugRenderer.AddCapsule(t.position, t.rotation, rb->capsuleHalfHeight, rb->radius, green);
+    						break;
+    				}
+    			}
 
-    			switch (rb->shapeType)
-    			{
-    				case RigidBody::Box:
-    					debugRenderer.AddBox(t.position, t.rotation, rb->halfExtent, green);
-    					break;
-    				case RigidBody::Sphere:
-    					debugRenderer.AddSphere(t.position, rb->radius, green);
-    					break;
-    				case RigidBody::Capsule:
-    					debugRenderer.AddCapsule(t.position, t.rotation, rb->capsuleHalfHeight, rb->radius, green);
-    					break;
+    			if (obj->fogVolume) {
+    				auto& fv = obj->fogVolume;
+    				glm::vec3 offset = obj->transform.position;
+    				glm::vec3 center = (fv->boundsMin + fv->boundsMax) * 0.5f + offset;
+    				glm::vec3 half   = (fv->boundsMax - fv->boundsMin) * 0.5f;
+    				debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, blue);
+    			}
+
+    			if (obj->particleSystem) {
+    				auto& ps = obj->particleSystem;
+    				glm::vec3 offset = obj->transform.position;
+    				glm::vec3 center = (ps->boundsMin + ps->boundsMax) * 0.5f + offset;
+    				glm::vec3 half   = (ps->boundsMax - ps->boundsMin) * 0.5f;
+    				debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1.0f, 0.5f, 0.0f));
     			}
     		}
     		debugRenderer.Render(camera.GetViewMatrix(), projection);
@@ -210,15 +226,12 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     // Graphics Settings
     ImGui::Begin("Graphics Settings");
-    ImGui::Checkbox("Volumetric Fog", &FOG_ENABLED);
-    if (FOG_ENABLED) {
-	ImGui::SliderFloat("Density", &FOG_DENSITY, 0.0f, 2.0f);
-	ImGui::SliderInt("Steps", &FOG_STEPS, 4, 64);
-	ImGui::SliderFloat("Scale", &FOG_SCALE, 0.01f, 2.0f);
-	ImGui::SliderFloat("Scroll Speed", &FOG_SCROLL_SPEED, 0.01f, 2.0f);
-	ImGui::SliderInt("Fog Blur", &FOG_BLUR_KERNEL_SIZE, 1, 9);
-	if (FOG_BLUR_KERNEL_SIZE % 2 == 0) FOG_BLUR_KERNEL_SIZE++;
-    }
+	ImGui::Checkbox("Volumetric Fog", &FOG_ENABLED);
+	if (FOG_ENABLED) {
+		ImGui::SliderInt("Steps", &FOG_STEPS, 4, 64);
+		ImGui::SliderInt("Fog Blur", &FOG_BLUR_KERNEL_SIZE, 1, 9);
+		if (FOG_BLUR_KERNEL_SIZE % 2 == 0) FOG_BLUR_KERNEL_SIZE++;
+	}
 
 	ImGui::Checkbox("SSAO", &SSAO_ENABLED);
 	if (SSAO_ENABLED) {
@@ -236,8 +249,6 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	ImGui::SliderFloat("Point Shadow Far Plane", &POINT_SHADOW_FAR_PLANE, 1.0f, 3000.0f);
 
     ImGui::End();
-
-
 
 	ImGui::Begin("Buffer Preview");
 	{
@@ -331,7 +342,6 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
         if (obj->particleSystem) {
             if (ImGui::TreeNode("Particle System")) {
                 auto& ps = obj->particleSystem;
-                ImGui::DragFloat3("Position", &ps->position.x, 0.01f);
                 ImGui::DragFloat3("Bounds Min", &ps->boundsMin.x, 0.1f);
                 ImGui::DragFloat3("Bounds Max", &ps->boundsMax.x, 0.1f);
                 ImGui::ColorEdit4("Start Color", &ps->startColor.x);
@@ -354,6 +364,18 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
             }
         }
         */
+
+    	if (obj->fogVolume) {
+    		if (ImGui::TreeNode("Fog Volume##component")) {
+    			auto& fv = obj->fogVolume;
+    			ImGui::DragFloat3("Bounds Min", &fv->boundsMin.x, 0.1f);
+    			ImGui::DragFloat3("Bounds Max", &fv->boundsMax.x, 0.1f);
+    			ImGui::DragFloat("Density", &fv->density, 0.01f, 0.0f, 2.0f);
+    			ImGui::DragFloat("Scale", &fv->scale, 0.01f, 0.01f, 2.0f);
+    			ImGui::DragFloat("Scroll Speed", &fv->scrollSpeed, 0.01f, 0.0f, 2.0f);
+    			ImGui::TreePop();
+    		}
+    	}
 
     	if (obj->rigidBody) {
     		if (ImGui::TreeNode("Rigid Body")) {

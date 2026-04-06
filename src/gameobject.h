@@ -5,6 +5,7 @@
 #include "rendering/light.h"
 #include "particles/particleSystem.h"
 #include "physics/rigidbody.h"
+#include "rendering/fogVolume.h"
 
 class GameObject
 {
@@ -14,6 +15,7 @@ public:
     std::shared_ptr<Light> light   = nullptr;
     std::shared_ptr<ParticleSystem> particleSystem = nullptr;
     std::shared_ptr<RigidBody> rigidBody = nullptr;
+    std::shared_ptr<FogVolume> fogVolume = nullptr;
     bool enabled = true;
 
     std::string name = "GameObject";

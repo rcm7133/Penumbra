@@ -10,12 +10,6 @@ public:
         systems.push_back(system);
     }
 
-    void Update(float deltaTime) {
-        for (auto& system : systems) {
-            system->Update(deltaTime);
-        }
-    }
-
     void Reset() {
         systems.clear();
     }

@@ -151,9 +151,9 @@
                     0.0
                 ],
                 "direction": [
-                    0.9987587928771973,
+                    -0.23803044855594635,
                     0.0,
-                    -0.04980790615081787
+                    -0.9712576866149902
                 ],
                 "innerCutoffDeg": 12.5,
                 "intensity": 1.0,
@@ -162,7 +162,7 @@
                 "type": "Spot"
             },
             "name": "Light",
-            "rotationAngle": 272.85498046875,
+            "rotationAngle": 13.77032470703125,
             "rotationSpeed": 90.0,
             "transform": {
                 "position": [
@@ -172,7 +172,7 @@
                 ],
                 "rotation": [
                     0.0,
-                    -87.14501190185547,
+                    13.77032470703125,
                     0.0
                 ],
                 "scale": [
@@ -188,12 +188,12 @@
             "name": "Particles",
             "particleSystem": {
                 "boundsMax": [
-                    15.0,
+                    5.0,
                     2.5,
                     2.0
                 ],
                 "boundsMin": [
-                    -2.0,
+                    -15.0,
                     0.0,
                     -2.0
                 ],
@@ -211,9 +211,9 @@
                 "minLifetime": 10.0,
                 "minSize": 0.05000000074505806,
                 "position": [
-                    -15.0,
                     0.0,
-                    -0.014999999664723873
+                    0.0,
+                    0.0
                 ],
                 "speed": 0.10000000149011612,
                 "startColor": [
@@ -267,8 +267,87 @@
             },
             "transform": {
                 "position": [
-                    -11.319999694824219,
+                    -2.2375333309173584,
+                    0.22999997437000275,
+                    0.18672685325145721
+                ],
+                "rotation": [
+                    16.873409271240234,
+                    -9.11246109008789,
+                    42.1544075012207
+                ],
+                "scale": [
+                    0.27000001072883606,
                     0.25,
+                    0.25
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "mesh": {
+                "model": "../assets/models/sphere.obj",
+                "normalMap": "../assets/textures/normals/metalSphereNormal.jpg",
+                "shininess": 32.0,
+                "texture": "../assets/textures/metalSphere.jpg"
+            },
+            "name": "Sphere 2",
+            "rigidBody": {
+                "capsuleHalfHeight": 0.6000000238418579,
+                "friction": 0.5,
+                "halfExtent": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "mass": 10.0,
+                "motion": "Dynamic",
+                "radius": 0.25,
+                "restitution": 0.30000001192092896,
+                "shape": "Sphere"
+            },
+            "transform": {
+                "position": [
+                    -45.53289031982422,
+                    -35640.19140625,
+                    0.00012272033200133592
+                ],
+                "rotation": [
+                    0.0001991247700061649,
+                    -0.00029067337163724005,
+                    179.27854919433594
+                ],
+                "scale": [
+                    0.27000001072883606,
+                    0.25,
+                    0.25
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "enabled": true,
+            "fogVolume": {
+                "boundsMax": [
+                    5.0,
+                    2.5,
+                    2.0
+                ],
+                "boundsMin": [
+                    -15.0,
+                    0.0,
+                    -2.0
+                ],
+                "density": 0.5,
+                "scale": 0.5,
+                "scrollSpeed": 0.10000000149011612
+            },
+            "name": "Fog Volume",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
                     3.2365994329097703e-09
                 ],
                 "rotation": [
@@ -283,48 +362,6 @@
                 ]
             }
         },
-        {
-                    "class": "GameObject",
-                    "enabled": true,
-                    "mesh": {
-                        "model": "../assets/models/sphere.obj",
-                        "normalMap": "../assets/textures/normals/metalSphereNormal.jpg",
-                        "shininess": 32.0,
-                        "texture": "../assets/textures/metalSphere.jpg"
-                    },
-                    "name": "Sphere 2",
-                    "rigidBody": {
-                        "capsuleHalfHeight": 0.6000000238418579,
-                        "friction": 0.5,
-                        "halfExtent": [
-                            0.5,
-                            0.5,
-                            0.5
-                        ],
-                        "mass": 10.0,
-                        "motion": "Dynamic",
-                        "radius": 0.25,
-                        "restitution": 0.30000001192092896,
-                        "shape": "Sphere"
-                    },
-                    "transform": {
-                        "position": [
-                            -11.5,
-                            2.25,
-                            3.2365994329097703e-09
-                        ],
-                        "rotation": [
-                            0.0,
-                            -0.0,
-                            0.0
-                        ],
-                        "scale": [
-                            0.27000001072883606,
-                            0.25,
-                            0.25
-                        ]
-                    }
-                },
         {
             "class": "GameObject",
             "enabled": true,

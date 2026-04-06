@@ -605,6 +605,8 @@ void Renderer::FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowC
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(fogShader);
 
+    scene->UploadFogVolumes(fogShader);
+
     glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, litTexture);
     glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
     glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_3D, fogNoiseTexture);

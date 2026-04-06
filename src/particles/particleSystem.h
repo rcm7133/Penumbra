@@ -8,7 +8,6 @@ class ParticleSystem
 {
 public:
     bool lit = true;
-    glm::vec3 position = glm::vec3(0, 0, 0);
     int maxParticles;
     glm::vec3 boundsMin = glm::vec3(-2.0f, 0.0f, -2.0f);
     glm::vec3 boundsMax = glm::vec3(2.0f, 4.0f,  2.0f);
@@ -21,7 +20,7 @@ public:
     float fadeInTime = 1.0f;
     float speed = 1.0f;
 
-    ParticleSystem(glm::vec3 pos, int maxParticles, bool lit = true) : position(pos), maxParticles(maxParticles), lit(lit)
+    ParticleSystem(int maxParticles, bool lit = true) : maxParticles(maxParticles), lit(lit)
     {
         glGenVertexArrays(1, &dummyVAO);
         glGenBuffers(1, &particleSSBO);
@@ -30,14 +29,16 @@ public:
         computeShader = ShaderUtils::LoadComputeShader("../shaders/compute/particles/particleCompute.glsl");
     }
 
-    void Update(const float& deltaTime)
+    void Update(const float& deltaTime, const glm::vec3& transformPos)
     {
+        glm::vec3 worldBoundsMin = boundsMin + transformPos;
+        glm::vec3 worldBoundsMax = boundsMax + transformPos;
+
         glUseProgram(computeShader);
         glUniform1f(glGetUniformLocation(computeShader, "deltaTime"), deltaTime);
         glUniform1f(glGetUniformLocation(computeShader, "time"), (float)glfwGetTime());
-        glUniform3fv(glGetUniformLocation(computeShader, "emitterPos"), 1, glm::value_ptr(position));
-        glUniform3fv(glGetUniformLocation(computeShader, "boundsMin"),  1, glm::value_ptr(boundsMin));
-        glUniform3fv(glGetUniformLocation(computeShader, "boundsMax"),  1, glm::value_ptr(boundsMax));
+        glUniform3fv(glGetUniformLocation(computeShader, "boundsMin"), 1, glm::value_ptr(worldBoundsMin));
+        glUniform3fv(glGetUniformLocation(computeShader, "boundsMax"), 1, glm::value_ptr(worldBoundsMax));
 
         glUniform4fv(glGetUniformLocation(computeShader, "startColor"), 1, glm::value_ptr(startColor));
         glUniform4fv(glGetUniformLocation(computeShader, "endColor"),   1, glm::value_ptr(endColor));

@@ -44,7 +44,6 @@ json SceneLoader::SerializeLight(const Light &l) {
 
 json SceneLoader::SerializeParticleSystem(const ParticleSystem& ps) {
     json j;
-    j["position"]    = SerializeVec3(ps.position);
     j["maxParticles"] = ps.maxParticles;
     j["lit"]         = ps.IsLit();
     j["boundsMin"]   = SerializeVec3(ps.boundsMin);
@@ -100,6 +99,9 @@ json SceneLoader::SerializeGameObject(const std::shared_ptr<GameObject>& obj) {
     if (obj->rigidBody)
         j["rigidBody"] = SerializeRigidBody(*obj->rigidBody);
 
+    if (obj->fogVolume)
+        j["fogVolume"] = SerializeFogVolume(*obj->fogVolume);
+
     return j;
 }
 
@@ -116,6 +118,16 @@ json SceneLoader::SerializeRigidBody(const RigidBody& rb) {
     j["mass"]      = rb.mass;
     j["friction"]  = rb.friction;
     j["restitution"] = rb.restitution;
+    return j;
+}
+
+json SceneLoader::SerializeFogVolume(const FogVolume& fv) {
+    json j;
+    j["boundsMin"]   = SerializeVec3(fv.boundsMin);
+    j["boundsMax"]   = SerializeVec3(fv.boundsMax);
+    j["density"]     = fv.density;
+    j["scale"]       = fv.scale;
+    j["scrollSpeed"] = fv.scrollSpeed;
     return j;
 }
 
@@ -194,9 +206,8 @@ std::shared_ptr<ParticleSystem> SceneLoader::DeserializeParticleSystem(
     int maxParticles = j.value("maxParticles", 10000);
     bool lit = j.value("lit", true);
 
-    auto ps = std::make_shared<ParticleSystem>(ownerPos, maxParticles, lit);
+    auto ps = std::make_shared<ParticleSystem>(maxParticles, lit);
 
-    ps->position = DeserializeVec3(j["position"]);
     ps->boundsMin = DeserializeVec3(j["boundsMin"]);
     ps->boundsMax = DeserializeVec3(j["boundsMax"]);
     ps->startColor = DeserializeVec4(j["startColor"]);
@@ -256,6 +267,9 @@ std::shared_ptr<GameObject> SceneLoader::DeserializeGameObject(
     if (j.contains("rigidBody"))
         obj->rigidBody = DeserializeRigidBody(j["rigidBody"]);
 
+    if (j.contains("fogVolume"))
+        obj->fogVolume = DeserializeFogVolume(j["fogVolume"]);
+
     return obj;
 }
 
@@ -280,6 +294,16 @@ std::shared_ptr<RigidBody> SceneLoader::DeserializeRigidBody(const json& j) {
     rb->friction          = j.value("friction", 0.5f);
     rb->restitution       = j.value("restitution", 0.3f);
     return rb;
+}
+
+std::shared_ptr<FogVolume> SceneLoader::DeserializeFogVolume(const json& j) {
+    auto fv = std::make_shared<FogVolume>();
+    fv->boundsMin   = DeserializeVec3(j["boundsMin"]);
+    fv->boundsMax   = DeserializeVec3(j["boundsMax"]);
+    fv->density     = j.value("density", 0.5f);
+    fv->scale       = j.value("scale", 0.5f);
+    fv->scrollSpeed = j.value("scrollSpeed", 0.1f);
+    return fv;
 }
 
 std::shared_ptr<Scene> SceneLoader::Load(const std::string& filepath, ParticleSystemManager& particleManager) {

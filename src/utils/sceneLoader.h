@@ -5,6 +5,7 @@
 #include "../physics/rigidbody.h"
 #include "../particles/particleSystemManager.h"
 #include "../../dependencies/nlohmann/json.hpp"
+#include "../rendering/fogVolume.h"
 
 class SceneLoader {
 public:
@@ -23,6 +24,7 @@ private:
     static json SerializeParticleSystem(const ParticleSystem& ps);
     static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
     static json SerializeRigidBody(const RigidBody& rb);
+    static json SerializeFogVolume(const FogVolume& fv);
 
     static glm::vec3 DeserializeVec3(const json& j);
     static glm::vec4 DeserializeVec4(const json& j);
@@ -32,4 +34,5 @@ private:
     static std::shared_ptr<ParticleSystem> DeserializeParticleSystem(const json& j, const glm::vec3& ownerPos, ParticleSystemManager& particleManager);
     static std::shared_ptr<GameObject> DeserializeGameObject(const json& j, ParticleSystemManager& particleManager);
     static std::shared_ptr<RigidBody> DeserializeRigidBody(const json& j);
+    static std::shared_ptr<FogVolume> DeserializeFogVolume(const json& j);
 };

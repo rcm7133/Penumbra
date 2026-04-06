@@ -20,8 +20,10 @@ public:
 
     void Update(float dt) const {
         for (const std::shared_ptr<GameObject>& obj : objects) {
-            if (obj->enabled)
-                obj->Update(dt);
+            if (!obj->enabled) continue;
+            obj->Update(dt);
+            if (obj->particleSystem)
+                obj->particleSystem->Update(dt, obj->transform.position);
         }
     }
 
@@ -105,6 +107,31 @@ public:
     		glUniform1i (glGetUniformLocation(shader, (p + "type").c_str()),        static_cast<int>(light->type));
     	    glUniform1f(glGetUniformLocation(shader, (p + "radius").c_str()), light->radius);
     	}
+    }
+
+    void UploadFogVolumes(unsigned int shader) const {
+        std::vector<std::shared_ptr<GameObject>> fogObjects;
+
+        for (const auto& obj : objects)
+            if (obj->enabled && obj->fogVolume)
+                fogObjects.push_back(obj);
+
+        int count = static_cast<int>(fogObjects.size());
+        glUniform1i(glGetUniformLocation(shader, "fogVolumeCount"), count);
+
+        for (int i = 0; i < count; i++) {
+            auto& fv = fogObjects[i]->fogVolume;
+            glm::vec3 offset = fogObjects[i]->transform.position;
+            glm::vec3 worldMin = fv->boundsMin + offset;
+            glm::vec3 worldMax = fv->boundsMax + offset;
+            std::string p = "fogVolumes[" + std::to_string(i) + "].";
+
+            glUniform3fv(glGetUniformLocation(shader, (p + "boundsMin").c_str()), 1, glm::value_ptr(worldMin));
+            glUniform3fv(glGetUniformLocation(shader, (p + "boundsMax").c_str()), 1, glm::value_ptr(worldMax));
+            glUniform1f(glGetUniformLocation(shader,  (p + "density").c_str()),     fv->density);
+            glUniform1f(glGetUniformLocation(shader,  (p + "scale").c_str()),       fv->scale);
+            glUniform1f(glGetUniformLocation(shader,  (p + "scrollSpeed").c_str()), fv->scrollSpeed);
+        }
     }
 
     std::shared_ptr<GameObject> GetObject(const std::string& name) {

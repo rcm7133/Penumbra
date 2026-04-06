@@ -46,7 +46,7 @@ void main()
 
     if (p.lifetime <= 0.0)
     {
-        p.position = emitterPos + vec3(
+        p.position = vec3(
         mix(boundsMin.x, boundsMax.x, hash(id * 3u + 0u)),
         mix(boundsMin.y, boundsMax.y, hash(id * 3u + 1u)),
         mix(boundsMin.z, boundsMax.z, hash(id * 3u + 2u))
