@@ -5,11 +5,26 @@
 #include "components/fogVolumeComponent.h"
 #include "components/meshComponent.h"
 #include "components/lightComponent.h"
+#include "rendering/skybox.h"
 
 class Scene
 {
 public:
     std::vector<std::shared_ptr<GameObject>> objects;
+    std::shared_ptr<Skybox> skybox;
+
+    void LoadSkybox(const std::string& directory) {
+        std::vector<std::string> faces = {
+            directory + "/right.jpg",
+            directory + "/left.jpg",
+            directory + "/top.jpg",
+            directory + "/bottom.jpg",
+            directory + "/front.jpg",
+            directory + "/back.jpg",
+        };
+        skybox = std::make_shared<Skybox>();
+        skybox->Load(faces);
+    }
 
     void Add(const std::shared_ptr<GameObject>& obj) {
         objects.push_back(obj);
@@ -32,45 +47,7 @@ public:
                 ps->system->Update(dt, obj->transform.position);
         }
     }
-    /*
-    void Render(unsigned int shader, int modelLoc, int shininessLoc) const {
-        // Lights
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec3> colors;
-        std::vector<float>     intensities;
 
-        for (const std::shared_ptr<GameObject>& obj : objects) {
-            if (!obj->enabled || !obj->light) continue;
-            positions.push_back(obj->transform.position);
-            colors.push_back(obj->light->color);
-            intensities.push_back(obj->light->intensity);
-        }
-
-        int lightCount = positions.size();
-        glUniform1i(glGetUniformLocation(shader, "lightCount"), lightCount);
-
-        for (int i = 0; i < lightCount; i++) {
-            std::string base = "lightPos[" + std::to_string(i) + "]";
-            glUniform3fv(glGetUniformLocation(shader, base.c_str()), 1,
-                glm::value_ptr(positions[i]));
-
-            base = "lightColor[" + std::to_string(i) + "]";
-            glUniform3fv(glGetUniformLocation(shader, base.c_str()), 1,
-                glm::value_ptr(colors[i]));
-
-            base = "lightIntensity[" + std::to_string(i) + "]";
-            glUniform1f(glGetUniformLocation(shader, base.c_str()), intensities[i]);
-        }
-
-        for (const std::shared_ptr<GameObject>& obj : objects) {
-            if (!obj->enabled || !obj->mesh) continue;
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
-                glm::value_ptr(obj->transform.GetMatrix()));
-            glUniform1f(shininessLoc, obj->mesh->GetShininess());
-            obj->mesh->Draw();
-        }
-    }
-    */
     void RenderGeometry(unsigned int gBufferShader, int modelLoc, int shininessLoc) const {
         int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
 

@@ -36,5 +36,5 @@ float FXAA_EDGE_THRESHOLD_MIN = 0.0625f; // 1/16
 float CAMERA_SPEED = 1.5f;
 
 // Debug
-bool DEBUG_COLLIDERS = true;
+bool DEBUG_COLLIDERS = false;
 

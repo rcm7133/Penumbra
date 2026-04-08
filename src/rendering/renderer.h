@@ -91,6 +91,7 @@ private:
     unsigned int particleLitShader;
     unsigned int particleUnlitShader;
     unsigned int pointShadowShader;
+    unsigned int skyboxShader;
 
     // Geometry shader caches
     int gBuf_model, gBuf_view, gBuf_projection, gBuf_normalMat;
@@ -116,6 +117,7 @@ private:
     void PassthroughPass();
     void FXAAPass(Profiler& profiler);
     void ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
+    void SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene);
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene);
 

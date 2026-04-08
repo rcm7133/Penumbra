@@ -8,6 +8,7 @@ Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float sh
     material.texturePath = texturePath;
     material.normalMapPath = normalMapPath;
 
+    stbi_set_flip_vertically_on_load(true);
 
     std::vector<glm::vec3> positions;
     std::vector<glm::vec2> texCoords;

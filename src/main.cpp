@@ -99,7 +99,9 @@ int main()
     Renderer renderer(w, h, projection);
 	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
     renderer.AssignDefaultShader(scene);
-    scene->Start();
+	scene->Start();
+	scene->LoadSkybox("../assets/textures/skybox");
+
     renderer.InitShadowMaps(scene);
 	// Create collider debug renderer
 	ColliderDebugRenderer debugRenderer;
@@ -114,6 +116,9 @@ int main()
     int frameCount = 0;
     float lastFrame = 0.0f;
 
+	std::string title = "Penumbra";
+	glfwSetWindowTitle(window, title.c_str());
+
     while (!glfwWindowShouldClose(window))
     {
         profiler.Collect();
@@ -124,8 +129,6 @@ int main()
 
         if (currentTime - lastTime >= 1.0)
         {
-            std::string title = "Penumbra | FPS: " + std::to_string(frameCount);
-            glfwSetWindowTitle(window, title.c_str());
             frameCount = 0;
             lastTime   = currentTime;
         }

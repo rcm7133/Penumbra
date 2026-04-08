@@ -5,47 +5,6 @@
             "components": [
                 {
                     "data": {
-                        "capsuleHalfHeight": 0.6000000238418579,
-                        "friction": 0.5,
-                        "halfExtent": [
-                            0.5,
-                            0.5,
-                            0.5
-                        ],
-                        "mass": 10.0,
-                        "motion": "Dynamic",
-                        "radius": 0.25,
-                        "restitution": 0.30000001192092896,
-                        "shape": "Sphere"
-                    },
-                    "type": "RigidBody"
-                }
-            ],
-            "enabled": true,
-            "name": "Sphere",
-            "transform": {
-                "position": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "components": [
-                {
-                    "data": {
                         "boundsMax": [
                             5.0,
                             2.5,
@@ -373,6 +332,55 @@
                     1.0,
                     1.0,
                     1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "model": "../assets/models/sphere.obj",
+                        "shininess": 32.0,
+                        "texture": "../assets/textures/default.png"
+                    },
+                    "type": "Mesh"
+                },
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.5,
+                            0.5,
+                            0.5
+                        ],
+                        "mass": 16.899999618530273,
+                        "motion": "Dynamic",
+                        "radius": 0.20000000298023224,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Sphere"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "Sphere",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.20000000298023224,
+                    0.20000000298023224,
+                    0.20000000298023224
                 ]
             }
         }

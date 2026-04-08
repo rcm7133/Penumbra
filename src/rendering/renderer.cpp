@@ -37,6 +37,8 @@ Renderer::~Renderer()
     glDeleteProgram(passthroughShader);
     glDeleteProgram(fogCompositeShader);
     glDeleteProgram(ssaoShader);
+    glDeleteProgram(skyboxShader);
+    glDeleteProgram(fxaaShader);
 
     glDeleteFramebuffers(1, &fxaaFBO);
     glDeleteTextures(1, &fxaaTexture);
@@ -260,8 +262,8 @@ void Renderer::LoadShaders()
     fxaaShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
     particleLitShader   = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleLitFrag.glsl");
     particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
-    pointShadowShader = ShaderUtils::MakeShaderProgram("../shaders/shadows/pointShadowVert.glsl", "../shaders/shadows/pointShadowFrag.glsl"
-);
+    pointShadowShader = ShaderUtils::MakeShaderProgram("../shaders/shadows/pointShadowVert.glsl", "../shaders/shadows/pointShadowFrag.glsl");
+    skyboxShader = ShaderUtils::MakeShaderProgram("../shaders/skybox/skyboxVert.glsl","../shaders/skybox/skyboxFrag.glsl");
 }
 
 void Renderer::CacheUniforms()
@@ -332,6 +334,13 @@ void Renderer::RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profile
     GeometryPass(view, scene, profiler);
     if (SSAO_ENABLED) SSAOPass(view, profiler);
     LightingPass(camera, scene, shadowCount, profiler);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.FBO);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, litFBO);
+    glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+    SkyboxPass(camera, scene);
+
     ParticlePass(camera, scene, shadowCount, profiler);
     if (FOG_ENABLED) FogPass(camera, scene, shadowCount, profiler);
     else PassthroughPass();
@@ -855,6 +864,31 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     profiler.End("Particle Pass");
 }
 
+void Renderer::SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene)
+{
+    if (!scene->skybox) return;
+
+    glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
+    glUseProgram(skyboxShader);
+
+    glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"),
+                       1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"),
+                       1, GL_FALSE, glm::value_ptr(projection));
+    glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+
+    scene->skybox->Draw();
+
+    // Unbind the cubemap so it doesn't interfere with subsequent 2D texture binds
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_LESS);
+}
 
 void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene)
 {
