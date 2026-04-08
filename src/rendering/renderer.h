@@ -7,6 +7,8 @@
 #include "camera.h"
 #include "../utils/profiler.h"
 #include "shaderutils.h"
+#include "../components/meshComponent.h"
+#include "../components/lightComponent.h"
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;
@@ -52,9 +54,6 @@ public:
 
     unsigned int GetGBufferShader()  const { return gBufferShader; }
     unsigned int GetLightingShader() const { return lightingShader; }
-
-    void Screenshot(const std::string& directory = "../screenshots");
-    void DeepScreenshot(std::shared_ptr<Scene> scene, const std::string& directory = "../screenshots/");
     unsigned int GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const;
 
 private:

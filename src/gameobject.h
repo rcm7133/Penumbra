@@ -1,78 +1,64 @@
 #pragma once
 #include "config.h"
-#include "rendering/mesh.h"
 #include "transform.h"
-#include "rendering/light.h"
-#include "particles/particleSystem.h"
 #include "physics/rigidbody.h"
-#include "rendering/fogVolume.h"
+#include "component.h"
 
 class GameObject
 {
 public:
     Transform transform;
-    std::shared_ptr<Mesh> mesh = nullptr;
-    std::shared_ptr<Light> light   = nullptr;
-    std::shared_ptr<ParticleSystem> particleSystem = nullptr;
-    std::shared_ptr<RigidBody> rigidBody = nullptr;
-    std::shared_ptr<FogVolume> fogVolume = nullptr;
     bool enabled = true;
-
     std::string name = "GameObject";
+
+    std::vector<std::shared_ptr<Component>> components;
+
     GameObject(const std::string& name = "GameObject") : name(name) {}
+
+    template<typename T, typename... Args>
+    std::shared_ptr<T> AddComponent(Args&&... args) {
+        auto comp = std::make_shared<T>(std::forward<Args>(args)...);
+        comp->owner = this;
+        components.push_back(comp);
+        return comp;
+    }
+
+    template<typename T>
+    std::shared_ptr<T> GetComponent()
+    {
+        for (auto& comp : components)
+        {
+            auto casted = std::dynamic_pointer_cast<T>(comp);
+            if (casted) return casted;
+        }
+        return nullptr;
+    }
+
+    template<typename T>
+    bool HasComponent()
+    {
+        return GetComponent<T>() != nullptr;
+    }
+
+    void RemoveComponent(std::shared_ptr<Component> comp)
+    {
+        components.erase(
+            std::remove(components.begin(), components.end(), comp),
+            components.end());
+    }
+
+
     virtual ~GameObject() {}
 
-    virtual void Update(float deltaTime) {}
-    virtual void Start() {}
-};
-
-class Orbiter : public GameObject
-{
-public:
-    glm::vec3 orbitCenter = glm::vec3(0, 0, 0);
-    float orbitRadius     = 3.0f;
-    float orbitSpeed      = 45.0f; // degrees per second
-    float orbitAngle      = 0.0f;
-
-    Orbiter(const std::string& name = "Orbiter") : GameObject(name) {}
-
-    void Update(float deltaTime) override
+    virtual void Update(float deltaTime)
     {
-        orbitAngle += orbitSpeed * deltaTime;
-        if (orbitAngle > 360.0f) orbitAngle -= 360.0f;
-
-        float rad = glm::radians(orbitAngle);
-        transform.position.x = orbitCenter.x + orbitRadius * cos(rad);
-        transform.position.z = orbitCenter.z + orbitRadius * sin(rad);
-        transform.position.y = orbitCenter.y; // stays at same height
+        for (auto& comp : components)
+            if (comp->enabled) comp->Update(deltaTime);
     }
 
-    void Start() override {
-
-    }
-};
-
-class RotatingLight : public GameObject
-{
-public:
-    float rotationSpeed = 90.0f;      // degrees per second
-    float rotationAngle = 0.0f;       // current rotation angle
-
-    RotatingLight(const std::string& name = "RotatingLight") : GameObject(name) {}
-
-    void Update(float deltaTime) override
+    virtual void Start()
     {
-        rotationAngle += rotationSpeed * deltaTime;
-        if (rotationAngle >= 360.0f)
-            rotationAngle -= 360.0f;
-
-        transform.rotation = glm::angleAxis(glm::radians(rotationAngle), glm::vec3(0, 1, 0));
-
-        if (light)
-            light->direction = transform.Forward();
-    }
-
-    void Start() override {
-
+        for (auto& comp : components)
+            comp->Start();
     }
 };

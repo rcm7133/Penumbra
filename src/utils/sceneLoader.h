@@ -6,6 +6,11 @@
 #include "../particles/particleSystemManager.h"
 #include "../../dependencies/nlohmann/json.hpp"
 #include "../rendering/fogVolume.h"
+#include "../components/particleSystemComponent.h"
+#include "../components/rigidbodyComponent.h"
+#include "../components/fogVolumeComponent.h"
+#include "components/meshComponent.h"
+#include "components/lightComponent.h"
 
 class SceneLoader {
 public:
@@ -29,6 +34,7 @@ private:
     static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
     static json SerializeRigidBody(const RigidBody& rb);
     static json SerializeFogVolume(const FogVolume& fv);
+    static json SerializeComponents(const std::shared_ptr<GameObject>& obj);
 
     static glm::vec3 DeserializeVec3(const json& j);
     static glm::vec4 DeserializeVec4(const json& j);
@@ -37,6 +43,7 @@ private:
     static std::shared_ptr<Light> DeserializeLight(const json& j);
     static std::shared_ptr<ParticleSystem> DeserializeParticleSystem(const json& j, const glm::vec3& ownerPos, ParticleSystemManager& particleManager);
     static std::shared_ptr<GameObject> DeserializeGameObject(const json& j, ParticleSystemManager& particleManager);
+    static void DeserializeComponents(const json& j, std::shared_ptr<GameObject>& obj, ParticleSystemManager& particleManager);
     static std::shared_ptr<RigidBody> DeserializeRigidBody(const json& j);
     static std::shared_ptr<FogVolume> DeserializeFogVolume(const json& j);
 };

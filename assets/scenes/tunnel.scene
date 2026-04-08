@@ -2,14 +2,27 @@
     "objects": [
         {
             "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.6000000238418579,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.5,
+                            0.5,
+                            0.5
+                        ],
+                        "mass": 10.0,
+                        "motion": "Dynamic",
+                        "radius": 0.25,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Sphere"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
             "enabled": true,
-            "mesh": {
-                "model": "../assets/models/corridor.obj",
-                "normalMap": "../assets/textures/normals/corridorNormal.jpg",
-                "shininess": 32.0,
-                "texture": "../assets/textures/corridor.jpg"
-            },
-            "name": "Corridor",
+            "name": "Sphere",
             "transform": {
                 "position": [
                     0.0,
@@ -30,192 +43,45 @@
         },
         {
             "class": "GameObject",
-            "enabled": true,
-            "mesh": {
-                "model": "../assets/models/cables.obj",
-                "normalMap": "../assets/textures/normals/rubberNormal.jpg",
-                "shininess": 32.0,
-                "texture": "../assets/textures/rubber.jpg"
-            },
-            "name": "Cables",
-            "transform": {
-                "position": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "enabled": true,
-            "mesh": {
-                "model": "../assets/models/cableholder.obj",
-                "normalMap": "../assets/textures/normals/metalNormal.jpg",
-                "shininess": 32.0,
-                "texture": "../assets/textures/metal.jpg"
-            },
-            "name": "Cable Holder",
-            "transform": {
-                "position": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "enabled": true,
-            "mesh": {
-                "model": "../assets/models/barrels.obj",
-                "normalMap": "../assets/textures/normals/barrelNormal.png",
-                "shininess": 32.0,
-                "texture": "../assets/textures/barrel.png"
-            },
-            "name": "Barrels",
-            "transform": {
-                "position": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "enabled": true,
-            "mesh": {
-                "model": "../assets/models/debris.obj",
-                "normalMap": "../assets/textures/normals/metalNormal.jpg",
-                "shininess": 32.0,
-                "texture": "../assets/textures/barrel.png"
-            },
-            "name": "Debris",
-            "transform": {
-                "position": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "enabled": true,
-            "light": {
-                "castsShadow": true,
-                "color": [
-                    1.0,
-                    0.0,
-                    0.0
-                ],
-                "direction": [
-                    -0.23803044855594635,
-                    0.0,
-                    -0.9712576866149902
-                ],
-                "innerCutoffDeg": 12.5,
-                "intensity": 1.0,
-                "outerCutoffDeg": 35.5,
-                "radius": 5.0,
-                "type": "Spot"
-            },
-            "name": "Light",
-            "transform": {
-                "position": [
-                    -6.0,
-                    0.25,
-                    -0.014999999664723873
-                ],
-                "rotation": [
-                    0.0,
-                    13.77032470703125,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "boundsMax": [
+                            5.0,
+                            2.5,
+                            2.0
+                        ],
+                        "boundsMin": [
+                            -15.0,
+                            0.0,
+                            -2.0
+                        ],
+                        "endColor": [
+                            0.800000011920929,
+                            0.800000011920929,
+                            0.800000011920929,
+                            0.0
+                        ],
+                        "fadeInTime": 1.0,
+                        "lit": true,
+                        "maxLifetime": 15.0,
+                        "maxParticles": 10000,
+                        "maxSize": 0.10000000149011612,
+                        "minLifetime": 10.0,
+                        "minSize": 0.05000000074505806,
+                        "speed": 0.10000000149011612,
+                        "startColor": [
+                            0.800000011920929,
+                            0.800000011920929,
+                            0.800000011920929,
+                            0.8999999761581421
+                        ]
+                    },
+                    "type": "ParticleSystem"
+                }
+            ],
             "enabled": true,
             "name": "Particles",
-            "particleSystem": {
-                "boundsMax": [
-                    5.0,
-                    2.5,
-                    2.0
-                ],
-                "boundsMin": [
-                    -15.0,
-                    0.0,
-                    -2.0
-                ],
-                "endColor": [
-                    0.800000011920929,
-                    0.800000011920929,
-                    0.800000011920929,
-                    0.0
-                ],
-                "fadeInTime": 1.0,
-                "lit": true,
-                "maxLifetime": 15.0,
-                "maxParticles": 10000,
-                "maxSize": 0.10000000149011612,
-                "minLifetime": 10.0,
-                "minSize": 0.05000000074505806,
-                "speed": 0.10000000149011612,
-                "startColor": [
-                    0.800000011920929,
-                    0.800000011920929,
-                    0.800000011920929,
-                    0.8999999761581421
-                ]
-            },
             "transform": {
                 "position": [
                     0.0,
@@ -236,112 +102,33 @@
         },
         {
             "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "boundsMax": [
+                            5.0,
+                            2.5,
+                            2.0
+                        ],
+                        "boundsMin": [
+                            -15.0,
+                            0.0,
+                            -2.0
+                        ],
+                        "density": 0.5,
+                        "scale": 0.5,
+                        "scrollSpeed": 0.10000000149011612
+                    },
+                    "type": "FogVolume"
+                }
+            ],
             "enabled": true,
-            "mesh": {
-                "model": "../assets/models/sphere.obj",
-                "normalMap": "../assets/textures/normals/metalSphereNormal.jpg",
-                "shininess": 32.0,
-                "texture": "../assets/textures/metalSphere.jpg"
-            },
-            "name": "Sphere",
-            "rigidBody": {
-                "capsuleHalfHeight": 0.6000000238418579,
-                "friction": 0.5,
-                "halfExtent": [
-                    0.5,
-                    0.5,
-                    0.5
-                ],
-                "mass": 10.0,
-                "motion": "Dynamic",
-                "radius": 0.25,
-                "restitution": 0.30000001192092896,
-                "shape": "Sphere"
-            },
-            "transform": {
-                "position": [
-                    -2.4543685913085938,
-                    0.2900002896785736,
-                    0.29027244448661804
-                ],
-                "rotation": [
-                    17.05393409729004,
-                    -9.27515697479248,
-                    42.63070297241211
-                ],
-                "scale": [
-                    0.27000001072883606,
-                    0.25,
-                    0.25
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "enabled": true,
-            "mesh": {
-                "model": "../assets/models/sphere.obj",
-                "normalMap": "../assets/textures/normals/metalSphereNormal.jpg",
-                "shininess": 32.0,
-                "texture": "../assets/textures/metalSphere.jpg"
-            },
-            "name": "Sphere 2",
-            "rigidBody": {
-                "capsuleHalfHeight": 0.6000000238418579,
-                "friction": 0.5,
-                "halfExtent": [
-                    0.5,
-                    0.5,
-                    0.5
-                ],
-                "mass": 10.0,
-                "motion": "Dynamic",
-                "radius": 0.25,
-                "restitution": 0.30000001192092896,
-                "shape": "Sphere"
-            },
-            "transform": {
-                "position": [
-                    -45.53289031982422,
-                    -60519.76953125,
-                    0.00012272033200133592
-                ],
-                "rotation": [
-                    0.0001991247700061649,
-                    -0.0002906734007410705,
-                    179.27854919433594
-                ],
-                "scale": [
-                    0.27000001072883606,
-                    0.25,
-                    0.25
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "enabled": true,
-            "fogVolume": {
-                "boundsMax": [
-                    5.0,
-                    2.5,
-                    2.0
-                ],
-                "boundsMin": [
-                    -15.0,
-                    0.0,
-                    -2.0
-                ],
-                "density": 0.5,
-                "scale": 0.5,
-                "scrollSpeed": 0.10000000149011612
-            },
             "name": "Fog Volume",
             "transform": {
                 "position": [
                     0.0,
                     0.0,
-                    3.2365994329097703e-09
+                    0.0
                 ],
                 "rotation": [
                     0.0,
@@ -349,35 +136,159 @@
                     0.0
                 ],
                 "scale": [
-                    0.27000001072883606,
-                    0.25,
-                    0.25
+                    1.0,
+                    1.0,
+                    1.0
                 ]
             }
         },
         {
             "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "model": "../assets/models/corridor.obj",
+                        "normalMap": "../assets/textures/normals/corridorNormal.jpg",
+                        "shininess": 32.0,
+                        "texture": "../assets/textures/corridor.jpg"
+                    },
+                    "type": "Mesh"
+                }
+            ],
             "enabled": true,
-            "name": "Left Wall Collider",
-            "rigidBody": {
-                "capsuleHalfHeight": 0.5,
-                "friction": 0.5,
-                "halfExtent": [
-                    9.609999656677246,
-                    0.30000001192092896,
-                    1.090000033378601
-                ],
-                "mass": 1.0,
-                "motion": "Static",
-                "radius": 0.5,
-                "restitution": 0.30000001192092896,
-                "shape": "Box"
-            },
+            "name": "Hallway",
             "transform": {
                 "position": [
-                    -8.989999771118164,
-                    1.1299999952316284,
-                    1.350000023841858
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "castsShadow": true,
+                        "color": [
+                            1.0,
+                            0.0,
+                            0.0
+                        ],
+                        "direction": [
+                            -1.0,
+                            0.0,
+                            0.0
+                        ],
+                        "innerCutoffDeg": 12.5,
+                        "intensity": 0.8799999952316284,
+                        "outerCutoffDeg": 35.5,
+                        "radius": 15.0,
+                        "type": "Spot"
+                    },
+                    "type": "Light"
+                }
+            ],
+            "enabled": true,
+            "name": "Light",
+            "transform": {
+                "position": [
+                    -1.850000023841858,
+                    0.2199999988079071,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.6000000238418579,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            10.15999984741211,
+                            0.07999999821186066,
+                            1.2599999904632568
+                        ],
+                        "mass": 10.0,
+                        "motion": "Static",
+                        "radius": 0.25,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "Box Collider",
+            "transform": {
+                "position": [
+                    -5.139999866485596,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.6000000238418579,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            10.15999984741211,
+                            0.07999999821186066,
+                            1.2599999904632568
+                        ],
+                        "mass": 10.0,
+                        "motion": "Static",
+                        "radius": 0.25,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "Box Collider",
+            "transform": {
+                "position": [
+                    -5.139999866485596,
+                    1.2899999618530273,
+                    1.3200000524520874
                 ],
                 "rotation": [
                     90.0,
@@ -393,27 +304,32 @@
         },
         {
             "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.6000000238418579,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            10.15999984741211,
+                            0.07999999821186066,
+                            1.2599999904632568
+                        ],
+                        "mass": 10.0,
+                        "motion": "Static",
+                        "radius": 0.25,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
             "enabled": true,
-            "name": "Right Wall Collider",
-            "rigidBody": {
-                "capsuleHalfHeight": 0.5,
-                "friction": 0.5,
-                "halfExtent": [
-                    9.609999656677246,
-                    0.30000001192092896,
-                    1.090000033378601
-                ],
-                "mass": 1.0,
-                "motion": "Static",
-                "radius": 0.5,
-                "restitution": 0.30000001192092896,
-                "shape": "Box"
-            },
+            "name": "Box Collider",
             "transform": {
                 "position": [
-                    -8.989999771118164,
-                    1.1299999952316284,
-                    -1.350000023841858
+                    -5.139999866485596,
+                    1.2899999618530273,
+                    -1.3200000524520874
                 ],
                 "rotation": [
                     90.0,
@@ -429,26 +345,23 @@
         },
         {
             "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "model": "../assets/models/barrels.obj",
+                        "normalMap": "../assets/textures/normals/barrelNormal.png",
+                        "shininess": 32.0,
+                        "texture": "../assets/textures/barrel.png"
+                    },
+                    "type": "Mesh"
+                }
+            ],
             "enabled": true,
-            "name": "Floor Collider",
-            "rigidBody": {
-                "capsuleHalfHeight": 0.5,
-                "friction": 0.5,
-                "halfExtent": [
-                    9.609999656677246,
-                    0.30000001192092896,
-                    1.090000033378601
-                ],
-                "mass": 1.0,
-                "motion": "Static",
-                "radius": 0.5,
-                "restitution": 0.30000001192092896,
-                "shape": "Box"
-            },
+            "name": "Barrels",
             "transform": {
                 "position": [
-                    -8.989999771118164,
-                    -0.23999999463558197,
+                    0.0,
+                    0.0,
                     0.0
                 ],
                 "rotation": [

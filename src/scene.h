@@ -1,6 +1,10 @@
 #pragma once
 #include "config.h"
 #include "gameobject.h"
+#include "components/particleSystemComponent.h"
+#include "components/fogVolumeComponent.h"
+#include "components/meshComponent.h"
+#include "components/lightComponent.h"
 
 class Scene
 {
@@ -22,11 +26,13 @@ public:
         for (const std::shared_ptr<GameObject>& obj : objects) {
             if (!obj->enabled) continue;
             obj->Update(dt);
-            if (obj->particleSystem)
-                obj->particleSystem->Update(dt, obj->transform.position);
+
+            auto ps = obj->GetComponent<ParticleSystemComponent>();
+            if (ps)
+                ps->system->Update(dt, obj->transform.position);
         }
     }
-
+    /*
     void Render(unsigned int shader, int modelLoc, int shininessLoc) const {
         // Lights
         std::vector<glm::vec3> positions;
@@ -64,73 +70,80 @@ public:
             obj->mesh->Draw();
         }
     }
-
+    */
     void RenderGeometry(unsigned int gBufferShader, int modelLoc, int shininessLoc) const {
-    	int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
+        int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
 
         for (const auto& obj : objects) {
-            if (!obj->enabled || !obj->mesh) continue;
+            if (!obj->enabled) continue;
+            auto mc = obj->GetComponent<MeshComponent>();
+            if (!mc) continue;
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
                 glm::value_ptr(obj->transform.GetMatrix()));
-            glUniform1f(shininessLoc, obj->mesh->GetShininess());
-        	glUniform1i(hasNormalMapLoc, obj->mesh->material.hasNormalMap ? 1 : 0);
-            obj->mesh->Draw();
+            glUniform1f(shininessLoc, mc->mesh->GetShininess());
+            glUniform1i(hasNormalMapLoc, mc->mesh->material.hasNormalMap ? 1 : 0);
+            mc->mesh->Draw();
         }
     }
 
-	void UploadLights(unsigned int shader) const {
-    	// Shadow casters first, then non-shadow lights
-    	std::vector<std::shared_ptr<GameObject>> lightObjects;
+    void UploadLights(unsigned int shader) const {
+        std::vector<std::shared_ptr<GameObject>> lightObjects;
 
-    	for (const auto& obj : objects)
-    		if (obj->enabled && obj->light && obj->light->castsShadow)
-    			lightObjects.push_back(obj);
+        for (const auto& obj : objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (obj->enabled && lc && lc->light->castsShadow)
+                lightObjects.push_back(obj);
+        }
+        for (const auto& obj : objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (obj->enabled && lc && !lc->light->castsShadow)
+                lightObjects.push_back(obj);
+        }
 
-    	for (const auto& obj : objects)
-    		if (obj->enabled && obj->light && !obj->light->castsShadow)
-    			lightObjects.push_back(obj);
+        int count = static_cast<int>(lightObjects.size());
+        glUniform1i(glGetUniformLocation(shader, "lightCount"), count);
 
-    	int count = static_cast<int>(lightObjects.size());
-    	glUniform1i(glGetUniformLocation(shader, "lightCount"), count);
+        for (int i = 0; i < count; i++) {
+            auto& obj = lightObjects[i];
+            auto light = obj->GetComponent<LightComponent>()->light;
+            std::string p = "lights[" + std::to_string(i) + "].";
 
-    	for (int i = 0; i < count; i++) {
-    		auto& obj = lightObjects[i];
-    		auto& light = obj->light;
-    		std::string p = "lights[" + std::to_string(i) + "].";
-
-    		glUniform3fv(glGetUniformLocation(shader, (p + "position").c_str()),    1, glm::value_ptr(obj->transform.position));
-    		glUniform3fv(glGetUniformLocation(shader, (p + "color").c_str()),       1, glm::value_ptr(light->color));
-    		glUniform3fv(glGetUniformLocation(shader, (p + "direction").c_str()),   1, glm::value_ptr(light->direction));
-    		glUniform1f (glGetUniformLocation(shader, (p + "intensity").c_str()),   light->intensity);
-    		glUniform1f (glGetUniformLocation(shader, (p + "innerCutoff").c_str()), light->innerCutoff);
-    		glUniform1f (glGetUniformLocation(shader, (p + "outerCutoff").c_str()), light->outerCutoff);
-    		glUniform1i (glGetUniformLocation(shader, (p + "type").c_str()),        static_cast<int>(light->type));
-    	    glUniform1f(glGetUniformLocation(shader, (p + "radius").c_str()), light->radius);
-    	}
+            glUniform3fv(glGetUniformLocation(shader, (p + "position").c_str()),    1, glm::value_ptr(obj->transform.position));
+            glUniform3fv(glGetUniformLocation(shader, (p + "color").c_str()),       1, glm::value_ptr(light->color));
+            glUniform3fv(glGetUniformLocation(shader, (p + "direction").c_str()),   1, glm::value_ptr(light->direction));
+            glUniform1f (glGetUniformLocation(shader, (p + "intensity").c_str()),   light->intensity);
+            glUniform1f (glGetUniformLocation(shader, (p + "innerCutoff").c_str()), light->innerCutoff);
+            glUniform1f (glGetUniformLocation(shader, (p + "outerCutoff").c_str()), light->outerCutoff);
+            glUniform1i (glGetUniformLocation(shader, (p + "type").c_str()),        static_cast<int>(light->type));
+            glUniform1f (glGetUniformLocation(shader, (p + "radius").c_str()),      light->radius);
+        }
     }
+
 
     void UploadFogVolumes(unsigned int shader) const {
         std::vector<std::shared_ptr<GameObject>> fogObjects;
 
-        for (const auto& obj : objects)
-            if (obj->enabled && obj->fogVolume)
+        for (const auto& obj : objects) {
+            auto fv = obj->GetComponent<FogVolumeComponent>();
+            if (obj->enabled && fv)
                 fogObjects.push_back(obj);
+        }
 
         int count = static_cast<int>(fogObjects.size());
         glUniform1i(glGetUniformLocation(shader, "fogVolumeCount"), count);
 
         for (int i = 0; i < count; i++) {
-            auto& fv = fogObjects[i]->fogVolume;
+            auto fv = fogObjects[i]->GetComponent<FogVolumeComponent>();
             glm::vec3 offset = fogObjects[i]->transform.position;
-            glm::vec3 worldMin = fv->boundsMin + offset;
-            glm::vec3 worldMax = fv->boundsMax + offset;
+            glm::vec3 worldMin = fv->volume->boundsMin + offset;
+            glm::vec3 worldMax = fv->volume->boundsMax + offset;
             std::string p = "fogVolumes[" + std::to_string(i) + "].";
 
             glUniform3fv(glGetUniformLocation(shader, (p + "boundsMin").c_str()), 1, glm::value_ptr(worldMin));
             glUniform3fv(glGetUniformLocation(shader, (p + "boundsMax").c_str()), 1, glm::value_ptr(worldMax));
-            glUniform1f(glGetUniformLocation(shader,  (p + "density").c_str()),     fv->density);
-            glUniform1f(glGetUniformLocation(shader,  (p + "scale").c_str()),       fv->scale);
-            glUniform1f(glGetUniformLocation(shader,  (p + "scrollSpeed").c_str()), fv->scrollSpeed);
+            glUniform1f(glGetUniformLocation(shader,  (p + "density").c_str()),     fv->volume->density);
+            glUniform1f(glGetUniformLocation(shader,  (p + "scale").c_str()),       fv->volume->scale);
+            glUniform1f(glGetUniformLocation(shader,  (p + "scrollSpeed").c_str()), fv->volume->scrollSpeed);
         }
     }
 

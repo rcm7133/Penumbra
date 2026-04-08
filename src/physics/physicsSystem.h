@@ -103,20 +103,20 @@ public:
 
     void AddBody(const std::shared_ptr<GameObject>& obj)
     {
-        if (!obj->rigidBody) return;
-        auto& rb = obj->rigidBody;
+        auto rb = obj->GetComponent<RigidBodyComponent>();
+        if (rb) return;
 
         JPH::ShapeRefC shape;
-        switch (rb->shapeType)
+        switch (rb->body->shapeType)
         {
             case RigidBody::Box:
-                shape = new JPH::BoxShape(JPH::Vec3(rb->halfExtent.x, rb->halfExtent.y, rb->halfExtent.z));
+                shape = new JPH::BoxShape(JPH::Vec3(rb->body->halfExtent.x, rb->body->halfExtent.y, rb->body->halfExtent.z));
                 break;
             case RigidBody::Sphere:
-                shape = new JPH::SphereShape(rb->radius);
+                shape = new JPH::SphereShape(rb->body->radius);
                 break;
             case RigidBody::Capsule:
-                shape = new JPH::CapsuleShape(rb->capsuleHalfHeight, rb->radius);
+                shape = new JPH::CapsuleShape(rb->body->capsuleHalfHeight, rb->body->radius);
                 break;
             default:
                 shape = new JPH::BoxShape(JPH::Vec3(0.5f, 0.5f, 0.5f));
@@ -129,7 +129,7 @@ public:
 
         JPH::EMotionType motionType;
         JPH::ObjectLayer layer;
-        switch (rb->motion)
+        switch (rb->body->motion)
         {
             case BodyMotion::Dynamic:
                 motionType = JPH::EMotionType::Dynamic;
@@ -146,19 +146,22 @@ public:
         }
 
         JPH::BodyCreationSettings settings(shape, pos, rot, motionType, layer);
-        settings.mFriction = rb->friction;
-        settings.mRestitution = rb->restitution;
-        if (rb->motion == BodyMotion::Dynamic)
-            settings.mMassPropertiesOverride.mMass = rb->mass;
+        settings.mFriction = rb->body->friction;
+        settings.mRestitution = rb->body->restitution;
+        if (rb->body->motion == BodyMotion::Dynamic)
+            settings.mMassPropertiesOverride.mMass = rb->body->mass;
 
         auto& bodyInterface = physicsSystem.GetBodyInterface();
-        rb->bodyID = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);
+        rb->body->bodyID = bodyInterface.CreateAndAddBody(settings, JPH::EActivation::Activate);
     }
 
     void RegisterScene(const std::shared_ptr<Scene>& scene)
     {
-        for (const auto& obj : scene->objects)
-            if (obj->rigidBody) AddBody(obj);
+        for (const auto& obj : scene->objects) {
+            auto rb = obj->GetComponent<RigidBodyComponent>();
+                if (rb) AddBody(obj);
+        }
+
 
         physicsSystem.OptimizeBroadPhase();
     }
@@ -179,10 +182,11 @@ public:
 
         for (const auto& obj : scene->objects)
         {
-            if (!obj->rigidBody || obj->rigidBody->motion == BodyMotion::Static)
+            auto rb = obj->GetComponent<RigidBodyComponent>();
+            if (!rb || rb->body->motion == BodyMotion::Static)
                 continue;
 
-            auto id = obj->rigidBody->bodyID;
+            auto id = rb->body->bodyID;
 
             // Jolt -> glm
             JPH::Vec3 pos = bodyInterface.GetPosition(id);

@@ -1,0 +1,41 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "capsuleHalfHeight": 0.6000000238418579,
+                "friction": 0.5,
+                "halfExtent": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "mass": 10.0,
+                "motion": "Dynamic",
+                "radius": 0.25,
+                "restitution": 0.30000001192092896,
+                "shape": "Sphere"
+            },
+            "type": "RigidBody"
+        }
+    ],
+    "enabled": true,
+    "name": "Sphere",
+    "transform": {
+        "position": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "rotation": [
+            0.0,
+            -0.0,
+            0.0
+        ],
+        "scale": [
+            1.0,
+            1.0,
+            1.0
+        ]
+    }
+}

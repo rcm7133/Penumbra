@@ -1,6 +1,7 @@
 #include "renderer.h"
 #define STB_PERLIN_IMPLEMENTATION
 #include "../../dependencies/stb_perlin.h"
+#include "../components/particleSystemComponent.h"
 
 
 // Construction and destruction
@@ -48,10 +49,11 @@ void Renderer::InitShadowMaps(std::shared_ptr<Scene> scene)
     int count = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow) continue;
         if (count >= MAX_SHADOW_LIGHTS) break;
 
-        auto& light = obj->light;
+        auto& light = lc->light;
 
         if (light->type == LightType::Point)
         {
@@ -130,8 +132,11 @@ void Renderer::InitShadowMaps(std::shared_ptr<Scene> scene)
 void Renderer::AssignDefaultShader(std::shared_ptr<Scene> scene)
 {
     for (auto& obj : scene->objects)
-        if (obj->mesh)
-            obj->mesh->material.shader = gBufferShader;
+    {
+        auto mc = obj->GetComponent<MeshComponent>();
+        if (mc)
+            mc->mesh->material.shader = gBufferShader;
+    }
 }
 
 
@@ -255,9 +260,7 @@ void Renderer::LoadShaders()
     fxaaShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
     particleLitShader   = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleLitFrag.glsl");
     particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
-    pointShadowShader = ShaderUtils::MakeShaderProgram(
-    "../shaders/shadows/pointShadowVert.glsl",
-    "../shaders/shadows/pointShadowFrag.glsl"
+    pointShadowShader = ShaderUtils::MakeShaderProgram("../shaders/shadows/pointShadowVert.glsl", "../shaders/shadows/pointShadowFrag.glsl"
 );
 }
 
@@ -315,37 +318,23 @@ void Renderer::RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profile
 {
     glm::mat4 view = camera.GetViewMatrix();
 
-    // Pass 0 — shadows
     ShadowPass(scene, profiler);
 
-    // Count shadow lights (used by later passes)
     int shadowCount = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (shadowCount >= MAX_SHADOW_LIGHTS) break;
         shadowCount++;
     }
 
-    // Pass 1 — geometry
     GeometryPass(view, scene, profiler);
-
-    // Pass 1.5 — SSAO
-    if (SSAO_ENABLED)
-        SSAOPass(view, profiler);
-
-    // Pass 2 — lighting
+    if (SSAO_ENABLED) SSAOPass(view, profiler);
     LightingPass(camera, scene, shadowCount, profiler);
-
-    // Pass 3 - particles
     ParticlePass(camera, scene, shadowCount, profiler);
-
-    // Pass 4 — fog (or passthrough)
-    if (FOG_ENABLED)
-        FogPass(camera, scene, shadowCount, profiler);
-    else
-        PassthroughPass();
-
+    if (FOG_ENABLED) FogPass(camera, scene, shadowCount, profiler);
+    else PassthroughPass();
     FXAAPass(profiler);
 }
 
@@ -358,10 +347,11 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
 
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow) continue;
         if (idx >= MAX_SHADOW_LIGHTS) break;
 
-        auto& light = obj->light;
+        auto& light = lc->light;
 
         if (light->type == LightType::Point)
         {
@@ -406,11 +396,12 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
 
                 for (auto& renderObj : scene->objects)
                 {
-                    if (!renderObj->mesh || !renderObj->enabled) continue;
+                    auto mc = renderObj->GetComponent<MeshComponent>();
+                    if (!mc || !renderObj->enabled) continue;
                     glm::mat4 model = renderObj->transform.GetMatrix();
                     glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
                                        1, GL_FALSE, glm::value_ptr(model));
-                    renderObj->mesh->Draw();
+                    mc->mesh->Draw();
                 }
             }
 
@@ -536,18 +527,22 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     int si = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (si >= MAX_SHADOW_LIGHTS) break;
 
         glActiveTexture(GL_TEXTURE3 + si);
-        glBindTexture(GL_TEXTURE_2D, obj->light->shadowMap);
+        if (lc->light->type == LightType::Point)
+            glBindTexture(GL_TEXTURE_2D, 0);
+        else
+            glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
 
         std::string name = "shadowMap[" + std::to_string(si) + "]";
         glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), 3 + si);
 
         std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
         glUniformMatrix4fv(glGetUniformLocation(lightingShader, lsm.c_str()),
-                           1, GL_FALSE, glm::value_ptr(obj->light->lightSpaceMatrix));
+                           1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
         si++;
     }
 
@@ -555,14 +550,15 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     int ci = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (ci >= MAX_SHADOW_LIGHTS) break;
 
         glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
-        if (obj->light->type == LightType::Point)
-            glBindTexture(GL_TEXTURE_CUBE_MAP, obj->light->shadowCubemap);
+        if (lc->light->type == LightType::Point)
+            glBindTexture(GL_TEXTURE_CUBE_MAP, lc->light->shadowCubemap);
         else
-            glBindTexture(GL_TEXTURE_CUBE_MAP, 0); // no cubemap for non-point lights
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
         std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
         glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), cubeStart + ci);
@@ -572,10 +568,11 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     int fi = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (fi >= MAX_SHADOW_LIGHTS) break;
 
-        float fp = (obj->light->type == LightType::Point) ? obj->light->radius : 50.0f;
+        float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
         std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
         glUniform1f(glGetUniformLocation(lightingShader, name.c_str()), fp);
         fi++;
@@ -624,16 +621,21 @@ void Renderer::FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowC
     int si = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (si >= MAX_SHADOW_LIGHTS) break;
 
         glActiveTexture(GL_TEXTURE3 + si);
-        glBindTexture(GL_TEXTURE_2D, obj->light->shadowMap);
+        if (lc->light->type == LightType::Point)
+            glBindTexture(GL_TEXTURE_2D, 0);
+        else
+            glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
+
         std::string name = "shadowMap[" + std::to_string(si) + "]";
         glUniform1i(glGetUniformLocation(fogShader, name.c_str()), 3 + si);
         std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
         glUniformMatrix4fv(glGetUniformLocation(fogShader, lsm.c_str()),
-                           1, GL_FALSE, glm::value_ptr(obj->light->lightSpaceMatrix));
+                           1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
         si++;
     }
 
@@ -641,12 +643,13 @@ void Renderer::FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowC
     int ci = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (ci >= MAX_SHADOW_LIGHTS) break;
 
         glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
-        if (obj->light->type == LightType::Point)
-            glBindTexture(GL_TEXTURE_CUBE_MAP, obj->light->shadowCubemap);
+        if (lc->light->type == LightType::Point)
+            glBindTexture(GL_TEXTURE_CUBE_MAP, lc->light->shadowCubemap);
         else
             glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
@@ -658,10 +661,11 @@ void Renderer::FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowC
     int fi = 0;
     for (auto& obj : scene->objects)
     {
-        if (!obj->light || !obj->light->castsShadow) continue;
+        auto lc = obj->GetComponent<LightComponent>();
+        if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (fi >= MAX_SHADOW_LIGHTS) break;
 
-        float fp = (obj->light->type == LightType::Point) ? obj->light->radius : 50.0f;
+        float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
         std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
         glUniform1f(glGetUniformLocation(fogShader, name.c_str()), fp);
         fi++;
@@ -766,53 +770,53 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
 
     for (auto& obj: scene->objects)
     {
-        if (!obj->particleSystem || !obj->enabled)
-            continue;
+        if (!obj->enabled) continue;
 
-        auto& ps = obj->particleSystem;
-        unsigned int shader = ps->IsLit() ? particleLitShader : particleUnlitShader;
+        auto ps = obj->GetComponent<ParticleSystemComponent>();
+        if (!ps) continue;
+
+        unsigned int shader = ps->system->IsLit() ? particleLitShader : particleUnlitShader;
         glUseProgram(shader);
 
-        // Set shader uniforms
         glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniform3f(glGetUniformLocation(shader, "cameraPos"), camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
+        glUniform3f(glGetUniformLocation(shader, "cameraPos"),
+                    camera.transform.position.x, camera.transform.position.y, camera.transform.position.z);
 
-        // Bind lighting and shadow map data if the particles are lit
-        if (ps->IsLit())
+        if (ps->system->IsLit())
         {
             int shadowIndex = 0;
-            for (auto& potentialShadowLight : scene->objects) {
-                if (!potentialShadowLight->light || !potentialShadowLight->enabled || !potentialShadowLight->light->castsShadow)
+            for (auto& shadowObj : scene->objects) {
+                auto lc = shadowObj->GetComponent<LightComponent>();
+                if (!lc || !shadowObj->enabled || !lc->light->castsShadow)
                     continue;
                 if (shadowIndex >= MAX_SHADOW_LIGHTS) break;
 
                 glActiveTexture(GL_TEXTURE0 + shadowIndex);
-                if (potentialShadowLight->light->type == LightType::Point)
+                if (lc->light->type == LightType::Point)
                     glBindTexture(GL_TEXTURE_2D, 0);
                 else
-                    glBindTexture(GL_TEXTURE_2D, potentialShadowLight->light->shadowMap);
+                    glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
 
                 std::string name = "shadowMap[" + std::to_string(shadowIndex) + "]";
                 glUniform1i(glGetUniformLocation(shader, name.c_str()), shadowIndex);
-
                 std::string lsm = "lightSpaceMatrix[" + std::to_string(shadowIndex) + "]";
                 glUniformMatrix4fv(glGetUniformLocation(shader, lsm.c_str()),
-                                   1, GL_FALSE, glm::value_ptr(potentialShadowLight->light->lightSpaceMatrix));
+                                   1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
                 shadowIndex++;
             }
 
-            // Cubemaps after 2D maps
             int cubeStart = shadowIndex;
             int ci = 0;
-            for (auto& potentialShadowLight : scene->objects) {
-                if (!potentialShadowLight->light || !potentialShadowLight->enabled || !potentialShadowLight->light->castsShadow)
+            for (auto& shadowObj : scene->objects) {
+                auto lc = shadowObj->GetComponent<LightComponent>();
+                if (!lc || !shadowObj->enabled || !lc->light->castsShadow)
                     continue;
                 if (ci >= MAX_SHADOW_LIGHTS) break;
 
                 glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
-                if (potentialShadowLight->light->type == LightType::Point)
-                    glBindTexture(GL_TEXTURE_CUBE_MAP, potentialShadowLight->light->shadowCubemap);
+                if (lc->light->type == LightType::Point)
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, lc->light->shadowCubemap);
                 else
                     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
@@ -822,12 +826,13 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
             }
 
             int fi = 0;
-            for (auto& obj : scene->objects)
+            for (auto& shadowObj : scene->objects)
             {
-                if (!obj->light || !obj->light->castsShadow) continue;
+                auto lc = shadowObj->GetComponent<LightComponent>();
+                if (!lc || !lc->light->castsShadow) continue;
                 if (fi >= MAX_SHADOW_LIGHTS) break;
 
-                float fp = (obj->light->type == LightType::Point) ? obj->light->radius : 50.0f;
+                float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
                 std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
                 glUniform1f(glGetUniformLocation(shader, name.c_str()), fp);
                 fi++;
@@ -838,10 +843,9 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
             scene->UploadLights(shader);
         }
 
-        // Bind particle SSBO and draw particle system
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ps->GetSSBO());
-        glBindVertexArray(ps->GetDummyVAO());
-        glDrawArrays(GL_POINTS, 0, ps->GetCount());
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ps->system->GetSSBO());
+        glBindVertexArray(ps->system->GetDummyVAO());
+        glDrawArrays(GL_POINTS, 0, ps->system->GetCount());
     }
 
     glDepthMask(GL_TRUE);
@@ -860,11 +864,12 @@ void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_pt
 
     for (auto& obj : scene->objects)
     {
-        if (!obj->mesh || !obj->enabled) continue;
+        auto mc = obj->GetComponent<MeshComponent>();
+        if (!mc || !obj->enabled) continue;
         glm::mat4 model = obj->transform.GetMatrix();
         glUniformMatrix4fv(glGetUniformLocation(shadowShader, "model"),
                            1, GL_FALSE, glm::value_ptr(model));
-        obj->mesh->Draw();
+        mc->mesh->Draw();
     }
 }
 
@@ -922,8 +927,9 @@ unsigned int Renderer::GetDebugTexture(int mode, std::shared_ptr<Scene> scene) c
             int idx = 0;
             for (auto& obj : scene->objects)
             {
-                if (!obj->light || !obj->light->castsShadow) continue;
-                if (idx == mode - 6) return obj->light->shadowMap;
+                auto lc = obj->GetComponent<LightComponent>();
+                if (!lc || !lc->light->castsShadow) continue;
+                if (idx == mode - 6) return lc->light->shadowMap;
                 idx++;
             }
             return 0;

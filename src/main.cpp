@@ -1,5 +1,4 @@
 #include "config.h"
-#include "rendering/mesh.h"
 #include "scene.h"
 #include "rendering/camera.h"
 #include "rendering/renderer.h"
@@ -12,6 +11,9 @@
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
+#include "components/rigidbodyComponent.h"
+#include "components/lightComponent.h"
+#include "components/meshComponent.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -23,6 +25,7 @@ bool cursorEnabled = false;
 bool tabWasPressed = false;
 
 extern bool DEBUG_COLLIDERS;
+extern std::string CURRENT_SCENE;
 
 Profiler profiler;
 ParticleSystemManager particleManager;
@@ -94,7 +97,7 @@ int main()
     // Create renderer and scene
 	// -------------------------
     Renderer renderer(w, h, projection);
-	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/tunnel.scene", particleManager);
+	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
     renderer.AssignDefaultShader(scene);
     scene->Start();
     renderer.InitShadowMaps(scene);
@@ -160,36 +163,36 @@ int main()
     		glm::vec3 blue(0, 0.5, 1);
     		for (const auto& obj : scene->objects)
     		{
-    			if (obj->rigidBody) {
-    				auto& rb = obj->rigidBody;
+    			auto rb = obj->GetComponent<RigidBodyComponent>();
+    			if (rb) {
     				auto& t = obj->transform;
-    				switch (rb->shapeType)
+    				switch (rb->body->shapeType)
     				{
     					case RigidBody::Box:
-    						debugRenderer.AddBox(t.position, t.rotation, rb->halfExtent, green);
+    						debugRenderer.AddBox(t.position, t.rotation, rb->body->halfExtent, green);
     						break;
     					case RigidBody::Sphere:
-    						debugRenderer.AddSphere(t.position, rb->radius, green);
+    						debugRenderer.AddSphere(t.position, rb->body->radius, green);
     						break;
     					case RigidBody::Capsule:
-    						debugRenderer.AddCapsule(t.position, t.rotation, rb->capsuleHalfHeight, rb->radius, green);
+    						debugRenderer.AddCapsule(t.position, t.rotation, rb->body->capsuleHalfHeight, rb->body->radius, green);
     						break;
     				}
     			}
 
-    			if (obj->fogVolume) {
-    				auto& fv = obj->fogVolume;
+    			auto fv = obj->GetComponent<FogVolumeComponent>();
+    			if (fv) {
     				glm::vec3 offset = obj->transform.position;
-    				glm::vec3 center = (fv->boundsMin + fv->boundsMax) * 0.5f + offset;
-    				glm::vec3 half   = (fv->boundsMax - fv->boundsMin) * 0.5f;
+    				glm::vec3 center = (fv->volume->boundsMin + fv->volume->boundsMax) * 0.5f + offset;
+    				glm::vec3 half   = (fv->volume->boundsMax - fv->volume->boundsMin) * 0.5f;
     				debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, blue);
     			}
 
-    			if (obj->particleSystem) {
-    				auto& ps = obj->particleSystem;
+    			auto ps = obj->GetComponent<ParticleSystemComponent>();
+    			if (ps) {
     				glm::vec3 offset = obj->transform.position;
-    				glm::vec3 center = (ps->boundsMin + ps->boundsMax) * 0.5f + offset;
-    				glm::vec3 half   = (ps->boundsMax - ps->boundsMin) * 0.5f;
+    				glm::vec3 center = (ps->system->boundsMin + ps->system->boundsMax) * 0.5f + offset;
+    				glm::vec3 half   = (ps->system->boundsMax - ps->system->boundsMin) * 0.5f;
     				debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1.0f, 0.5f, 0.0f));
     			}
     		}
@@ -288,10 +291,16 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     ImGui::Begin("Scene");
 	ImGui::SliderFloat("Camera Speed", &CAMERA_SPEED, 0.1f, 5.0f);
 	if (ImGui::Button("Save Scene"))
-		SceneLoader::Save(scene, "../assets/scenes/tunnel.scene");
+		SceneLoader::Save(scene, "../assets/scenes/" + CURRENT_SCENE);
 	if (ImGui::Button("Reload Scene"))
 		ReloadScene(scene, renderer, particleManager, physics);
 	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
+
+	if (ImGui::Button("Add Empty GameObject")) {
+		auto obj = std::make_shared<GameObject>("New GameObject");
+		scene->Add(obj);
+	}
+	ImGui::Separator();
 
 	// Prefab spawner
 	ImGui::Separator();
@@ -329,6 +338,49 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     if (ImGui::CollapsingHeader(obj->name.c_str())) {
         ImGui::Checkbox("Enabled", &obj->enabled);
+
+    	// Add Component
+    	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume" };
+    	static int selectedComponent = -1;
+    	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
+    	if (ImGui::BeginCombo("##AddComponent", "Add Component...")) {
+    		for (int c = 0; c < IM_ARRAYSIZE(componentTypes); c++) {
+    			if (ImGui::Selectable(componentTypes[c])) {
+    				selectedComponent = c;
+    			}
+    		}
+    		ImGui::EndCombo();
+    	}
+
+    	if (selectedComponent >= 0) {
+    		switch (selectedComponent) {
+    			case 0: // Mesh
+    				if (!obj->GetComponent<MeshComponent>())
+    					obj->AddComponent<MeshComponent>(
+							std::make_shared<Mesh>("../assets/models/sphere.obj",
+												   "../assets/textures/default.png", 32.0f, ""));
+    				break;
+    			case 1: // Light
+    				if (!obj->GetComponent<LightComponent>())
+    					obj->AddComponent<LightComponent>();
+    				break;
+    			case 2: // Particle System
+    				if (!obj->GetComponent<ParticleSystemComponent>()) {
+    					auto comp = obj->AddComponent<ParticleSystemComponent>(10000, true);
+    					particleManager.Register(comp->system);
+    				}
+    				break;
+    			case 3: // Rigid Body
+    				if (!obj->GetComponent<RigidBodyComponent>())
+    					obj->AddComponent<RigidBodyComponent>();
+    				break;
+    			case 4: // Fog Volume
+    				if (!obj->GetComponent<FogVolumeComponent>())
+    					obj->AddComponent<FogVolumeComponent>();
+    				break;
+    		}
+    		selectedComponent = -1;
+    	}
 
     	static int editingIndex = -1;
     	static char renameBuffer[128];
@@ -375,92 +427,140 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     		ImGui::TreePop();
     	}
 
+    	auto mc = obj->GetComponent<MeshComponent>();
+	    if (mc) {
+	        if (ImGui::TreeNode("Mesh")) {
+	            static char modelBuf[256];
+	            static char textureBuf[256];
+	            static char normalBuf[256];
+	            static int editingMeshIndex = -1;
+
+	            if (editingMeshIndex != i) {
+	                ImGui::Text("Model: %s", mc->mesh->material.modelPath.c_str());
+	                ImGui::Text("Texture: %s", mc->mesh->material.texturePath.c_str());
+	                ImGui::Text("Normal Map: %s", mc->mesh->material.hasNormalMap
+	                    ? mc->mesh->material.normalMapPath.c_str() : "None");
+	                ImGui::DragFloat("Shininess", &mc->mesh->material.shininess, 1.0f, 1.0f, 256.0f);
+
+	                if (ImGui::Button("Edit Paths")) {
+	                    editingMeshIndex = i;
+	                    strncpy(modelBuf, mc->mesh->material.modelPath.c_str(), sizeof(modelBuf) - 1);
+	                    strncpy(textureBuf, mc->mesh->material.texturePath.c_str(), sizeof(textureBuf) - 1);
+	                    strncpy(normalBuf, mc->mesh->material.hasNormalMap
+	                        ? mc->mesh->material.normalMapPath.c_str() : "", sizeof(normalBuf) - 1);
+	                }
+	            } else {
+	                ImGui::InputText("Model", modelBuf, sizeof(modelBuf));
+	                ImGui::InputText("Texture", textureBuf, sizeof(textureBuf));
+	                ImGui::InputText("Normal Map", normalBuf, sizeof(normalBuf));
+	                ImGui::DragFloat("Shininess", &mc->mesh->material.shininess, 1.0f, 1.0f, 256.0f);
+
+	                if (ImGui::Button("Apply")) {
+	                    float shininess = mc->mesh->material.shininess;
+	                    std::string normalStr(normalBuf);
+	                    mc->mesh = std::make_shared<Mesh>(
+	                        std::string(modelBuf),
+	                        std::string(textureBuf),
+	                        shininess,
+	                        normalStr
+	                    );
+	                    editingMeshIndex = -1;
+	                }
+	                ImGui::SameLine();
+	                if (ImGui::Button("Cancel"))
+	                    editingMeshIndex = -1;
+	            }
+
+	            ImGui::TreePop();
+	        }
+	    }
+
         // Light
-        if (obj->light) {
-            if (ImGui::TreeNode("Light")) {
-                ImGui::ColorEdit3("Color", &obj->light->color.x);
-                ImGui::DragFloat("Intensity", &obj->light->intensity, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat3("Direction", &obj->light->direction.x, 0.01f);
-                ImGui::Checkbox("Casts Shadow", &obj->light->castsShadow);
+    	auto lc = obj->GetComponent<LightComponent>();
+    	if (lc) {
+    		if (ImGui::TreeNode("Light")) {
+    			ImGui::ColorEdit3("Color", &lc->light->color.x);
+    			ImGui::DragFloat("Intensity", &lc->light->intensity, 0.01f, 0.0f, 10.0f);
+    			ImGui::DragFloat3("Direction", &lc->light->direction.x, 0.01f);
+    			ImGui::Checkbox("Casts Shadow", &lc->light->castsShadow);
 
-                const char* types[] = { "Directional", "Spot", "Point" };
-                int current = static_cast<int>(obj->light->type);
-                if (ImGui::Combo("Type", &current, types, IM_ARRAYSIZE(types)))
-                    obj->light->type = static_cast<LightType>(current);
+    			const char* types[] = { "Directional", "Spot", "Point" };
+    			int current = static_cast<int>(lc->light->type);
+    			if (ImGui::Combo("Type", &current, types, IM_ARRAYSIZE(types)))
+    				lc->light->type = static_cast<LightType>(current);
 
-                if (obj->light->type == LightType::Spot) {
-                    float innerDeg = glm::degrees(glm::acos(obj->light->innerCutoff));
-                    float outerDeg = glm::degrees(glm::acos(obj->light->outerCutoff));
-                    if (ImGui::DragFloat("Inner Cutoff", &innerDeg, 0.1f, 0.0f, 90.0f))
-                        obj->light->innerCutoff = glm::cos(glm::radians(innerDeg));
-                    if (ImGui::DragFloat("Outer Cutoff", &outerDeg, 0.1f, 0.0f, 90.0f))
-                        obj->light->outerCutoff = glm::cos(glm::radians(outerDeg));
-                }
-            	if (obj->light->type == LightType::Point) {
-            		ImGui::DragFloat("Radius", &obj->light->radius, 0.1f, 0.1f, 100.0f);
-            	}
-                ImGui::TreePop();
-            }
-        }
-
-        // Particle System
-        if (obj->particleSystem) {
-            if (ImGui::TreeNode("Particle System")) {
-                auto& ps = obj->particleSystem;
-                ImGui::DragFloat3("Bounds Min", &ps->boundsMin.x, 0.1f);
-                ImGui::DragFloat3("Bounds Max", &ps->boundsMax.x, 0.1f);
-                ImGui::ColorEdit4("Start Color", &ps->startColor.x);
-                ImGui::ColorEdit4("End Color", &ps->endColor.x);
-                ImGui::DragFloat("Speed", &ps->speed, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat("Min Size", &ps->minSize, 0.01f, 0.001f, 50.0f);
-                ImGui::DragFloat("Max Size", &ps->maxSize, 0.01f, 0.001f, 50.0f);
-                ImGui::DragFloat("Min Lifetime", &ps->minLifetime, 0.1f, 0.1f, 30.0f);
-                ImGui::DragFloat("Max Lifetime", &ps->maxLifetime, 0.1f, 0.1f, 30.0f);
-                ImGui::DragFloat("Fade In Time", &ps->fadeInTime, 0.1f, 0.0f, 10.0f);
-                ImGui::Text("Particles: %d", ps->GetCount());
-                ImGui::TreePop();
-            }
-        }
-
-    	if (obj->fogVolume) {
-    		if (ImGui::TreeNode("Fog Volume##component")) {
-    			auto& fv = obj->fogVolume;
-    			ImGui::DragFloat3("Bounds Min", &fv->boundsMin.x, 0.1f);
-    			ImGui::DragFloat3("Bounds Max", &fv->boundsMax.x, 0.1f);
-    			ImGui::DragFloat("Density", &fv->density, 0.01f, 0.0f, 2.0f);
-    			ImGui::DragFloat("Scale", &fv->scale, 0.01f, 0.01f, 2.0f);
-    			ImGui::DragFloat("Scroll Speed", &fv->scrollSpeed, 0.01f, 0.0f, 2.0f);
+    			if (lc->light->type == LightType::Spot) {
+    				float innerDeg = glm::degrees(glm::acos(lc->light->innerCutoff));
+    				float outerDeg = glm::degrees(glm::acos(lc->light->outerCutoff));
+    				if (ImGui::DragFloat("Inner Cutoff", &innerDeg, 0.1f, 0.0f, 90.0f))
+    					lc->light->innerCutoff = glm::cos(glm::radians(innerDeg));
+    				if (ImGui::DragFloat("Outer Cutoff", &outerDeg, 0.1f, 0.0f, 90.0f))
+    					lc->light->outerCutoff = glm::cos(glm::radians(outerDeg));
+    			}
+    			if (lc->light->type == LightType::Point) {
+    				ImGui::DragFloat("Radius", &lc->light->radius, 0.1f, 0.1f, 100.0f);
+    			}
     			ImGui::TreePop();
     		}
     	}
 
-    	if (obj->rigidBody) {
-    		if (ImGui::TreeNode("Rigid Body")) {
-    			auto& rb = obj->rigidBody;
+    	auto ps = obj->GetComponent<ParticleSystemComponent>();
+        // Particle System
+        if (ps) {
+            if (ImGui::TreeNode("Particle System")) {
+                ImGui::DragFloat3("Bounds Min", &ps->system->boundsMin.x, 0.1f);
+                ImGui::DragFloat3("Bounds Max", &ps->system->boundsMax.x, 0.1f);
+                ImGui::ColorEdit4("Start Color", &ps->system->startColor.x);
+                ImGui::ColorEdit4("End Color", &ps->system->endColor.x);
+                ImGui::DragFloat("Speed", &ps->system->speed, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Min Size", &ps->system->minSize, 0.01f, 0.001f, 50.0f);
+                ImGui::DragFloat("Max Size", &ps->system->maxSize, 0.01f, 0.001f, 50.0f);
+                ImGui::DragFloat("Min Lifetime", &ps->system->minLifetime, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Max Lifetime", &ps->system->maxLifetime, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Fade In Time", &ps->system->fadeInTime, 0.1f, 0.0f, 10.0f);
+                ImGui::Text("Particles: %d", ps->system->GetCount());
+                ImGui::TreePop();
+            }
+        }
 
+    	auto fv = obj->GetComponent<FogVolumeComponent>();
+    	if (fv) {
+    		if (ImGui::TreeNode("Fog Volume##component")) {
+    			ImGui::DragFloat3("Bounds Min", &fv->volume->boundsMin.x, 0.1f);
+    			ImGui::DragFloat3("Bounds Max", &fv->volume->boundsMax.x, 0.1f);
+    			ImGui::DragFloat("Density", &fv->volume->density, 0.01f, 0.0f, 2.0f);
+    			ImGui::DragFloat("Scale", &fv->volume->scale, 0.01f, 0.01f, 2.0f);
+    			ImGui::DragFloat("Scroll Speed", &fv->volume->scrollSpeed, 0.01f, 0.0f, 2.0f);
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto rb = obj->GetComponent<RigidBodyComponent>();
+    	if (rb) {
+    		if (ImGui::TreeNode("Rigid Body")) {
     			const char* motions[] = { "Static", "Dynamic", "Kinematic" };
-    			int curMotion = static_cast<int>(rb->motion);
+    			int curMotion = static_cast<int>(rb->body->motion);
     			if (ImGui::Combo("Motion", &curMotion, motions, IM_ARRAYSIZE(motions)))
-    				rb->motion = static_cast<BodyMotion>(curMotion);
+    				rb->body->motion = static_cast<BodyMotion>(curMotion);
 
     			const char* shapes[] = { "Box", "Sphere", "Mesh", "Capsule" };
-    			int curShape = static_cast<int>(rb->shapeType);
+    			int curShape = static_cast<int>(rb->body->shapeType);
     			if (ImGui::Combo("Shape", &curShape, shapes, IM_ARRAYSIZE(shapes)))
-    				rb->shapeType = static_cast<RigidBody::ShapeType>(curShape);
+    				rb->body->shapeType = static_cast<RigidBody::ShapeType>(curShape);
 
-    			if (rb->shapeType == RigidBody::Box)
-    				ImGui::DragFloat3("Half Extent", &rb->halfExtent.x, 0.01f, 0.01f, 100.0f);
-    			if (rb->shapeType == RigidBody::Sphere || rb->shapeType == RigidBody::Capsule)
-    				ImGui::DragFloat("Radius", &rb->radius, 0.01f, 0.01f, 50.0f);
-    			if (rb->shapeType == RigidBody::Capsule)
-    				ImGui::DragFloat("Half Height", &rb->capsuleHalfHeight, 0.01f, 0.01f, 50.0f);
+    			if (rb->body->shapeType == RigidBody::Box)
+    				ImGui::DragFloat3("Half Extent", &rb->body->halfExtent.x, 0.01f, 0.01f, 100.0f);
+    			if (rb->body->shapeType == RigidBody::Sphere || rb->body->shapeType == RigidBody::Capsule)
+    				ImGui::DragFloat("Radius", &rb->body->radius, 0.01f, 0.01f, 50.0f);
+    			if (rb->body->shapeType == RigidBody::Capsule)
+    				ImGui::DragFloat("Half Height", &rb->body->capsuleHalfHeight, 0.01f, 0.01f, 50.0f);
 
-    			ImGui::DragFloat("Mass", &rb->mass, 0.1f, 0.01f, 1000.0f);
-    			ImGui::DragFloat("Friction", &rb->friction, 0.01f, 0.0f, 1.0f);
-    			ImGui::DragFloat("Restitution", &rb->restitution, 0.01f, 0.0f, 1.0f);
+    			ImGui::DragFloat("Mass", &rb->body->mass, 0.1f, 0.01f, 1000.0f);
+    			ImGui::DragFloat("Friction", &rb->body->friction, 0.01f, 0.0f, 1.0f);
+    			ImGui::DragFloat("Restitution", &rb->body->restitution, 0.01f, 0.0f, 1.0f);
 
     			if (ImGui::Button("Apply Changes")) {
-    				physics.RemoveBody(rb);
+    				physics.RemoveBody(rb->body);
     				physics.AddBody(obj);
     			}
 
@@ -490,7 +590,7 @@ void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer,
 				 ParticleSystemManager& particleManager, PhysicsWorld& physics)
 {
 	particleManager.Reset();
-	scene = SceneLoader::Load("../assets/scenes/tunnel.scene", particleManager);
+	scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
 	renderer.AssignDefaultShader(scene);
 	scene->Start();
 	renderer.InitShadowMaps(scene);
