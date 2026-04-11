@@ -6,8 +6,8 @@ class GBuffer
 public:
     unsigned int FBO;       // Frame Buffer Object. Writes pixels to a texture
     unsigned int gPosition; // Position texture RGB -> XYZ
-    unsigned int gNormal;   // Normal texture RGB -> XYZ
-    unsigned int gDiffuse;  // Color Texture RGB
+    unsigned int gNormal;   // RGB = normal, A = roughness
+    unsigned int gAlbedo;   // RGB = albedo, A = metallic
     unsigned int rboDepth;  // Depth texture
 
     GBuffer(int width, int height)
@@ -37,12 +37,12 @@ public:
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
 
         // *** Diffuse texture ***
-        glGenTextures(1, &gDiffuse);
-        glBindTexture(GL_TEXTURE_2D, gDiffuse);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glGenTextures(1, &gAlbedo);
+        glBindTexture(GL_TEXTURE_2D, gAlbedo);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gDiffuse, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
 
         // Tell OpenGL to draw to all 3 textures
         unsigned int attachments[3] = {

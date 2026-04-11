@@ -67,9 +67,14 @@ json SceneLoader::SerializeMesh(const Mesh& m) {
     json j;
     j["model"] = m.material.modelPath;
     j["texture"] = m.material.texturePath;
-    j["shininess"] = m.material.shininess;
+    j["roughness"] = m.material.roughness;
+    j["metallic"]  = m.material.metallic;
     if (m.material.hasNormalMap)
         j["normalMap"] = m.material.normalMapPath;
+    if (m.material.hasHeightMap) {
+        j["heightMap"]   = m.material.heightMapPath;
+        j["heightScale"] = m.material.heightScale;
+    }
     return j;
 }
 
@@ -232,9 +237,24 @@ void SceneLoader::DeserializeTransform(const json& j, Transform& t) {
 std::shared_ptr<Mesh> SceneLoader::DeserializeMesh(const json& j) {
     std::string model     = j["model"].get<std::string>();
     std::string texture   = j["texture"].get<std::string>();
-    float shininess       = j["shininess"].get<float>();
     std::string normalMap = j.contains("normalMap") ? j["normalMap"].get<std::string>() : "";
-    return std::make_shared<Mesh>(model, texture, shininess, normalMap);
+    std::string heightMap = j.contains("heightMap") ? j["heightMap"].get<std::string>() : "";
+
+    auto mesh = std::make_shared<Mesh>(model, texture, normalMap, heightMap);
+
+    if (j.contains("roughness")) {
+        mesh->material.roughness = j["roughness"].get<float>();
+        mesh->material.metallic  = j.value("metallic", 0.0f);
+    }
+    else if (j.contains("shininess")) {
+        float shininess = j["shininess"].get<float>();
+        mesh->material.roughness = glm::clamp(1.0f - (log2(shininess) / 8.0f), 0.05f, 1.0f);
+        mesh->material.metallic  = 0.0f;
+    }
+
+    mesh->material.heightScale = j.value("heightScale", 0.05f);
+
+    return mesh;
 }
 
 std::shared_ptr<Light> SceneLoader::DeserializeLight(const json& j) {

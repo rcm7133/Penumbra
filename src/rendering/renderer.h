@@ -96,7 +96,7 @@ private:
 
     // Geometry shader caches
     int gBuf_model, gBuf_view, gBuf_projection, gBuf_normalMat;
-    int gBuf_shininess, gBuf_diffuseTex, gBuf_normalMap, gBuf_hasNormalMap;
+    int gBuf_roughness, gBuf_metallic, gBuf_diffuseTex, gBuf_normalMap, gBuf_hasNormalMap;
 
     // Lighting shader caches
     int light_gPosition, light_gNormal, light_gAlbedo, light_cameraPos, light_ambient;
@@ -111,7 +111,7 @@ private:
 
     // Passes
     void ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler);
-    void GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene, Profiler& profiler);
+    void GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene, const Camera& camera, Profiler& profiler);
     void SSAOPass(const glm::mat4& view, Profiler& profiler);
     void LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
     void FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);

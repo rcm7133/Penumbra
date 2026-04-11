@@ -106,9 +106,9 @@
             "components": [
                 {
                     "data": {
+                        "metallic": 0.0,
                         "model": "../assets/models/corridor.obj",
-                        "normalMap": "../assets/textures/normals/corridorNormal.jpg",
-                        "shininess": 32.0,
+                        "roughness": 0.375,
                         "texture": "../assets/textures/corridor.jpg"
                     },
                     "type": "Mesh"
@@ -120,51 +120,6 @@
                 "position": [
                     0.0,
                     0.0,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "components": [
-                {
-                    "data": {
-                        "castsShadow": true,
-                        "color": [
-                            1.0,
-                            0.0,
-                            0.0
-                        ],
-                        "direction": [
-                            -1.0,
-                            0.0,
-                            0.0
-                        ],
-                        "innerCutoffDeg": 12.5,
-                        "intensity": 0.8799999952316284,
-                        "outerCutoffDeg": 35.5,
-                        "radius": 15.0,
-                        "type": "Spot"
-                    },
-                    "type": "Light"
-                }
-            ],
-            "enabled": false,
-            "name": "Light",
-            "transform": {
-                "position": [
-                    -1.850000023841858,
-                    0.2199999988079071,
                     0.0
                 ],
                 "rotation": [
@@ -307,9 +262,9 @@
             "components": [
                 {
                     "data": {
+                        "metallic": 0.0,
                         "model": "../assets/models/barrels.obj",
-                        "normalMap": "../assets/textures/normals/barrelNormal.png",
-                        "shininess": 32.0,
+                        "roughness": 0.375,
                         "texture": "../assets/textures/barrel.png"
                     },
                     "type": "Mesh"
@@ -340,8 +295,9 @@
             "components": [
                 {
                     "data": {
+                        "metallic": 0.0,
                         "model": "../assets/models/plane.obj",
-                        "shininess": 32.0,
+                        "roughness": 0.375,
                         "texture": "../assets/textures/default.png"
                     },
                     "type": "Mesh"
@@ -375,6 +331,87 @@
                     -7.860000133514404,
                     0.11999999731779099,
                     0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "heightMap": "../assets/textures/brick/displacement.jpg",
+                        "heightScale": -0.03099999949336052,
+                        "metallic": 0.20000000298023224,
+                        "model": "../assets/models/plane.obj",
+                        "normalMap": "../assets/textures/brick/normal.jpg",
+                        "roughness": 0.2800000011920929,
+                        "texture": "../assets/textures/brick/brick.jpg"
+                    },
+                    "type": "Mesh"
+                }
+            ],
+            "enabled": true,
+            "name": "Brick",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "castsShadow": false,
+                        "color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "direction": [
+                            -1.0,
+                            -1.0,
+                            1.399999976158142
+                        ],
+                        "innerCutoffDeg": 12.5,
+                        "intensity": 1.0,
+                        "outerCutoffDeg": 35.5,
+                        "radius": 5.0,
+                        "type": "Spot"
+                    },
+                    "type": "Light"
+                }
+            ],
+            "enabled": true,
+            "name": "Light",
+            "transform": {
+                "position": [
+                    0.8899999856948853,
+                    0.2800000011920929,
+                    -0.9900000095367432
                 ],
                 "rotation": [
                     0.0,

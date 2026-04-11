@@ -2,11 +2,12 @@
 #include "mesh.h"
 #include "stb_image.h"
 
-Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float shininess, const std::string& normalMapPath)
+Mesh::Mesh(const std::string& filePath, const std::string& texturePath, const std::string& normalMapPath, const std::string& heightMapPath)
 {
     material.modelPath = filePath;
     material.texturePath = texturePath;
     material.normalMapPath = normalMapPath;
+    material.heightMapPath = heightMapPath;
 
     stbi_set_flip_vertically_on_load(true);
 
@@ -14,7 +15,6 @@ Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float sh
     std::vector<glm::vec2> texCoords;
     std::vector<glm::vec3> normals;
 
-    // Each "expanded" vertex will hold pos, uv, normal (before tangent calc)
     std::vector<glm::vec3> outPositions;
     std::vector<glm::vec2> outUVs;
     std::vector<glm::vec3> outNormals;
@@ -98,15 +98,12 @@ Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float sh
         tangents[i2] += tangent;
     }
 
-
     std::vector<float> vertices;
     vertices.reserve(outPositions.size() * 11);
 
     for (size_t i = 0; i < outPositions.size(); i++)
     {
         glm::vec3 t = glm::normalize(tangents[i]);
-
-        // Gram-Schmidt orthogonalize tangent against normal
         glm::vec3 n = glm::normalize(outNormals[i]);
         t = glm::normalize(t - n * glm::dot(n, t));
 
@@ -130,7 +127,8 @@ Mesh::Mesh(const std::string& filePath, const std::string& texturePath, float sh
     if (!normalMapPath.empty())
         LoadNormalMap(normalMapPath);
 
-    SetShininess(shininess);
+    if (!heightMapPath.empty())
+        LoadHeightMap(heightMapPath);
 }
 
 Mesh::~Mesh()
@@ -144,6 +142,16 @@ void Mesh::Draw()
 {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureID);
+
+    if (material.hasNormalMap) {
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, material.normalMap);
+    }
+
+    if (material.hasHeightMap) {
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, material.heightMap);
+    }
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, vertexCount, GL_UNSIGNED_INT, 0);
@@ -247,6 +255,37 @@ void Mesh::LoadNormalMap(const std::string& path)
     {
         std::cerr << "Failed to load normal map: " << path << std::endl;
         material.hasNormalMap = false;
+    }
+
+    stbi_image_free(data);
+}
+
+void Mesh::LoadHeightMap(const std::string& path)
+{
+    glGenTextures(1, &material.heightMap);
+    glBindTexture(GL_TEXTURE_2D, material.heightMap);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, channels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
+
+    if (data)
+    {
+        GLenum format = (channels == 4) ? GL_RGBA : (channels == 3) ? GL_RGB : GL_RED;
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        material.hasHeightMap = true;
+    }
+    else
+    {
+        std::cerr << "Failed to load height map: " << path << std::endl;
+        material.hasHeightMap = false;
     }
 
     stbi_image_free(data);

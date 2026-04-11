@@ -362,7 +362,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     				if (!obj->GetComponent<MeshComponent>())
     					obj->AddComponent<MeshComponent>(
 							std::make_shared<Mesh>("../assets/models/sphere.obj",
-												   "../assets/textures/default.png", 32.0f, ""));
+												   "../assets/textures/default.png", ""));
     				break;
     			case 1: // Light
     				if (!obj->GetComponent<LightComponent>())
@@ -435,52 +435,65 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     	}
 
     	auto mc = obj->GetComponent<MeshComponent>();
-	    if (mc) {
-	        if (ImGui::TreeNode("Mesh")) {
-	            static char modelBuf[256];
-	            static char textureBuf[256];
-	            static char normalBuf[256];
-	            static int editingMeshIndex = -1;
+		if (mc) {
+		    if (ImGui::TreeNode("Mesh")) {
+		        static char modelBuf[256];
+		        static char textureBuf[256];
+		        static char normalBuf[256];
+		        static char heightBuf[256];
+		        static int editingMeshIndex = -1;
 
-	            if (editingMeshIndex != i) {
-	                ImGui::Text("Model: %s", mc->mesh->material.modelPath.c_str());
-	                ImGui::Text("Texture: %s", mc->mesh->material.texturePath.c_str());
-	                ImGui::Text("Normal Map: %s", mc->mesh->material.hasNormalMap
-	                    ? mc->mesh->material.normalMapPath.c_str() : "None");
-	                ImGui::DragFloat("Shininess", &mc->mesh->material.shininess, 1.0f, 1.0f, 256.0f);
+		        if (editingMeshIndex != i) {
+		            ImGui::Text("Model: %s", mc->mesh->material.modelPath.c_str());
+		            ImGui::Text("Texture: %s", mc->mesh->material.texturePath.c_str());
+		            ImGui::Text("Normal Map: %s", mc->mesh->material.hasNormalMap
+		                ? mc->mesh->material.normalMapPath.c_str() : "None");
+		            ImGui::Text("Height Map: %s", mc->mesh->material.hasHeightMap
+		                ? mc->mesh->material.heightMapPath.c_str() : "None");
+		            ImGui::DragFloat("Roughness", &mc->mesh->material.roughness, 0.01f, 0.05f, 1.0f);
+		            ImGui::DragFloat("Metallic",  &mc->mesh->material.metallic,  0.01f, 0.0f, 1.0f);
+		            if (mc->mesh->material.hasHeightMap)
+		                ImGui::DragFloat("Height Scale", &mc->mesh->material.heightScale, 0.005f, 0.0f, 0.3f);
 
-	                if (ImGui::Button("Edit Paths")) {
-	                    editingMeshIndex = i;
-	                    strncpy(modelBuf, mc->mesh->material.modelPath.c_str(), sizeof(modelBuf) - 1);
-	                    strncpy(textureBuf, mc->mesh->material.texturePath.c_str(), sizeof(textureBuf) - 1);
-	                    strncpy(normalBuf, mc->mesh->material.hasNormalMap
-	                        ? mc->mesh->material.normalMapPath.c_str() : "", sizeof(normalBuf) - 1);
-	                }
-	            } else {
-	                ImGui::InputText("Model", modelBuf, sizeof(modelBuf));
-	                ImGui::InputText("Texture", textureBuf, sizeof(textureBuf));
-	                ImGui::InputText("Normal Map", normalBuf, sizeof(normalBuf));
-	                ImGui::DragFloat("Shininess", &mc->mesh->material.shininess, 1.0f, 1.0f, 256.0f);
+		            if (ImGui::Button("Edit Paths")) {
+		                editingMeshIndex = i;
+		                strncpy(modelBuf, mc->mesh->material.modelPath.c_str(), sizeof(modelBuf) - 1);
+		                strncpy(textureBuf, mc->mesh->material.texturePath.c_str(), sizeof(textureBuf) - 1);
+		                strncpy(normalBuf, mc->mesh->material.hasNormalMap
+		                    ? mc->mesh->material.normalMapPath.c_str() : "", sizeof(normalBuf) - 1);
+		                strncpy(heightBuf, mc->mesh->material.hasHeightMap
+		                    ? mc->mesh->material.heightMapPath.c_str() : "", sizeof(heightBuf) - 1);
+		            }
+		        } else {
+		            ImGui::InputText("Model", modelBuf, sizeof(modelBuf));
+		            ImGui::InputText("Texture", textureBuf, sizeof(textureBuf));
+		            ImGui::InputText("Normal Map", normalBuf, sizeof(normalBuf));
+		            ImGui::InputText("Height Map", heightBuf, sizeof(heightBuf));
+		            ImGui::DragFloat("Roughness", &mc->mesh->material.roughness, 0.01f, 0.05f, 1.0f);
+		            ImGui::DragFloat("Metallic",  &mc->mesh->material.metallic,  0.01f, 0.0f, 1.0f);
+		            ImGui::DragFloat("Height Scale", &mc->mesh->material.heightScale, 0.005f, 0.0f, 0.3f);
 
-	                if (ImGui::Button("Apply")) {
-	                    float shininess = mc->mesh->material.shininess;
-	                    std::string normalStr(normalBuf);
-	                    mc->mesh = std::make_shared<Mesh>(
-	                        std::string(modelBuf),
-	                        std::string(textureBuf),
-	                        shininess,
-	                        normalStr
-	                    );
-	                    editingMeshIndex = -1;
-	                }
-	                ImGui::SameLine();
-	                if (ImGui::Button("Cancel"))
-	                    editingMeshIndex = -1;
-	            }
+		            if (ImGui::Button("Apply")) {
+		                float r = mc->mesh->material.roughness;
+		                float m = mc->mesh->material.metallic;
+		                float hs = mc->mesh->material.heightScale;
+		                auto newMesh = std::make_shared<Mesh>(
+		                    std::string(modelBuf), std::string(textureBuf),
+		                    std::string(normalBuf), std::string(heightBuf));
+		                newMesh->material.roughness  = r;
+		                newMesh->material.metallic   = m;
+		                newMesh->material.heightScale = hs;
+		                mc->mesh = newMesh;
+		                editingMeshIndex = -1;
+		            }
+		            ImGui::SameLine();
+		            if (ImGui::Button("Cancel"))
+		                editingMeshIndex = -1;
+		        }
 
-	            ImGui::TreePop();
-	        }
-	    }
+		        ImGui::TreePop();
+		    }
+		}
 
         // Light
     	auto lc = obj->GetComponent<LightComponent>();

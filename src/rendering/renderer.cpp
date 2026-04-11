@@ -272,7 +272,8 @@ void Renderer::CacheUniforms()
     gBuf_view       = glGetUniformLocation(gBufferShader, "view");
     gBuf_projection = glGetUniformLocation(gBufferShader, "projection");
     gBuf_normalMat  = glGetUniformLocation(gBufferShader, "normalMatrix");
-    gBuf_shininess  = glGetUniformLocation(gBufferShader, "shininess");
+    gBuf_roughness = glGetUniformLocation(gBufferShader, "roughness");
+    gBuf_metallic  = glGetUniformLocation(gBufferShader, "metallic");
     gBuf_diffuseTex = glGetUniformLocation(gBufferShader, "diffuseTex");
     gBuf_normalMap  = glGetUniformLocation(gBufferShader, "normalMap");
     gBuf_hasNormalMap = glGetUniformLocation(gBufferShader, "hasNormalMap");
@@ -280,6 +281,7 @@ void Renderer::CacheUniforms()
     glUseProgram(gBufferShader);
     glUniform1i(gBuf_diffuseTex, 0);
     glUniform1i(gBuf_normalMap, 1);
+    glUniform1i(glGetUniformLocation(gBufferShader, "heightMap"), 2);
     glUniformMatrix4fv(gBuf_projection, 1, GL_FALSE, glm::value_ptr(projection));
 
     glm::mat4 identity(1.0f);
@@ -330,7 +332,7 @@ void Renderer::RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profile
         shadowCount++;
     }
 
-    GeometryPass(view, scene, profiler);
+    GeometryPass(view, scene, camera, profiler);
     if (SSAO_ENABLED) SSAOPass(view, profiler);
     LightingPass(camera, scene, shadowCount, profiler);
 
@@ -462,7 +464,7 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
     profiler.End("Shadow Pass");
 }
 
-void Renderer::GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene, Profiler& profiler)
+void Renderer::GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene, const Camera& camera, Profiler& profiler)
 {
     profiler.Begin("Geometry Pass");
     glViewport(0, 0, w, h);
@@ -473,7 +475,11 @@ void Renderer::GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene,
     glFrontFace(GL_CCW);
     glUseProgram(gBufferShader);
     glUniformMatrix4fv(gBuf_view, 1, GL_FALSE, glm::value_ptr(view));
-    scene->RenderGeometry(gBufferShader, gBuf_model, gBuf_shininess);
+    glUniform3f(glGetUniformLocation(gBufferShader, "viewPos"),
+            camera.transform.position.x,
+            camera.transform.position.y,
+            camera.transform.position.z);
+    scene->RenderGeometry(gBufferShader, gBuf_model);
     gbuffer.Unbind();
     profiler.End("Geometry Pass");
 }
@@ -531,7 +537,7 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
 
     glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
     glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
-    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, gbuffer.gDiffuse);
+    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, gbuffer.gAlbedo);
 
     // Shadow maps on slots 3+
     int si = 0;
@@ -983,7 +989,7 @@ unsigned int Renderer::GenerateNoiseTexture(int size)
     return tex;
 }
 
-// Mode: 0=Position, 1=Normals, 2=Diffuse, 3=SSAO, 4=SSAO Blur,
+// Mode: 0=Position, 1=Normals, 2=Albedo, 3=SSAO, 4=SSAO Blur,
 //       5=Lighting, 6-8=Shadow Maps, 9=Fog
 
 unsigned int Renderer::GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const
@@ -992,7 +998,7 @@ unsigned int Renderer::GetDebugTexture(int mode, std::shared_ptr<Scene> scene) c
     {
         case 0: return gbuffer.gPosition;
         case 1: return gbuffer.gNormal;
-        case 2: return gbuffer.gDiffuse;
+        case 2: return gbuffer.gAlbedo;
         case 3: return ssaoTexture;
         case 4: return ssaoBlurTexture;
         case 5: return litTexture;

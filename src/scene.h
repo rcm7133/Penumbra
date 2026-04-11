@@ -49,18 +49,32 @@ public:
         }
     }
 
-    void RenderGeometry(unsigned int gBufferShader, int modelLoc, int shininessLoc) const {
+    void RenderGeometry(unsigned int gBufferShader, int modelLoc) const {
+        int roughnessLoc    = glGetUniformLocation(gBufferShader, "roughness");
+        int metallicLoc     = glGetUniformLocation(gBufferShader, "metallic");
         int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
+        int hasHeightMapLoc = glGetUniformLocation(gBufferShader, "hasHeightMap");
+        int heightScaleLoc  = glGetUniformLocation(gBufferShader, "heightScale");
+        int normalMatLoc    = glGetUniformLocation(gBufferShader, "normalMatrix");
 
         for (const auto& obj : objects) {
             if (!obj->enabled) continue;
             auto mc = obj->GetComponent<MeshComponent>();
             if (!mc) continue;
             if (obj->IsForwardRendered()) continue;
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
-                glm::value_ptr(obj->transform.GetMatrix()));
-            glUniform1f(shininessLoc, mc->mesh->GetShininess());
+
+            glm::mat4 modelMat = obj->transform.GetMatrix();
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMat));
+
+            glm::mat3 normalMat = glm::mat3(glm::transpose(glm::inverse(modelMat)));
+            glUniformMatrix3fv(normalMatLoc, 1, GL_FALSE, glm::value_ptr(normalMat));
+
+            glUniform1f(roughnessLoc, mc->mesh->material.roughness);
+            glUniform1f(metallicLoc,  mc->mesh->material.metallic);
             glUniform1i(hasNormalMapLoc, mc->mesh->material.hasNormalMap ? 1 : 0);
+            glUniform1i(hasHeightMapLoc, mc->mesh->material.hasHeightMap ? 1 : 0);
+            glUniform1f(heightScaleLoc,  mc->mesh->material.heightScale);
+
             mc->mesh->Draw();
         }
     }

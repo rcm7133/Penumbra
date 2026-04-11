@@ -1,7 +1,7 @@
 #version 430 core
 #include "../common/lights.glsl"
 
-
+const float PI = 3.14159265359;
 
 in vec2 fragUV;
 out vec4 screenColor;
@@ -20,6 +20,47 @@ uniform int pcfEnabled;
 // SSAO
 uniform sampler2D ssaoTexture;
 uniform bool ssaoEnabled;
+
+//---------------------------
+// PBR Functions
+//---------------------------
+
+// Normal Distribution Function (GGX)
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N,H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float denom = NdotH2 * (a2 - 1.0) + 1.0;
+    denom = PI * denom * denom;
+
+    return a2 / max(denom, 0.0001);
+}
+
+// Geometry Function Schlick-GGX
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return NdotV / (NdotV * (1.0 - k) + k);
+}
+
+// Smith's method, combines masking and shadowing
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+}
+
+// Fresnel effect
+vec3 FresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 
 float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 toLight)
 {
@@ -66,64 +107,98 @@ float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float 
 void main()
 {
     vec3 fragPos = texture(gPosition, fragUV).rgb;
-    vec3 normal  = texture(gNormal,   fragUV).rgb;
-    vec3 albedo  = texture(gAlbedo,   fragUV).rgb;
-    float shine  = texture(gAlbedo,   fragUV).a * 512.0;
+    vec3 N = normalize(texture(gNormal, fragUV).rgb);
+    float roughness = texture(gNormal, fragUV).a;
+    vec3 albedo = texture(gAlbedo, fragUV).rgb;
+    float metallic = texture(gAlbedo, fragUV).a;
 
-    vec3 viewDir = normalize(cameraPos - fragPos);
+    // view direction
+    vec3 V = normalize(cameraPos - fragPos);
 
+    // F0 = reflectance at normal incidence
+    // Dielectrics reflect about 4% gray, metals reflect their albedo color
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
+    // Ambient
+    // TODO: Replace with Image Based Lighting
     vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
     float ao = ssaoEnabled ? texture(ssaoTexture, screenUV).r : 1.0;
+    vec3 ambient = ambientMultiplier * albedo * ao;
 
-    vec3 result = ambientMultiplier * albedo * ao;
+    // Emission
+    vec3 Lo = vec3(0.0);
 
     for (int i = 0; i < lightCount; i++)
     {
-        vec3  lightDir_i;
+        vec3  L;
         float attenuation = 1.0;
         float spotEffect  = 1.0;
 
         if (lights[i].type == LIGHT_DIRECTIONAL)
         {
-            lightDir_i  = normalize(-lights[i].direction);
+            L = normalize(-lights[i].direction);
         }
         else if (lights[i].type == LIGHT_POINT)
         {
-            lightDir_i = normalize(lights[i].position - fragPos);
+            L = normalize(lights[i].position - fragPos);
             float dist = length(lights[i].position - fragPos);
-            attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+            attenuation = 1.0 / (dist * dist);  // inverse square
             attenuation *= 1.0 - smoothstep(lights[i].radius * 0.75, lights[i].radius, dist);
         }
         else // SPOT
         {
-            lightDir_i = normalize(lights[i].position - fragPos);
+            L = normalize(lights[i].position - fragPos);
             float dist = length(lights[i].position - fragPos);
-            attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+            attenuation = 1.0 / (dist * dist);
 
-            float theta = dot(lightDir_i, normalize(-lights[i].direction));
+            float theta = dot(L, normalize(-lights[i].direction));
             float epsilon = lights[i].innerCutoff - lights[i].outerCutoff;
             spotEffect = clamp((theta - lights[i].outerCutoff) / epsilon, 0.0, 1.0);
         }
 
-        vec3  halfwayDir = normalize(lightDir_i + viewDir);
-        float lambert = max(dot(normal, lightDir_i), 0.0);
-        vec3  diffuse = lambert * lights[i].color * lights[i].intensity * albedo * attenuation * spotEffect;
+        vec3 H = normalize(V + L);
+        float NdotL = max(dot(N, L), 0.0);
 
-        float spec = pow(max(dot(normal, halfwayDir), 0.0), shine);
-        vec3  specular = spec * lights[i].color * lights[i].intensity * attenuation * spotEffect;
+        // Radiance arriving from this light
+        vec3 radiance = lights[i].color * lights[i].intensity * attenuation * spotEffect;
 
+        // Cook-Torrance specular
+        float D = DistributionGGX(N, H, roughness);
+        vec3  F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+        float G = GeometrySmith(N, V, L, roughness);
+
+        float NdotV = max(dot(N, V), 0.001);
+        vec3 numerator = D * F * G;
+        float denominator = 4.0 * NdotV * NdotL + 0.0001;
+        vec3 specular = numerator / denominator;
+
+        // Diffuse
+        // kS = Fresnel = fraction of light that reflects
+        // kD = fraction that refracts
+        vec3 kS = F;
+        vec3 kD = (1.0 - kS) * (1.0 - metallic);
+
+        vec3 diffuse = kD * albedo / PI;
+
+        // Shadows
         float shadow = 0.0;
         if (i < shadowLightCount)
         {
             if (lights[i].type == LIGHT_POINT)
             shadow = SamplePointShadow(shadowCubeMap[i], fragPos, lights[i].position, lightFarPlane[i]);
             else
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
+            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, N, L);
         }
-
-        result += (1.0 - shadow) * (diffuse + specular);
+        // Accumulate
+        Lo += (1.0 - shadow) * (diffuse + specular) * radiance * NdotL;
     }
 
-    result = clamp(result, 0.0, 1.0);
-    screenColor = vec4(result, 1.0);
+    vec3 color = ambient + Lo;
+
+    // HDR tonemapping (Reinhard)
+    color = color / (color + vec3(1.0));
+    // Gamma correction
+    color = pow(color, vec3(1.0 / 2.2));
+
+    screenColor = vec4(color, 1.0);
 }
