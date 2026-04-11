@@ -1,6 +1,6 @@
 #pragma once
-#include "../component.h"
-#include "../rendering/fogVolume.h"
+#include "../../../component.h"
+#include "rendering/effects/fog/fogVolume.h"
 
 class FogVolumeComponent : public Component
 {

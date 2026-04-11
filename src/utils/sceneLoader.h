@@ -3,14 +3,15 @@
 #include "../scene.h"
 #include "../gameobject.h"
 #include "../physics/rigidbody.h"
-#include "../particles/particleSystemManager.h"
+#include "../rendering/effects/particles/particleSystemManager.h"
 #include "../../dependencies/nlohmann/json.hpp"
-#include "../rendering/fogVolume.h"
-#include "../components/particleSystemComponent.h"
-#include "../components/rigidbodyComponent.h"
-#include "../components/fogVolumeComponent.h"
-#include "components/meshComponent.h"
-#include "components/lightComponent.h"
+#include "../rendering/effects/fog/fogVolume.h"
+#include "../rendering/effects/particles/particleSystemComponent.h"
+#include "../physics/rigidbodyComponent.h"
+#include "../rendering/effects/fog/fogVolumeComponent.h"
+#include "../rendering/meshComponent.h"
+#include "../rendering/effects/lights/lightComponent.h"
+#include "../rendering/effects/water/interactiveWaterComponent.h"
 
 class SceneLoader {
 public:
@@ -34,6 +35,7 @@ private:
     static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
     static json SerializeRigidBody(const RigidBody& rb);
     static json SerializeFogVolume(const FogVolume& fv);
+    static json SerializeInteractiveWater(const InteractiveWaterComponent& iw);
     static json SerializeComponents(const std::shared_ptr<GameObject>& obj);
 
     static glm::vec3 DeserializeVec3(const json& j);

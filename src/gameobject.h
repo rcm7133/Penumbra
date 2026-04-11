@@ -3,6 +3,7 @@
 #include "transform.h"
 #include "physics/rigidbody.h"
 #include "component.h"
+#include "rendering/effects/water/interactiveWaterComponent.h"
 
 class GameObject
 {
@@ -47,8 +48,15 @@ public:
             components.end());
     }
 
-
     virtual ~GameObject() {}
+
+    bool IsForwardRendered() const {
+        for (auto& comp : components) {
+            if (auto wc = std::dynamic_pointer_cast<InteractiveWaterComponent>(comp))
+                return true;
+        }
+        return false;
+    }
 
     virtual void Update(float deltaTime)
     {

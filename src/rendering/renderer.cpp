@@ -1,7 +1,7 @@
 #include "renderer.h"
 #define STB_PERLIN_IMPLEMENTATION
 #include "../../dependencies/stb_perlin.h"
-#include "../components/particleSystemComponent.h"
+#include "effects/particles/particleSystemComponent.h"
 
 
 // Construction and destruction
@@ -190,7 +190,6 @@ void Renderer::CreateFXAA()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
 void Renderer::CreateSSAO()
 {
     // Create Kernel
@@ -339,9 +338,10 @@ void Renderer::RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profile
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, litFBO);
     glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
     glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
-    SkyboxPass(camera, scene);
-
+    SkyboxPass(camera, scene, profiler);
     ParticlePass(camera, scene, shadowCount, profiler);
+    WaterPass(camera, scene, profiler);
+
     if (FOG_ENABLED) FogPass(camera, scene, shadowCount, profiler);
     else PassthroughPass();
     FXAAPass(profiler);
@@ -407,6 +407,7 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
                 {
                     auto mc = renderObj->GetComponent<MeshComponent>();
                     if (!mc || !renderObj->enabled) continue;
+                    if (renderObj->IsForwardRendered()) continue;
                     glm::mat4 model = renderObj->transform.GetMatrix();
                     glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
                                        1, GL_FALSE, glm::value_ptr(model));
@@ -864,9 +865,11 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     profiler.End("Particle Pass");
 }
 
-void Renderer::SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene)
+void Renderer::SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler)
 {
     if (!scene->skybox) return;
+
+    profiler.Begin("Skybox Pass");
 
     glDepthFunc(GL_LEQUAL);
     glDisable(GL_CULL_FACE);
@@ -888,6 +891,44 @@ void Renderer::SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene)
 
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
+
+    profiler.End("Skybox Pass");
+}
+
+void Renderer::WaterPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler) {
+    profiler.Begin("Water Pass");
+    glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    glm::mat4 view = camera.GetViewMatrix();
+
+    for (auto& obj: scene->objects) {
+        if (!obj->enabled) continue;
+        auto wc = obj->GetComponent<InteractiveWaterComponent>();
+        auto mc = obj->GetComponent<MeshComponent>();
+        if (!wc || !mc) continue;
+
+        unsigned int shader = wc->GetWaterShader();
+        glUseProgram(shader);
+
+        glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "model"),
+            1, GL_FALSE, glm::value_ptr(obj->transform.GetMatrix()));
+
+        glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "view"),
+            1, GL_FALSE, glm::value_ptr(view));
+
+        glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "projection"),
+                           1, GL_FALSE, glm::value_ptr(projection));
+
+        mc->mesh->Draw();
+    }
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    profiler.End("Water Pass");
 }
 
 void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene)
@@ -900,6 +941,7 @@ void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_pt
     {
         auto mc = obj->GetComponent<MeshComponent>();
         if (!mc || !obj->enabled) continue;
+        if (obj->IsForwardRendered()) continue;
         glm::mat4 model = obj->transform.GetMatrix();
         glUniformMatrix4fv(glGetUniformLocation(shadowShader, "model"),
                            1, GL_FALSE, glm::value_ptr(model));

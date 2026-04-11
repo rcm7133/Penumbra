@@ -28,16 +28,32 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/shaders/skybox/skyboxFrag.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/skybox/skyboxVert.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/skybox.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/water/waterNormalCompute.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/water/waterFrag.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/water/waterVert.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWaterComponent.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/scenes/tunnel.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/tunnel.scene" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/fogVolumeComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/fog/fogVolumeComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/lightComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/lights/lightComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/meshComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/meshComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/particleSystemComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/particles/particleSystemComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/rigidbodyComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/physics/rigidbodyComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gameobject.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/gameobject.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/mesh.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/mesh.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particles/particle.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/particles/particle.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particles/particleSystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/particles/particleSystem.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/particles/particleSystemManager.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/particles/particleSystemManager.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/fogVolume.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/fog/fogVolume.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/light.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/lights/light.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/skybox.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,19 +75,12 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/src/camera.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/config.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/gameobject.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/gbuffer.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/glad.c" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/light.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/main.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/material.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/mesh.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/mesh.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/particles/particleSystem.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/particles/particleSystemManager.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/quad.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/scene.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/transform.h" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -125,11 +134,11 @@
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nlohmann" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\dependencies\glad" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\normals" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
       <recent name="C:\Users\m16ga\code\Penumbra\src\rendering" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects\fog" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects\particles" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\physics" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects\water" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
@@ -178,7 +187,9 @@
       <workItem from="1775487327437" duration="7614000" />
       <workItem from="1775512724663" duration="308000" />
       <workItem from="1775611594001" duration="6112000" />
-      <workItem from="1775684124910" duration="12000" />
+      <workItem from="1775684124910" duration="367000" />
+      <workItem from="1775701003970" duration="7723000" />
+      <workItem from="1775869002409" duration="10000" />
     </task>
     <servers />
   </component>
@@ -189,5 +200,16 @@
     <isAutomaticCheckingOnLaunch value="false" />
     <isAutomaticFoundErrors value="true" />
     <isAutomaticReloadCMake value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/utils/sceneLoader.h</url>
+          <line>1</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

@@ -1,6 +1,6 @@
 #pragma once
-#include "../config.h"
-#include "../../dependencies/stb_image.h"
+#include "../../../config.h"
+#include "../dependencies/stb_image.h"
 
 class Skybox {
 public:

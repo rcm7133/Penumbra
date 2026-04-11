@@ -1,5 +1,5 @@
 #pragma once
-#include "../component.h"
+#include "../../../component.h"
 #include "particleSystem.h"
 
 class ParticleSystemComponent : public Component

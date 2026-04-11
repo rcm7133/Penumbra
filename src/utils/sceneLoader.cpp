@@ -1,6 +1,8 @@
 #include "sceneLoader.h"
 #include <filesystem>
 
+#include "rendering/effects/water/interactiveWaterComponent.h"
+
 using json = nlohmann::json;
 
 // --- Prefabs ---
@@ -127,6 +129,19 @@ json SceneLoader::SerializeFogVolume(const FogVolume& fv) {
     return j;
 }
 
+json SceneLoader::SerializeInteractiveWater(const InteractiveWaterComponent& iw) {
+    json j;
+    j["resolution"]        = iw.resolution;
+    j["waveSpeed"]         = iw.waveSpeed;
+    j["dampening"]         = iw.dampening;
+    j["rippleStrength"]    = iw.rippleStrength;
+    j["fresnelPower"]      = iw.fresnelPower;
+    j["specularStrength"]  = iw.specularStrength;
+    j["shallowColor"]      = SerializeVec3(iw.shallowColor);
+    j["deepColor"]         = SerializeVec3(iw.deepColor);
+    return j;
+}
+
 json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
     json comps = json::array();
 
@@ -152,6 +167,11 @@ json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
         else if (auto fv = std::dynamic_pointer_cast<FogVolumeComponent>(comp)) {
             c["type"] = "FogVolume";
             c["data"] = SerializeFogVolume(*fv->volume);
+        }
+
+        else if (auto iw = std::dynamic_pointer_cast<InteractiveWaterComponent>(comp)) {
+            c["type"] = "InteractiveWater";
+            c["data"] = SerializeInteractiveWater(*iw);
         }
 
         if (!c.empty())
@@ -290,6 +310,18 @@ void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObjec
             fv->density     = data.value("density", 0.5f);
             fv->scale       = data.value("scale", 0.5f);
             fv->scrollSpeed = data.value("scrollSpeed", 0.1f);
+        }
+
+        else if (type == "InteractiveWater") {
+            int res = data.value("resolution", 256);
+            float speed = data.value("waveSpeed", 2.0f);
+            auto iw = obj->AddComponent<InteractiveWaterComponent>(res, speed);
+            iw->dampening        = data.value("dampening", 0.995f);
+            iw->rippleStrength   = data.value("rippleStrength", 0.5f);
+            iw->fresnelPower     = data.value("fresnelPower", 3.0f);
+            iw->specularStrength = data.value("specularStrength", 1.0f);
+            iw->shallowColor     = DeserializeVec3(data["shallowColor"]);
+            iw->deepColor         = DeserializeVec3(data["deepColor"]);
         }
     }
 }

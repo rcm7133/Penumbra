@@ -25,10 +25,10 @@
                         "lit": true,
                         "maxLifetime": 15.0,
                         "maxParticles": 10000,
-                        "maxSize": 0.10000000149011612,
+                        "maxSize": 0.019999999552965164,
                         "minLifetime": 10.0,
-                        "minSize": 0.05000000074505806,
-                        "speed": 0.10000000149011612,
+                        "minSize": 0.010999999940395355,
+                        "speed": 0.019999999552965164,
                         "startColor": [
                             0.800000011920929,
                             0.800000011920929,
@@ -39,7 +39,7 @@
                     "type": "ParticleSystem"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Particles",
             "transform": {
                 "position": [
@@ -81,7 +81,7 @@
                     "type": "FogVolume"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Fog Volume",
             "transform": {
                 "position": [
@@ -114,7 +114,7 @@
                     "type": "Mesh"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Hallway",
             "transform": {
                 "position": [
@@ -159,7 +159,7 @@
                     "type": "Light"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Light",
             "transform": {
                 "position": [
@@ -200,7 +200,7 @@
                     "type": "RigidBody"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Box Collider",
             "transform": {
                 "position": [
@@ -241,7 +241,7 @@
                     "type": "RigidBody"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Box Collider",
             "transform": {
                 "position": [
@@ -282,7 +282,7 @@
                     "type": "RigidBody"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Box Collider",
             "transform": {
                 "position": [
@@ -315,7 +315,7 @@
                     "type": "Mesh"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "Barrels",
             "transform": {
                 "position": [
@@ -340,7 +340,7 @@
             "components": [
                 {
                     "data": {
-                        "model": "../assets/models/sphere.obj",
+                        "model": "../assets/models/plane.obj",
                         "shininess": 32.0,
                         "texture": "../assets/textures/default.png"
                     },
@@ -348,28 +348,32 @@
                 },
                 {
                     "data": {
-                        "capsuleHalfHeight": 0.5,
-                        "friction": 0.5,
-                        "halfExtent": [
-                            0.5,
-                            0.5,
-                            0.5
+                        "dampening": 0.9950000047683716,
+                        "deepColor": [
+                            0.0,
+                            0.10000000149011612,
+                            0.30000001192092896
                         ],
-                        "mass": 16.899999618530273,
-                        "motion": "Dynamic",
-                        "radius": 0.20000000298023224,
-                        "restitution": 0.30000001192092896,
-                        "shape": "Sphere"
+                        "fresnelPower": 3.0,
+                        "resolution": 256,
+                        "rippleStrength": 0.5,
+                        "shallowColor": [
+                            0.5799999833106995,
+                            0.5400000214576721,
+                            1.0
+                        ],
+                        "specularStrength": 1.0,
+                        "waveSpeed": 2.0
                     },
-                    "type": "RigidBody"
+                    "type": "InteractiveWater"
                 }
             ],
-            "enabled": true,
-            "name": "Sphere",
+            "enabled": false,
+            "name": "Water",
             "transform": {
                 "position": [
-                    0.0,
-                    0.0,
+                    -7.860000133514404,
+                    0.11999999731779099,
                     0.0
                 ],
                 "rotation": [
@@ -378,9 +382,9 @@
                     0.0
                 ],
                 "scale": [
-                    0.20000000298023224,
-                    0.20000000298023224,
-                    0.20000000298023224
+                    1.0,
+                    1.0,
+                    1.0
                 ]
             }
         }

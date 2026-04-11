@@ -7,8 +7,9 @@
 #include "camera.h"
 #include "../utils/profiler.h"
 #include "shaderutils.h"
-#include "../components/meshComponent.h"
-#include "../components/lightComponent.h"
+#include "meshComponent.h"
+#include "effects/lights/lightComponent.h"
+#include "../rendering/effects/water/interactiveWaterComponent.h"
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;
@@ -117,7 +118,8 @@ private:
     void PassthroughPass();
     void FXAAPass(Profiler& profiler);
     void ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
-    void SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene);
+    void SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler);
+    void WaterPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler);
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene);
 

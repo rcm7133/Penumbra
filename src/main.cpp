@@ -3,17 +3,18 @@
 #include "rendering/camera.h"
 #include "rendering/renderer.h"
 #include "../utils/profiler.h"
-#include "particles/particleSystem.h"
-#include "particles/particleSystemManager.h"
+#include "rendering/effects/particles/particleSystem.h"
+#include "rendering/effects/particles/particleSystemManager.h"
 #include "utils/sceneLoader.h"
 #include "rendering/colliderDebugRenderer.h"
 #include "physics/physicsSystem.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
-#include "components/rigidbodyComponent.h"
-#include "components/lightComponent.h"
-#include "components/meshComponent.h"
+#include "physics/rigidbodyComponent.h"
+#include "rendering/effects/lights/lightComponent.h"
+#include "rendering/meshComponent.h"
+#include "rendering/effects/water/interactiveWaterComponent.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -343,7 +344,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
         ImGui::Checkbox("Enabled", &obj->enabled);
 
     	// Add Component
-    	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume" };
+    	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume", "Interactive Water"};
     	static int selectedComponent = -1;
     	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
     	if (ImGui::BeginCombo("##AddComponent", "Add Component...")) {
@@ -381,6 +382,9 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     				if (!obj->GetComponent<FogVolumeComponent>())
     					obj->AddComponent<FogVolumeComponent>();
     				break;
+    			case 5: // Interactive Water
+    				if (!obj->GetComponent<InteractiveWaterComponent>())
+    					obj->AddComponent<InteractiveWaterComponent>();
     		}
     		selectedComponent = -1;
     	}
@@ -566,6 +570,21 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     				physics.RemoveBody(rb->body);
     				physics.AddBody(obj);
     			}
+
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto iw = obj->GetComponent<InteractiveWaterComponent>();
+    	if (iw) {
+    		if (ImGui::TreeNode("Interactive Water")) {
+    			ImGui::DragInt("Resolution", &iw->resolution, 2, 64, 1024);
+    			ImGui::DragFloat("Wave Speed", &iw->waveSpeed, 0.1f, 0.1f, 4.0f);
+    			ImGui::DragFloat("Ripple Strength", &iw->rippleStrength, 0.1f, 0.1f, 1.0f);
+    			ImGui::DragFloat("Fresnel Power", &iw->fresnelPower, 0.1f, 0.1f, 10.0f);
+
+    			ImGui::DragFloat3("Shallow Color", &iw->shallowColor.x, 0.01f, 0.01f, 1.0f);
+    			ImGui::DragFloat3("Deep Color", &iw->deepColor.x, 0.01f, 0.01f, 1.0f);
 
     			ImGui::TreePop();
     		}

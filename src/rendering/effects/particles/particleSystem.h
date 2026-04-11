@@ -1,7 +1,7 @@
 #pragma once
-#include "../config.h"
+#include "../../../config.h"
 #include "particle.h"
-#include "../rendering/shaderutils.h"
+#include "../../shaderutils.h"
 
 
 class ParticleSystem

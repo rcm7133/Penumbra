@@ -1,11 +1,12 @@
 #pragma once
 #include "config.h"
 #include "gameobject.h"
-#include "components/particleSystemComponent.h"
-#include "components/fogVolumeComponent.h"
-#include "components/meshComponent.h"
-#include "components/lightComponent.h"
-#include "rendering/skybox.h"
+#include "rendering/effects/particles/particleSystemComponent.h"
+#include "rendering/effects/fog/fogVolumeComponent.h"
+#include "rendering/meshComponent.h"
+#include "rendering/effects/lights/lightComponent.h"
+#include "rendering/effects/cubemaps/skybox.h"
+#include "rendering/effects/water/interactiveWaterComponent.h"
 
 class Scene
 {
@@ -55,6 +56,7 @@ public:
             if (!obj->enabled) continue;
             auto mc = obj->GetComponent<MeshComponent>();
             if (!mc) continue;
+            if (obj->IsForwardRendered()) continue;
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
                 glm::value_ptr(obj->transform.GetMatrix()));
             glUniform1f(shininessLoc, mc->mesh->GetShininess());

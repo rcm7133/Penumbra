@@ -1,6 +1,6 @@
 #pragma once
 #include "../component.h"
-#include "../rendering/mesh.h"
+#include "mesh.h"
 
 class MeshComponent : public Component
 {

@@ -1,6 +1,6 @@
 #pragma once
-#include "../component.h"
-#include "../rendering/light.h"
+#include "../../../component.h"
+#include "light.h"
 
 class LightComponent : public Component
 {
