@@ -1,0 +1,39 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "albedo": "../assets/textures/materials/woodFloor/albedo.jpg",
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 0.0,
+                        "normalMap": "../assets/textures/materials/woodFloor/normal.jpg",
+                        "roughness": 0.07000000029802322
+                    }
+                ],
+                "path": "../assets/models/plane.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "Wood Floor",
+    "transform": {
+        "position": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "rotation": [
+            0.0,
+            -0.0,
+            0.0
+        ],
+        "scale": [
+            2.0,
+            1.0,
+            1.0
+        ]
+    }
+}

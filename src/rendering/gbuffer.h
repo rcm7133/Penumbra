@@ -9,6 +9,7 @@ public:
     unsigned int gNormal;   // RGB = normal, A = roughness
     unsigned int gAlbedo;   // RGB = albedo, A = metallic
     unsigned int rboDepth;  // Depth texture
+    unsigned int gEmissive; // Emission
 
     GBuffer(int width, int height)
     {
@@ -44,13 +45,22 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedo, 0);
 
+        // *** Emission texture ***
+        glGenTextures(1, &gEmissive);
+        glBindTexture(GL_TEXTURE_2D, gEmissive);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gEmissive, 0);
+
         // Tell OpenGL to draw to all 3 textures
-        unsigned int attachments[3] = {
+        unsigned int attachments[4] = {
             GL_COLOR_ATTACHMENT0,
             GL_COLOR_ATTACHMENT1,
-            GL_COLOR_ATTACHMENT2
+            GL_COLOR_ATTACHMENT2,
+            GL_COLOR_ATTACHMENT3
         };
-        glDrawBuffers(3, attachments);
+        glDrawBuffers(4, attachments);
 
         // Depth renderbuffer
         glGenRenderbuffers(1, &rboDepth);

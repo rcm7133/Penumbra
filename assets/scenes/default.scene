@@ -1,0 +1,547 @@
+{
+    "objects": [
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "castsShadow": false,
+                        "color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "direction": [
+                            -0.9900000095367432,
+                            -1.0099999904632568,
+                            0.0
+                        ],
+                        "innerCutoffDeg": 21.501001358032227,
+                        "intensity": 0.5799999833106995,
+                        "outerCutoffDeg": 35.400001525878906,
+                        "radius": 27.700000762939453,
+                        "type": "Point"
+                    },
+                    "type": "Light"
+                },
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "emissiveColor": [
+                                    1.0,
+                                    1.0,
+                                    1.0
+                                ],
+                                "emissiveIntensity": 128.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "roughness": 0.05000000074505806
+                            }
+                        ],
+                        "path": "../assets/models/sphere.glb"
+                    },
+                    "type": "Model"
+                },
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.5,
+                            0.5,
+                            0.5
+                        ],
+                        "mass": 1.0,
+                        "motion": "Static",
+                        "radius": 0.10000000149011612,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Sphere"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "Point Light",
+            "transform": {
+                "position": [
+                    -1.4500000476837158,
+                    0.5099999904632568,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    0.10000000149011612,
+                    0.10000000149011612,
+                    0.10000000149011612
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/woodFloor/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.03500000014901161,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/woodFloor/normal.jpg",
+                                "roughness": 0.07000000029802322
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Wood Floor",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    2.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.004999999888241291,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                                "roughness": 0.15000000596046448
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Wall",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.75,
+                    -0.6000000238418579
+                ],
+                "rotation": [
+                    90.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    2.0,
+                    1.0,
+                    0.75
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                                "roughness": 0.15000000596046448
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Wall",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.75,
+                    0.6000000238418579
+                ],
+                "rotation": [
+                    -90.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    2.0,
+                    1.0,
+                    0.75
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                                "roughness": 0.5
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Wall",
+            "transform": {
+                "position": [
+                    0.0,
+                    1.4700000286102295,
+                    0.0
+                ],
+                "rotation": [
+                    180.0,
+                    -4.4528261151010815e-14,
+                    7.355542684649263e-20
+                ],
+                "scale": [
+                    2.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "boundsMax": [
+                            2.0,
+                            1.5,
+                            0.6000000238418579
+                        ],
+                        "boundsMin": [
+                            -2.0,
+                            0.0,
+                            -0.6000000238418579
+                        ],
+                        "endColor": [
+                            0.8392156958580017,
+                            0.8392156958580017,
+                            0.8392156958580017,
+                            0.0
+                        ],
+                        "fadeInTime": 1.0,
+                        "lit": true,
+                        "maxLifetime": 15.0,
+                        "maxParticles": 500,
+                        "maxSize": 0.014999999664723873,
+                        "minLifetime": 9.800000190734863,
+                        "minSize": 0.009999999776482582,
+                        "speed": 0.004999999888241291,
+                        "startColor": [
+                            0.8382352590560913,
+                            0.8382352590560913,
+                            0.8382352590560913,
+                            1.0
+                        ]
+                    },
+                    "type": "ParticleSystem"
+                }
+            ],
+            "enabled": true,
+            "name": "Dust",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "boundsMax": [
+                            2.0,
+                            1.5,
+                            0.6000000238418579
+                        ],
+                        "boundsMin": [
+                            -2.0,
+                            0.0,
+                            -0.6000000238418579
+                        ],
+                        "density": 0.05999999865889549,
+                        "scale": 0.5,
+                        "scrollSpeed": 0.019999999552965164
+                    },
+                    "type": "FogVolume"
+                }
+            ],
+            "enabled": true,
+            "name": "Fog",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.33000001311302185,
+                                "roughness": 0.3199999928474426
+                            },
+                            {
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 1.0,
+                                "roughness": 0.05000000074505806
+                            }
+                        ],
+                        "path": "../assets/models/door/door.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Door",
+            "transform": {
+                "position": [
+                    1.899999976158142,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    89.98021697998047,
+                    0.0
+                ],
+                "scale": [
+                    0.6000000238418579,
+                    0.6000000238418579,
+                    0.6000000238418579
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.004999999888241291,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                                "roughness": 0.05000000074505806
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Wall",
+            "transform": {
+                "position": [
+                    1.899999976158142,
+                    0.75,
+                    0.0
+                ],
+                "rotation": [
+                    90.0,
+                    -89.96573638916016,
+                    0.0
+                ],
+                "scale": [
+                    2.0,
+                    1.0,
+                    0.75
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            1.8899999856948853,
+                            0.029999999329447746,
+                            0.699999988079071
+                        ],
+                        "mass": 0.5099999904632568,
+                        "motion": "Static",
+                        "radius": 0.5,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "New GameObject",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.009999999776482582,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    -0.6000000834465027
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.03999999910593033,
+                            0.8399999737739563,
+                            0.7300000190734863
+                        ],
+                        "mass": 0.009999999776482582,
+                        "motion": "Static",
+                        "radius": 0.5,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "New GameObject",
+            "transform": {
+                "position": [
+                    1.9199999570846558,
+                    0.7799999713897705,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        }
+    ]
+}

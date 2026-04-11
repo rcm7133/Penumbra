@@ -14,13 +14,14 @@ find_package(Jolt CONFIG REQUIRED)
 
 add_executable(Penumbra
         src/main.cpp
-        src/rendering/mesh.cpp
+        src/rendering/mesh/mesh.cpp
         dependencies/glad/glad.c
         src/rendering/stb_image.cpp
         src/rendering/renderer.cpp
         src/settings.cpp
         src/rendering/shaderutils.cpp
         src/rendering/colliderDebugRenderer.cpp
+        src/rendering/mesh/model.cpp
         src/utils/sceneLoader.cpp
         dependencies/imgui/imgui.cpp
         dependencies/imgui/imgui_draw.cpp

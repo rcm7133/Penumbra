@@ -3,7 +3,7 @@
 #include "gameobject.h"
 #include "rendering/effects/particles/particleSystemComponent.h"
 #include "rendering/effects/fog/fogVolumeComponent.h"
-#include "rendering/meshComponent.h"
+#include "rendering/mesh/meshComponent.h"
 #include "rendering/effects/lights/lightComponent.h"
 #include "rendering/effects/cubemaps/skybox.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
@@ -56,6 +56,8 @@ public:
         int hasHeightMapLoc = glGetUniformLocation(gBufferShader, "hasHeightMap");
         int heightScaleLoc  = glGetUniformLocation(gBufferShader, "heightScale");
         int normalMatLoc    = glGetUniformLocation(gBufferShader, "normalMatrix");
+        int emissiveColorLoc = glGetUniformLocation(gBufferShader, "emissiveColor");
+        int emissiveIntensityLoc = glGetUniformLocation(gBufferShader, "emissiveIntensity");
 
         for (const auto& obj : objects) {
             if (!obj->enabled) continue;
@@ -69,13 +71,8 @@ public:
             glm::mat3 normalMat = glm::mat3(glm::transpose(glm::inverse(modelMat)));
             glUniformMatrix3fv(normalMatLoc, 1, GL_FALSE, glm::value_ptr(normalMat));
 
-            glUniform1f(roughnessLoc, mc->mesh->material.roughness);
-            glUniform1f(metallicLoc,  mc->mesh->material.metallic);
-            glUniform1i(hasNormalMapLoc, mc->mesh->material.hasNormalMap ? 1 : 0);
-            glUniform1i(hasHeightMapLoc, mc->mesh->material.hasHeightMap ? 1 : 0);
-            glUniform1f(heightScaleLoc,  mc->mesh->material.heightScale);
-
-            mc->mesh->Draw();
+            mc->model->Draw(gBufferShader, roughnessLoc, metallicLoc,
+                            hasNormalMapLoc, hasHeightMapLoc, heightScaleLoc, emissiveColorLoc, emissiveIntensityLoc);
         }
     }
 

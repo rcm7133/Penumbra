@@ -9,10 +9,12 @@ out vec4 screenColor;
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
+uniform sampler2D gEmissive;
 uniform vec3  cameraPos;
 uniform float ambientMultiplier;
 uniform float shadowNormalOffset;
 uniform float shadowBias;
+
 
 // PCF
 uniform int pcfKernelSize;
@@ -29,14 +31,13 @@ uniform bool ssaoEnabled;
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
     float a = roughness * roughness;
-    float a2 = a * a;
     float NdotH = max(dot(N,H), 0.0);
     float NdotH2 = NdotH * NdotH;
 
-    float denom = NdotH2 * (a2 - 1.0) + 1.0;
+    float denom = NdotH2 * (a - 1.0) + 1.0;
     denom = PI * denom * denom;
 
-    return a2 / max(denom, 0.0001);
+    return a / max(denom, 0.0001);
 }
 
 // Geometry Function Schlick-GGX
@@ -126,7 +127,7 @@ void main()
     vec3 ambient = ambientMultiplier * albedo * ao;
 
     // Emission
-    vec3 Lo = vec3(0.0);
+    vec3 Lo = texture(gEmissive, fragUV).rgb;
 
     for (int i = 0; i < lightCount; i++)
     {

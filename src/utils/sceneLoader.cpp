@@ -63,18 +63,34 @@ json SceneLoader::SerializeTransform(const Transform& t) {
     };
 }
 
-json SceneLoader::SerializeMesh(const Mesh& m) {
+json SceneLoader::SerializeModel(const Model& m) {
     json j;
-    j["model"] = m.material.modelPath;
-    j["texture"] = m.material.texturePath;
-    j["roughness"] = m.material.roughness;
-    j["metallic"]  = m.material.metallic;
-    if (m.material.hasNormalMap)
-        j["normalMap"] = m.material.normalMapPath;
-    if (m.material.hasHeightMap) {
-        j["heightMap"]   = m.material.heightMapPath;
-        j["heightScale"] = m.material.heightScale;
+    j["path"] = m.sourcePath;
+    json matsJson = json::array();
+    for (const auto& mat : m.materials) {
+        json mj;
+        mj["roughness"]   = mat.roughness;
+        mj["metallic"]    = mat.metallic;
+        mj["heightScale"] = mat.heightScale;
+        mj["emissiveColor"] = SerializeVec3(mat.emissiveColor);
+        mj["emissiveIntensity"] = mat.emissiveIntensity;
+
+        // Always save paths — embedded textures don't need saving
+        // but manually assigned ones do
+        if (!mat.texturePath.empty() && mat.texturePath != "(embedded)")
+            mj["albedo"] = mat.texturePath;
+        if (mat.hasNormalMap && mat.normalMapPath != "(embedded)")
+            mj["normalMap"] = mat.normalMapPath;
+        if (mat.hasHeightMap && mat.heightMapPath != "(embedded)")
+            mj["heightMap"] = mat.heightMapPath;
+        if (mat.hasMetallicRoughnessMap && mat.metallicRoughnessMapPath != "(embedded)")
+            mj["metallicRoughnessMap"] = mat.metallicRoughnessMapPath;
+
+        matsJson.push_back(mj);
     }
+    // Always save materials array, even if paths are empty
+    // (preserves roughness/metallic overrides)
+    j["materials"] = matsJson;
     return j;
 }
 
@@ -154,8 +170,8 @@ json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
         json c;
 
         if (auto mc = std::dynamic_pointer_cast<MeshComponent>(comp)) {
-            c["type"] = "Mesh";
-            c["data"] = SerializeMesh(*mc->mesh);
+            c["type"] = "Model";
+            c["data"] = SerializeModel(*mc->model);
         }
         else if (auto lc = std::dynamic_pointer_cast<LightComponent>(comp)) {
             c["type"] = "Light";
@@ -234,27 +250,51 @@ void SceneLoader::DeserializeTransform(const json& j, Transform& t) {
     t.scale = DeserializeVec3(j["scale"]);
 }
 
-std::shared_ptr<Mesh> SceneLoader::DeserializeMesh(const json& j) {
-    std::string model     = j["model"].get<std::string>();
-    std::string texture   = j["texture"].get<std::string>();
-    std::string normalMap = j.contains("normalMap") ? j["normalMap"].get<std::string>() : "";
-    std::string heightMap = j.contains("heightMap") ? j["heightMap"].get<std::string>() : "";
-
-    auto mesh = std::make_shared<Mesh>(model, texture, normalMap, heightMap);
-
-    if (j.contains("roughness")) {
-        mesh->material.roughness = j["roughness"].get<float>();
-        mesh->material.metallic  = j.value("metallic", 0.0f);
-    }
-    else if (j.contains("shininess")) {
-        float shininess = j["shininess"].get<float>();
-        mesh->material.roughness = glm::clamp(1.0f - (log2(shininess) / 8.0f), 0.05f, 1.0f);
-        mesh->material.metallic  = 0.0f;
+std::shared_ptr<Model> SceneLoader::DeserializeModel(const json& j) {
+    std::string path = j["path"].get<std::string>();
+    auto model = std::make_shared<Model>();
+    if (!model->Load(path)) {
+        std::cerr << "Failed to load model: " << path << std::endl;
+        return nullptr;
     }
 
-    mesh->material.heightScale = j.value("heightScale", 0.05f);
+    if (j.contains("materials")) {
+        const auto& matsJson = j["materials"];
 
-    return mesh;
+        // Create materials if the model has fewer than the scene file expects
+        while ((int)model->materials.size() < (int)matsJson.size()) {
+            model->materials.push_back(Model::DefaultMaterial());
+        }
+
+        // Assign any unassigned sub-meshes to material 0
+        for (auto& sm : model->subMeshes) {
+            if (sm.materialIndex < 0 && !model->materials.empty())
+                sm.materialIndex = 0;
+        }
+
+        for (int i = 0; i < (int)matsJson.size() && i < (int)model->materials.size(); i++) {
+            auto& mj = matsJson[i];
+            model->materials[i].roughness   = mj.value("roughness", 0.5f);
+            model->materials[i].metallic    = mj.value("metallic", 0.0f);
+            model->materials[i].heightScale = mj.value("heightScale", 0.05f);
+            model->materials[i].emissiveColor =
+                mj.contains("emissiveColor") ? DeserializeVec3(mj["emissiveColor"]) : glm::vec3(0.0f);
+            model->materials[i].emissiveIntensity =
+                mj.value("emissiveIntensity", 0.0f);
+
+            std::string albedo = mj.value("albedo", "");
+            std::string normal = mj.value("normalMap", "");
+            std::string height = mj.value("heightMap", "");
+            std::string mr     = mj.value("metallicRoughnessMap", "");
+
+            bool hasOverrides = !albedo.empty() || !normal.empty() ||
+                                !height.empty() || !mr.empty();
+            if (hasOverrides) {
+                model->ApplyTexturePaths(i, albedo, normal, height, mr);
+            }
+        }
+    }
+    return model;
 }
 
 std::shared_ptr<Light> SceneLoader::DeserializeLight(const json& j) {
@@ -278,9 +318,9 @@ void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObjec
         std::string type = compJson["type"].get<std::string>();
         const json& data = compJson["data"];
 
-        if (type == "Mesh") {
-            auto mesh = DeserializeMesh(data);
-            obj->AddComponent<MeshComponent>(mesh);
+        if (type == "Model" || type == "Mesh") {
+            auto model = DeserializeModel(data);
+            if (model) obj->AddComponent<MeshComponent>(model);
         }
         else if (type == "Light") {
             auto light = DeserializeLight(data);

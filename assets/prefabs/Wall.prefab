@@ -1,0 +1,39 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                        "heightScale": 0.004999999888241291,
+                        "metallic": 0.0,
+                        "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                        "roughness": 0.05000000074505806
+                    }
+                ],
+                "path": "../assets/models/plane.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "Wall",
+    "transform": {
+        "position": [
+            0.0,
+            0.75,
+            -1.0
+        ],
+        "rotation": [
+            90.0,
+            -0.0,
+            0.0
+        ],
+        "scale": [
+            2.0,
+            1.0,
+            0.75
+        ]
+    }
+}

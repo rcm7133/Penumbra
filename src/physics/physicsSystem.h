@@ -104,7 +104,7 @@ public:
     void AddBody(const std::shared_ptr<GameObject>& obj)
     {
         auto rb = obj->GetComponent<RigidBodyComponent>();
-        if (rb) return;
+        if (!rb) return;
 
         JPH::ShapeRefC shape;
         switch (rb->body->shapeType)

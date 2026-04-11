@@ -136,8 +136,10 @@ void Renderer::AssignDefaultShader(std::shared_ptr<Scene> scene)
     for (auto& obj : scene->objects)
     {
         auto mc = obj->GetComponent<MeshComponent>();
-        if (mc)
-            mc->mesh->material.shader = gBufferShader;
+        if (mc) {
+            for (auto& mat : mc->model->materials)
+                mat.shader = gBufferShader;
+        }
     }
 }
 
@@ -282,6 +284,7 @@ void Renderer::CacheUniforms()
     glUniform1i(gBuf_diffuseTex, 0);
     glUniform1i(gBuf_normalMap, 1);
     glUniform1i(glGetUniformLocation(gBufferShader, "heightMap"), 2);
+    glUniform1i(glGetUniformLocation(gBufferShader, "metallicRoughnessMap"), 3);
     glUniformMatrix4fv(gBuf_projection, 1, GL_FALSE, glm::value_ptr(projection));
 
     glm::mat4 identity(1.0f);
@@ -300,7 +303,7 @@ void Renderer::CacheUniforms()
     glUniform1i(light_gPosition, 0);
     glUniform1i(light_gNormal, 1);
     glUniform1i(light_gAlbedo, 2);
-    glUniform1f(light_ambient, 0.15f);
+    glUniform1f(light_ambient, AMBIENT_MULTIPLIER);
 
     // upload SSAO kernel samples
     glUseProgram(ssaoShader);
@@ -413,7 +416,7 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
                     glm::mat4 model = renderObj->transform.GetMatrix();
                     glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
                                        1, GL_FALSE, glm::value_ptr(model));
-                    mc->mesh->Draw();
+                    mc->model->DrawGeometry();
                 }
             }
 
@@ -528,6 +531,8 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(lightingShader);
 
+    glUniform1f(light_ambient, AMBIENT_MULTIPLIER);
+
     glUniform1i(glGetUniformLocation(lightingShader, "pcfKernelSize"), PCF_KERNEL_SIZE);
     glUniform1i(glGetUniformLocation(lightingShader, "shadowLightCount"), shadowCount);
     glUniform1i(glGetUniformLocation(lightingShader, "pcfEnabled"), PCF_ENABLED ? 1 : 0);
@@ -535,11 +540,30 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
     glUniform1f(glGetUniformLocation(lightingShader, "shadowNormalOffset"), SHADOW_NORMAL_OFFSET);
     glUniform1f(glGetUniformLocation(lightingShader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
 
-    glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
-    glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
-    glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, gbuffer.gAlbedo);
+    // ------------------------
+    // GBUFFER (LOCKED SLOTS)
+    // ------------------------
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
+    glUniform1i(glGetUniformLocation(lightingShader, "gPosition"), 0);
 
-    // Shadow maps on slots 3+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
+    glUniform1i(glGetUniformLocation(lightingShader, "gNormal"), 1);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gbuffer.gAlbedo);
+    glUniform1i(glGetUniformLocation(lightingShader, "gAlbedo"), 2);
+
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, gbuffer.gEmissive);
+    glUniform1i(glGetUniformLocation(lightingShader, "gEmissive"), 3);
+
+    // ------------------------
+    // SHADOW MAPS START HERE
+    // ------------------------
+    int baseSlot = 4;
+
     int si = 0;
     for (auto& obj : scene->objects)
     {
@@ -547,22 +571,28 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
         if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
         if (si >= MAX_SHADOW_LIGHTS) break;
 
-        glActiveTexture(GL_TEXTURE3 + si);
+        glActiveTexture(GL_TEXTURE0 + baseSlot + si);
+
         if (lc->light->type == LightType::Point)
             glBindTexture(GL_TEXTURE_2D, 0);
         else
             glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
 
         std::string name = "shadowMap[" + std::to_string(si) + "]";
-        glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), 3 + si);
+        glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), baseSlot + si);
 
         std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
         glUniformMatrix4fv(glGetUniformLocation(lightingShader, lsm.c_str()),
                            1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
+
         si++;
     }
 
-    int cubeStart = 3 + si;
+    // ------------------------
+    // CUBEMAPS
+    // ------------------------
+    int cubeStart = baseSlot + si;
+
     int ci = 0;
     for (auto& obj : scene->objects)
     {
@@ -571,6 +601,7 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
         if (ci >= MAX_SHADOW_LIGHTS) break;
 
         glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
+
         if (lc->light->type == LightType::Point)
             glBindTexture(GL_TEXTURE_CUBE_MAP, lc->light->shadowCubemap);
         else
@@ -578,9 +609,13 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
 
         std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
         glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), cubeStart + ci);
+
         ci++;
     }
 
+    // ------------------------
+    // FAR PLANES
+    // ------------------------
     int fi = 0;
     for (auto& obj : scene->objects)
     {
@@ -589,25 +624,36 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
         if (fi >= MAX_SHADOW_LIGHTS) break;
 
         float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
+
         std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
         glUniform1f(glGetUniformLocation(lightingShader, name.c_str()), fp);
+
         fi++;
     }
 
-    // SSAO on next available slot
+    // ------------------------
+    // SSAO (LAST SLOT)
+    // ------------------------
     int ssaoSlot = cubeStart + ci;
+
     glActiveTexture(GL_TEXTURE0 + ssaoSlot);
     glBindTexture(GL_TEXTURE_2D, SSAO_ENABLED ? ssaoBlurTexture : 0);
+
     glUniform1i(glGetUniformLocation(lightingShader, "ssaoTexture"), ssaoSlot);
     glUniform1i(glGetUniformLocation(lightingShader, "ssaoEnabled"), SSAO_ENABLED ? 1 : 0);
 
+    // ------------------------
+    // CAMERA
+    // ------------------------
     glUniform3f(light_cameraPos,
                 camera.transform.position.x,
                 camera.transform.position.y,
                 camera.transform.position.z);
 
     scene->UploadLights(lightingShader);
+
     quad.Draw();
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     profiler.End("Lighting Pass");
 }
@@ -873,7 +919,7 @@ void Renderer::ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int sh
 
 void Renderer::SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler)
 {
-    if (!scene->skybox) return;
+    if (!scene->skybox || !SKYBOX_ENABLED) return;
 
     profiler.Begin("Skybox Pass");
 
@@ -929,7 +975,7 @@ void Renderer::WaterPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler&
         glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "projection"),
                            1, GL_FALSE, glm::value_ptr(projection));
 
-        mc->mesh->Draw();
+        mc->model->DrawGeometry();
     }
 
     glDepthMask(GL_TRUE);
@@ -951,7 +997,7 @@ void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_pt
         glm::mat4 model = obj->transform.GetMatrix();
         glUniformMatrix4fv(glGetUniformLocation(shadowShader, "model"),
                            1, GL_FALSE, glm::value_ptr(model));
-        mc->mesh->Draw();
+        mc->model->DrawGeometry();
     }
 }
 

@@ -1,6 +1,9 @@
 #include <string>
 
-std::string CURRENT_SCENE = "tunnel.scene";
+// Scene settings
+std::string CURRENT_SCENE = "default.scene";
+float AMBIENT_MULTIPLIER = 0.05f;
+bool SKYBOX_ENABLED = false;
 
 // Shadow settings
 int MAX_SHADOW_LIGHTS = 3;

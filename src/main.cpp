@@ -2,7 +2,7 @@
 #include "scene.h"
 #include "rendering/camera.h"
 #include "rendering/renderer.h"
-#include "../utils/profiler.h"
+#include "utils/profiler.h"
 #include "rendering/effects/particles/particleSystem.h"
 #include "rendering/effects/particles/particleSystemManager.h"
 #include "utils/sceneLoader.h"
@@ -13,7 +13,7 @@
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
 #include "physics/rigidbodyComponent.h"
 #include "rendering/effects/lights/lightComponent.h"
-#include "rendering/meshComponent.h"
+#include "rendering/mesh/meshComponent.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
 
 Camera* gCamera = nullptr;
@@ -73,13 +73,13 @@ int main()
         100.0f
     );
 
-    Camera camera(glm::vec3(-8, 1, 1));
-	camera.yaw   = 250.0f;
+    Camera camera(glm::vec3(0, 1, 0));
+	camera.yaw   = 0.0f;
 	camera.pitch = 0.0f;
     gCamera = &camera;
 
 
-    // Lock cursor
+    // Lock cursor7
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, MouseCallback);
 
@@ -235,6 +235,18 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     // Graphics Settings
     ImGui::Begin("Graphics Settings");
+
+	ImGui::Begin("Scene Settings");
+
+	ImGui::SliderFloat("Ambient Light", &AMBIENT_MULTIPLIER, 0.0f, 1.0f);
+
+	if (scene->skybox) {
+		ImGui::Checkbox("Skybox", &SKYBOX_ENABLED);
+	}
+
+	ImGui::End();
+
+
 	ImGui::Checkbox("Volumetric Fog", &FOG_ENABLED);
 	if (FOG_ENABLED) {
 		ImGui::SliderInt("Steps", &FOG_STEPS, 4, 64);
@@ -358,11 +370,12 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     	if (selectedComponent >= 0) {
     		switch (selectedComponent) {
-    			case 0: // Mesh
-    				if (!obj->GetComponent<MeshComponent>())
-    					obj->AddComponent<MeshComponent>(
-							std::make_shared<Mesh>("../assets/models/sphere.obj",
-												   "../assets/textures/default.png", ""));
+    			case 0: // Model
+    				if (!obj->GetComponent<MeshComponent>()) {
+    					auto model = std::make_shared<Model>();
+    					model->Load("../assets/models/sphere.glb");
+    					obj->AddComponent<MeshComponent>(model);
+    				}
     				break;
     			case 1: // Light
     				if (!obj->GetComponent<LightComponent>())
@@ -435,66 +448,113 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     	}
 
     	auto mc = obj->GetComponent<MeshComponent>();
-		if (mc) {
-		    if (ImGui::TreeNode("Mesh")) {
-		        static char modelBuf[256];
-		        static char textureBuf[256];
-		        static char normalBuf[256];
-		        static char heightBuf[256];
-		        static int editingMeshIndex = -1;
+		if (mc && mc->model) {
+		    if (ImGui::TreeNode("Model")) {
+		        static char modelPathBuf[256];
+		        static int editingModelIndex = -1;
 
-		        if (editingMeshIndex != i) {
-		            ImGui::Text("Model: %s", mc->mesh->material.modelPath.c_str());
-		            ImGui::Text("Texture: %s", mc->mesh->material.texturePath.c_str());
-		            ImGui::Text("Normal Map: %s", mc->mesh->material.hasNormalMap
-		                ? mc->mesh->material.normalMapPath.c_str() : "None");
-		            ImGui::Text("Height Map: %s", mc->mesh->material.hasHeightMap
-		                ? mc->mesh->material.heightMapPath.c_str() : "None");
-		            ImGui::DragFloat("Roughness", &mc->mesh->material.roughness, 0.01f, 0.05f, 1.0f);
-		            ImGui::DragFloat("Metallic",  &mc->mesh->material.metallic,  0.01f, 0.0f, 1.0f);
-		            if (mc->mesh->material.hasHeightMap)
-		                ImGui::DragFloat("Height Scale", &mc->mesh->material.heightScale, 0.005f, 0.0f, 0.3f);
+		        if (editingModelIndex != i) {
+		            ImGui::Text("Path: %s", mc->model->sourcePath.c_str());
+		            ImGui::Text("Sub-meshes: %d", (int)mc->model->subMeshes.size());
+		            ImGui::Text("Materials: %d", (int)mc->model->materials.size());
 
-		            if (ImGui::Button("Edit Paths")) {
-		                editingMeshIndex = i;
-		                strncpy(modelBuf, mc->mesh->material.modelPath.c_str(), sizeof(modelBuf) - 1);
-		                strncpy(textureBuf, mc->mesh->material.texturePath.c_str(), sizeof(textureBuf) - 1);
-		                strncpy(normalBuf, mc->mesh->material.hasNormalMap
-		                    ? mc->mesh->material.normalMapPath.c_str() : "", sizeof(normalBuf) - 1);
-		                strncpy(heightBuf, mc->mesh->material.hasHeightMap
-		                    ? mc->mesh->material.heightMapPath.c_str() : "", sizeof(heightBuf) - 1);
+		            if (ImGui::Button("Change Model")) {
+		                editingModelIndex = i;
+		                strncpy(modelPathBuf, mc->model->sourcePath.c_str(), sizeof(modelPathBuf) - 1);
+		                modelPathBuf[sizeof(modelPathBuf) - 1] = '\0';
 		            }
 		        } else {
-		            ImGui::InputText("Model", modelBuf, sizeof(modelBuf));
-		            ImGui::InputText("Texture", textureBuf, sizeof(textureBuf));
-		            ImGui::InputText("Normal Map", normalBuf, sizeof(normalBuf));
-		            ImGui::InputText("Height Map", heightBuf, sizeof(heightBuf));
-		            ImGui::DragFloat("Roughness", &mc->mesh->material.roughness, 0.01f, 0.05f, 1.0f);
-		            ImGui::DragFloat("Metallic",  &mc->mesh->material.metallic,  0.01f, 0.0f, 1.0f);
-		            ImGui::DragFloat("Height Scale", &mc->mesh->material.heightScale, 0.005f, 0.0f, 0.3f);
-
-		            if (ImGui::Button("Apply")) {
-		                float r = mc->mesh->material.roughness;
-		                float m = mc->mesh->material.metallic;
-		                float hs = mc->mesh->material.heightScale;
-		                auto newMesh = std::make_shared<Mesh>(
-		                    std::string(modelBuf), std::string(textureBuf),
-		                    std::string(normalBuf), std::string(heightBuf));
-		                newMesh->material.roughness  = r;
-		                newMesh->material.metallic   = m;
-		                newMesh->material.heightScale = hs;
-		                mc->mesh = newMesh;
-		                editingMeshIndex = -1;
+		            ImGui::InputText("Model Path", modelPathBuf, sizeof(modelPathBuf));
+		            if (ImGui::Button("Load")) {
+		                auto newModel = std::make_shared<Model>();
+		                if (newModel->Load(std::string(modelPathBuf))) {
+		                    mc->model = newModel;
+		                    renderer.AssignDefaultShader(scene);
+		                    renderer.InitShadowMaps(scene);
+		                }
+		                editingModelIndex = -1;
 		            }
 		            ImGui::SameLine();
 		            if (ImGui::Button("Cancel"))
-		                editingMeshIndex = -1;
+		                editingModelIndex = -1;
+		        }
+
+		    	if (mc->model->materials.empty()) {
+		    		if (ImGui::Button("Add Material")) {
+		    			mc->model->materials.push_back(Model::DefaultMaterial());
+		    			for (auto& sm : mc->model->subMeshes)
+		    				if (sm.materialIndex < 0)
+		    					sm.materialIndex = 0;
+		    		}
+		    	} else {
+		    		if (ImGui::Button("Add Material")) {
+		    			mc->model->materials.push_back(Model::DefaultMaterial());
+		    		}
+		    	}
+
+		        for (int m = 0; m < (int)mc->model->materials.size(); m++) {
+		            auto& mat = mc->model->materials[m];
+		            ImGui::PushID(m);
+		            std::string label = "Material " + std::to_string(m);
+		            if (ImGui::TreeNode(label.c_str())) {
+		                // Texture path editing
+		                static char albedoBuf[256];
+		                static char normalBuf[256];
+		                static char heightBuf[256];
+		                static char mrBuf[256];
+		                static int editingTexMat = -1;
+		                int texEditId = i * 1000 + m;
+
+		                if (editingTexMat != texEditId) {
+		                    ImGui::Text("Albedo: %s", mat.texturePath.empty() ? "None" : mat.texturePath.c_str());
+		                    ImGui::Text("Normal: %s", mat.hasNormalMap ? mat.normalMapPath.c_str() : "None");
+		                    ImGui::Text("Height: %s", mat.hasHeightMap ? mat.heightMapPath.c_str() : "None");
+		                    ImGui::Text("Met/Rough: %s", mat.hasMetallicRoughnessMap
+		                        ? mat.metallicRoughnessMapPath.c_str() : "None");
+
+		                    if (ImGui::Button("Edit Textures")) {
+		                        editingTexMat = texEditId;
+		                        strncpy(albedoBuf, mat.texturePath.c_str(), sizeof(albedoBuf) - 1);
+		                        strncpy(normalBuf, mat.hasNormalMap ? mat.normalMapPath.c_str() : "", sizeof(normalBuf) - 1);
+		                        strncpy(heightBuf, mat.hasHeightMap ? mat.heightMapPath.c_str() : "", sizeof(heightBuf) - 1);
+		                        strncpy(mrBuf, mat.hasMetallicRoughnessMap ? mat.metallicRoughnessMapPath.c_str() : "", sizeof(mrBuf) - 1);
+		                    }
+		                } else {
+		                    ImGui::InputText("Albedo", albedoBuf, sizeof(albedoBuf));
+		                    ImGui::InputText("Normal Map", normalBuf, sizeof(normalBuf));
+		                    ImGui::InputText("Height Map", heightBuf, sizeof(heightBuf));
+		                    ImGui::InputText("Met/Rough Map", mrBuf, sizeof(mrBuf));
+
+		                    if (ImGui::Button("Apply Textures")) {
+		                        mc->model->ApplyTexturePaths(m,
+		                            std::string(albedoBuf),
+		                            std::string(normalBuf),
+		                            std::string(heightBuf),
+		                            std::string(mrBuf));
+		                        editingTexMat = -1;
+		                    }
+		                    ImGui::SameLine();
+		                    if (ImGui::Button("Cancel##tex"))
+		                        editingTexMat = -1;
+		                }
+
+		                ImGui::Separator();
+		                ImGui::DragFloat("Roughness", &mat.roughness, 0.01f, 0.05f, 1.0f);
+		                ImGui::DragFloat("Metallic",  &mat.metallic,  0.01f, 0.0f, 1.0f);
+		            	ImGui::Text("Emissive");
+		            	ImGui::ColorEdit3("Emissive Color", &mat.emissiveColor.x);
+		            	ImGui::DragFloat("Emissive Intensity", &mat.emissiveIntensity, 0.05f, 0.0f, 50.0f);
+		                if (mat.hasHeightMap)
+		                    ImGui::DragFloat("Height Scale", &mat.heightScale, 0.005f, 0.0f, 0.3f);
+
+		                ImGui::TreePop();
+		            }
+		            ImGui::PopID();
 		        }
 
 		        ImGui::TreePop();
 		    }
 		}
-
         // Light
     	auto lc = obj->GetComponent<LightComponent>();
     	if (lc) {
@@ -581,6 +641,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     			if (ImGui::Button("Apply Changes")) {
     				physics.RemoveBody(rb->body);
+    				rb->body->bodyID = JPH::BodyID();
     				physics.AddBody(obj);
     			}
 

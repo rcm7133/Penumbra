@@ -7,9 +7,12 @@
 #include "camera.h"
 #include "../utils/profiler.h"
 #include "shaderutils.h"
-#include "meshComponent.h"
+#include "mesh/meshComponent.h"
 #include "effects/lights/lightComponent.h"
 #include "../rendering/effects/water/interactiveWaterComponent.h"
+
+extern float AMBIENT_MULTIPLIER;
+extern bool SKYBOX_ENABLED;
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;

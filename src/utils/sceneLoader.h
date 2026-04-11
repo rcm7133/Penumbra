@@ -9,9 +9,10 @@
 #include "../rendering/effects/particles/particleSystemComponent.h"
 #include "../physics/rigidbodyComponent.h"
 #include "../rendering/effects/fog/fogVolumeComponent.h"
-#include "../rendering/meshComponent.h"
+#include "../rendering/mesh/meshComponent.h"
 #include "../rendering/effects/lights/lightComponent.h"
 #include "../rendering/effects/water/interactiveWaterComponent.h"
+#include "../rendering/mesh/model.h"
 
 class SceneLoader {
 public:
@@ -29,7 +30,7 @@ private:
     static json SerializeVec3(const glm::vec3& v);
     static json SerializeVec4(const glm::vec4& v);
     static json SerializeTransform(const Transform& t);
-    static json SerializeMesh(const Mesh& m);
+    static json SerializeModel(const Model& m);
     static json SerializeLight(const Light& l);
     static json SerializeParticleSystem(const ParticleSystem& ps);
     static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
@@ -41,7 +42,7 @@ private:
     static glm::vec3 DeserializeVec3(const json& j);
     static glm::vec4 DeserializeVec4(const json& j);
     static void DeserializeTransform(const json& j, Transform& t);
-    static std::shared_ptr<Mesh> DeserializeMesh(const json& j);
+    static std::shared_ptr<Model> DeserializeModel(const json& j);
     static std::shared_ptr<Light> DeserializeLight(const json& j);
     static std::shared_ptr<ParticleSystem> DeserializeParticleSystem(const json& j, const glm::vec3& ownerPos, ParticleSystemManager& particleManager);
     static std::shared_ptr<GameObject> DeserializeGameObject(const json& j, ParticleSystemManager& particleManager);
