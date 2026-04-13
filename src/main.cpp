@@ -1,12 +1,11 @@
 #include "config.h"
 #include "scene.h"
-#include "rendering/camera.h"
 #include "rendering/renderer.h"
 #include "utils/profiler.h"
 #include "rendering/effects/particles/particleSystem.h"
 #include "rendering/effects/particles/particleSystemManager.h"
 #include "utils/sceneLoader.h"
-#include "rendering/colliderDebugRenderer.h"
+#include "rendering/debug/colliderDebugRenderer.h"
 #include "physics/physicsSystem.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
@@ -15,6 +14,8 @@
 #include "rendering/effects/lights/lightComponent.h"
 #include "rendering/mesh/meshComponent.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
+#include "physics/camera/characterControllerComponent.h"
+#include "physics/camera/camera.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -24,17 +25,21 @@ float sensitivityY = 5.0f;
 bool firstMouse  = true;
 bool cursorEnabled = false;
 bool tabWasPressed = false;
+bool fWasPressed = false;
 
 extern bool DEBUG_COLLIDERS;
+extern bool FREECAM_ENABLED;
 extern std::string CURRENT_SCENE;
 
 Profiler profiler;
 ParticleSystemManager particleManager;
 
 std::shared_ptr<Scene> CreateScene();
-void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics);
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics, std::shared_ptr<CharacterControllerComponent> controller);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& particleManager, PhysicsWorld& physics);
+void DebugColliders(std::shared_ptr<Scene> scene, ColliderDebugRenderer& debugRenderer, Camera& camera, glm::mat4& projection);
+void MovePlayerAndCamera(std::shared_ptr<Scene> scene, Camera& camera, GLFWwindow* window);
 
 int main()
 {
@@ -99,6 +104,7 @@ int main()
 	// -------------------------
     Renderer renderer(w, h, projection);
 	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
+
     renderer.AssignDefaultShader(scene);
 	scene->Start();
 	scene->LoadSkybox("../assets/textures/skybox");
@@ -112,6 +118,15 @@ int main()
 	PhysicsWorld physics;
 	physics.Init();
 	physics.RegisterScene(scene);
+
+	// Create Player
+	auto playerObj = std::make_shared<GameObject>("Player");
+	playerObj->transform.position = glm::vec3(0, 2, 0); // spawn position
+	auto controller = playerObj->AddComponent<CharacterControllerComponent>();
+	controller->Init(physics);
+	controller->moveSpeed = 1.5f;
+	playerObj->runtimeOnly = true;
+	scene->Add(playerObj);
 
     double lastTime = glfwGetTime();
     int frameCount = 0;
@@ -137,6 +152,13 @@ int main()
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
 
+    	bool fPressed = glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS;
+
+    	if (fPressed && !fWasPressed) {
+    		FREECAM_ENABLED = !FREECAM_ENABLED;
+    	}
+    	fWasPressed = fPressed;
+
         bool tabPressed = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
         if (tabPressed && !tabWasPressed)
         {
@@ -151,59 +173,49 @@ int main()
         }
         tabWasPressed = tabPressed;
 
-        if (!cursorEnabled)
-            camera.ProcessKeyboard(window, deltaTime);
+    	if (!cursorEnabled)
+    	{
+    		if (FREECAM_ENABLED)
+    		{
+    			camera.ProcessKeyboard(window, deltaTime);
+    		}
+    		else
+    		{
+    			glm::vec3 forward = camera.transform.Forward();
+    			glm::vec3 right   = camera.transform.Right();
+    			forward.y = 0.0f;
+    			right.y   = 0.0f;
+    			if (glm::length(forward) > 0.001f) forward = glm::normalize(forward);
+    			if (glm::length(right)   > 0.001f) right   = glm::normalize(right);
+
+    			glm::vec3 moveDir(0.0f);
+    			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir += forward;
+    			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= forward;
+    			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= right;
+    			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += right;
+    			if (glm::length(moveDir) > 0.001f) moveDir = glm::normalize(moveDir);
+
+    			bool jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+    			controller->SetMoveInput(moveDir, jump);
+    		}
+    	}
 
         glfwPollEvents();
     	// Update scene
         scene->Update(deltaTime);
     	physics.Update(deltaTime);
     	physics.SyncTransforms(scene);
-		// Render
-        renderer.RenderFrame(camera, scene, profiler);
-    	if (DEBUG_COLLIDERS)
+
+    	if (!FREECAM_ENABLED)
     	{
-    		glm::vec3 green(0, 1, 0);
-    		glm::vec3 blue(0, 0.5, 1);
-    		for (const auto& obj : scene->objects)
-    		{
-    			auto rb = obj->GetComponent<RigidBodyComponent>();
-    			if (rb) {
-    				auto& t = obj->transform;
-    				switch (rb->body->shapeType)
-    				{
-    					case RigidBody::Box:
-    						debugRenderer.AddBox(t.position, t.rotation, rb->body->halfExtent, green);
-    						break;
-    					case RigidBody::Sphere:
-    						debugRenderer.AddSphere(t.position, rb->body->radius, green);
-    						break;
-    					case RigidBody::Capsule:
-    						debugRenderer.AddCapsule(t.position, t.rotation, rb->body->capsuleHalfHeight, rb->body->radius, green);
-    						break;
-    				}
-    			}
-
-    			auto fv = obj->GetComponent<FogVolumeComponent>();
-    			if (fv) {
-    				glm::vec3 offset = obj->transform.position;
-    				glm::vec3 center = (fv->volume->boundsMin + fv->volume->boundsMax) * 0.5f + offset;
-    				glm::vec3 half   = (fv->volume->boundsMax - fv->volume->boundsMin) * 0.5f;
-    				debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, blue);
-    			}
-
-    			auto ps = obj->GetComponent<ParticleSystemComponent>();
-    			if (ps) {
-    				glm::vec3 offset = obj->transform.position;
-    				glm::vec3 center = (ps->system->boundsMin + ps->system->boundsMax) * 0.5f + offset;
-    				glm::vec3 half   = (ps->system->boundsMax - ps->system->boundsMin) * 0.5f;
-    				debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1.0f, 0.5f, 0.0f));
-    			}
-    		}
-    		debugRenderer.Render(camera.GetViewMatrix(), projection);
+    		camera.transform.position = playerObj->transform.position
+									  + glm::vec3(0, controller->eyeHeight, 0);
     	}
 
-        GUI(scene, deltaTime, profiler, renderer, physics);
+		// Render
+        renderer.RenderFrame(camera, scene, profiler);
+    	if (DEBUG_COLLIDERS) { DebugColliders(scene, debugRenderer, camera, projection); }
+        GUI(scene, deltaTime, profiler, renderer, physics, controller);
         glfwSwapBuffers(window);
     }
 
@@ -216,7 +228,79 @@ int main()
     return 0;
 }
 
-void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics)
+void MovePlayerAndCamera(std::shared_ptr<Scene> scene, Camera& camera, GLFWwindow* window) {
+	auto playerObj  = scene->GetObject("Player");
+	auto controller = playerObj->GetComponent<CharacterControllerComponent>();
+
+	if (!cursorEnabled && controller) {
+		// Build world-space move direction from camera facing
+		glm::vec3 forward = camera.transform.Forward();
+		glm::vec3 right   = camera.transform.Right();
+		forward.y = 0;  right.y = 0;  // flatten to XZ
+		if (glm::length(forward) > 0) forward = glm::normalize(forward);
+		if (glm::length(right)   > 0) right   = glm::normalize(right);
+
+		glm::vec3 moveDir(0);
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir += forward;
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= forward;
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= right;
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += right;
+		if (glm::length(moveDir) > 0) moveDir = glm::normalize(moveDir);
+
+		bool jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+		controller->SetMoveInput(moveDir, jump);
+	}
+
+	// After scene->Update() and physics.Update(), snap camera to player eye position:
+	if (playerObj) {
+		auto ctrl = playerObj->GetComponent<CharacterControllerComponent>();
+		camera.transform.position = playerObj->transform.position
+								  + glm::vec3(0, ctrl->eyeHeight, 0);
+	}
+}
+
+void DebugColliders(std::shared_ptr<Scene> scene, ColliderDebugRenderer& debugRenderer, Camera& camera, glm::mat4& projection) {
+	glm::vec3 green(0, 1, 0);
+	glm::vec3 blue(0, 0.5, 1);
+	for (const auto& obj : scene->objects)
+	{
+		auto rb = obj->GetComponent<RigidBodyComponent>();
+		if (rb) {
+			auto& t = obj->transform;
+			switch (rb->body->shapeType)
+			{
+				case RigidBody::Box:
+					debugRenderer.AddBox(t.position, t.rotation, rb->body->halfExtent, green);
+					break;
+				case RigidBody::Sphere:
+					debugRenderer.AddSphere(t.position, rb->body->radius, green);
+					break;
+				case RigidBody::Capsule:
+					debugRenderer.AddCapsule(t.position, t.rotation, rb->body->capsuleHalfHeight, rb->body->radius, green);
+					break;
+			}
+		}
+
+		auto fv = obj->GetComponent<FogVolumeComponent>();
+		if (fv) {
+			glm::vec3 offset = obj->transform.position;
+			glm::vec3 center = (fv->volume->boundsMin + fv->volume->boundsMax) * 0.5f + offset;
+			glm::vec3 half   = (fv->volume->boundsMax - fv->volume->boundsMin) * 0.5f;
+			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, blue);
+		}
+
+		auto ps = obj->GetComponent<ParticleSystemComponent>();
+		if (ps) {
+			glm::vec3 offset = obj->transform.position;
+			glm::vec3 center = (ps->system->boundsMin + ps->system->boundsMax) * 0.5f + offset;
+			glm::vec3 half   = (ps->system->boundsMax - ps->system->boundsMin) * 0.5f;
+			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1.0f, 0.5f, 0.0f));
+		}
+	}
+	debugRenderer.Render(camera.GetViewMatrix(), projection);
+}
+
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics, std::shared_ptr<CharacterControllerComponent> controller)
 {
 	static std::vector<std::shared_ptr<GameObject>> deleteQueue;
 
@@ -271,47 +355,22 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     ImGui::End();
 
-	ImGui::Begin("Buffer Preview");
-	{
-    	static int selected = -1;
-    	const char* buffers[] = {
-    		"Position", "Normals", "Diffuse",
-			"SSAO", "SSAO Blurred",
-			"Lighting",
-			"Shadow Map 0", "Shadow Map 1", "Shadow Map 2",
-			"Fog"
-		};
-    	ImGui::Combo("Buffer", &selected, buffers, IM_ARRAYSIZE(buffers));
-
-    	if (selected >= 0)
-    	{
-    		unsigned int tex = renderer.GetDebugTexture(selected, scene);
-    		if (tex != 0)
-    		{
-    			float previewWidth = ImGui::GetContentRegionAvail().x;
-    			float aspect = 9.0f / 16.0f;
-    			ImVec2 size(previewWidth, previewWidth * aspect);
-    			ImVec2 pos = ImGui::GetCursorScreenPos();
-    			ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(0, 0, 0, 255));
-    			ImGui::Image((ImTextureID)(intptr_t)tex, size, ImVec2(0, 1), ImVec2(1, 0));
-    		}
-    		else
-    		{
-    			ImGui::TextDisabled("Buffer not available");
-    		}
-    	}
-	}
+	ImGui::Begin("Debug");
+	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
+	ImGui::SliderFloat("Move Speed", &controller->moveSpeed, 0.1f, 5.0f);
+	ImGui::Checkbox("Free Cam", &FREECAM_ENABLED);
+	if (FREECAM_ENABLED)
+		ImGui::SliderFloat("Camera Speed", &CAMERA_SPEED, 0.1f, 10.0f);
 	ImGui::End();
 
     // Scene editor
     ImGui::Begin("Scene");
-	ImGui::SliderFloat("Camera Speed", &CAMERA_SPEED, 0.1f, 5.0f);
 	if (ImGui::Button("Save Scene"))
 		SceneLoader::Save(scene, "../assets/scenes/" + CURRENT_SCENE);
+	ImGui::SameLine();
 	if (ImGui::Button("Reload Scene"))
 		ReloadScene(scene, renderer, particleManager, physics);
-	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
-
+	ImGui::SameLine();
 	if (ImGui::Button("Add Empty GameObject")) {
 		auto obj = std::make_shared<GameObject>("New GameObject");
 		scene->Add(obj);

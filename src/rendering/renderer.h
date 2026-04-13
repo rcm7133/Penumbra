@@ -4,7 +4,7 @@
 #include "gbuffer.h"
 #include "quad.h"
 #include "../scene.h"
-#include "camera.h"
+#include "../physics/camera/camera.h"
 #include "../utils/profiler.h"
 #include "shaderutils.h"
 #include "mesh/meshComponent.h"

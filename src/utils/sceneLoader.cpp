@@ -222,8 +222,11 @@ json SceneLoader::SerializeGameObject(const std::shared_ptr<GameObject>& obj) {
 void SceneLoader::Save(const std::shared_ptr<Scene>& scene, const std::string& filepath) {
     json root;
     root["objects"] = json::array();
-    for (const auto& obj : scene->objects)
+    for (const auto& obj : scene->objects) {
+        if (obj->runtimeOnly) continue;
         root["objects"].push_back(SerializeGameObject(obj));
+    }
+
     std::ofstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "SceneLoader::Save - Failed to open: " << filepath << std::endl;

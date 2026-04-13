@@ -5,6 +5,8 @@ std::string CURRENT_SCENE = "default.scene";
 float AMBIENT_MULTIPLIER = 0.05f;
 bool SKYBOX_ENABLED = false;
 
+bool FREECAM_ENABLED = false;
+
 // Shadow settings
 int MAX_SHADOW_LIGHTS = 3;
 int SHADOW_RESOLUTION = 2048;

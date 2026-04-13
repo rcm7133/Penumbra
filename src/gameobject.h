@@ -1,15 +1,18 @@
 #pragma once
 #include "config.h"
+#include "component.h"
 #include "transform.h"
 #include "physics/rigidbody.h"
-#include "component.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
+
+class InteractiveWaterComponent;
 
 class GameObject
 {
 public:
     Transform transform;
     bool enabled = true;
+    bool runtimeOnly = false;
     std::string name = "GameObject";
 
     std::vector<std::shared_ptr<Component>> components;

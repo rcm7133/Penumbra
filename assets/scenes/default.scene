@@ -5,87 +5,6 @@
             "components": [
                 {
                     "data": {
-                        "castsShadow": false,
-                        "color": [
-                            1.0,
-                            1.0,
-                            1.0
-                        ],
-                        "direction": [
-                            -0.9900000095367432,
-                            -1.0099999904632568,
-                            0.0
-                        ],
-                        "innerCutoffDeg": 21.501001358032227,
-                        "intensity": 0.5799999833106995,
-                        "outerCutoffDeg": 35.400001525878906,
-                        "radius": 27.700000762939453,
-                        "type": "Point"
-                    },
-                    "type": "Light"
-                },
-                {
-                    "data": {
-                        "materials": [
-                            {
-                                "emissiveColor": [
-                                    1.0,
-                                    1.0,
-                                    1.0
-                                ],
-                                "emissiveIntensity": 128.0,
-                                "heightScale": 0.05000000074505806,
-                                "metallic": 0.0,
-                                "roughness": 0.05000000074505806
-                            }
-                        ],
-                        "path": "../assets/models/sphere.glb"
-                    },
-                    "type": "Model"
-                },
-                {
-                    "data": {
-                        "capsuleHalfHeight": 0.5,
-                        "friction": 0.5,
-                        "halfExtent": [
-                            0.5,
-                            0.5,
-                            0.5
-                        ],
-                        "mass": 1.0,
-                        "motion": "Static",
-                        "radius": 0.10000000149011612,
-                        "restitution": 0.30000001192092896,
-                        "shape": "Sphere"
-                    },
-                    "type": "RigidBody"
-                }
-            ],
-            "enabled": true,
-            "name": "Point Light",
-            "transform": {
-                "position": [
-                    -1.4500000476837158,
-                    0.5099999904632568,
-                    0.0
-                ],
-                "rotation": [
-                    0.0,
-                    -0.0,
-                    0.0
-                ],
-                "scale": [
-                    0.10000000149011612,
-                    0.10000000149011612,
-                    0.10000000149011612
-                ]
-            }
-        },
-        {
-            "class": "GameObject",
-            "components": [
-                {
-                    "data": {
                         "materials": [
                             {
                                 "albedo": "../assets/textures/materials/woodFloor/albedo.jpg",
@@ -250,7 +169,7 @@
                     0.0
                 ],
                 "rotation": [
-                    180.0,
+                    -180.0,
                     -4.4528261151010815e-14,
                     7.355542684649263e-20
                 ],
@@ -451,7 +370,7 @@
                 ],
                 "rotation": [
                     90.0,
-                    -89.96573638916016,
+                    -89.96043395996094,
                     0.0
                 ],
                 "scale": [
@@ -483,17 +402,17 @@
                 }
             ],
             "enabled": true,
-            "name": "New GameObject",
+            "name": "FloorCollider",
             "transform": {
                 "position": [
                     0.0,
-                    0.009999999776482582,
+                    -0.03999999910593033,
                     0.0
                 ],
                 "rotation": [
                     0.0,
                     -0.0,
-                    -0.6000000834465027
+                    0.0
                 ],
                 "scale": [
                     1.0,
@@ -524,12 +443,372 @@
                 }
             ],
             "enabled": true,
-            "name": "New GameObject",
+            "name": "WallCollider",
             "transform": {
                 "position": [
                     1.9199999570846558,
-                    0.7799999713897705,
+                    0.699999988079071,
                     0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/brick/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 15.0,
+                                "heightMap": "../assets/textures/materials/brick/disp.jpg",
+                                "heightScale": -0.03500000014901161,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/brick/normal.jpg",
+                                "roughness": 0.5
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Bricks",
+            "transform": {
+                "position": [
+                    -2.990000009536743,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            1.8899999856948853,
+                            0.029999999329447746,
+                            0.8999999761581421
+                        ],
+                        "mass": 0.5099999904632568,
+                        "motion": "Static",
+                        "radius": 0.5,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "FloorCollider",
+            "transform": {
+                "position": [
+                    0.0,
+                    0.6700000166893005,
+                    0.6399999856948853
+                ],
+                "rotation": [
+                    90.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.03999999910593033,
+                            0.8399999737739563,
+                            0.7300000190734863
+                        ],
+                        "mass": 0.009999999776482582,
+                        "motion": "Static",
+                        "radius": 0.5,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "WallCollider",
+            "transform": {
+                "position": [
+                    -1.899999976158142,
+                    0.699999988079071,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.004999999888241291,
+                                "metallic": 0.0,
+                                "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                                "roughness": 0.05000000074505806
+                            }
+                        ],
+                        "path": "../assets/models/plane.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Wall",
+            "transform": {
+                "position": [
+                    -1.8300000429153442,
+                    0.699999988079071,
+                    -1.0
+                ],
+                "rotation": [
+                    90.0,
+                    89.96573638916016,
+                    0.0
+                ],
+                "scale": [
+                    2.0,
+                    1.0,
+                    0.75
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.07000000029802322,
+                            0.8199999928474426,
+                            2.130000114440918
+                        ],
+                        "mass": 0.009999999776482582,
+                        "motion": "Static",
+                        "radius": 0.5,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Box"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "WallCollider",
+            "transform": {
+                "position": [
+                    -0.10000000149011612,
+                    0.7400000095367432,
+                    -0.6399999856948853
+                ],
+                "rotation": [
+                    0.0,
+                    89.9720230102539,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "castsShadow": false,
+                        "color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "direction": [
+                            -0.9900000095367432,
+                            -1.0099999904632568,
+                            0.0
+                        ],
+                        "innerCutoffDeg": 21.501001358032227,
+                        "intensity": 0.5799999833106995,
+                        "outerCutoffDeg": 35.400001525878906,
+                        "radius": 27.700000762939453,
+                        "type": "Point"
+                    },
+                    "type": "Light"
+                },
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "emissiveColor": [
+                                    1.0,
+                                    1.0,
+                                    1.0
+                                ],
+                                "emissiveIntensity": 50.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "roughness": 0.05000000074505806
+                            }
+                        ],
+                        "path": "../assets/models/sphere.glb"
+                    },
+                    "type": "Model"
+                },
+                {
+                    "data": {
+                        "capsuleHalfHeight": 0.5,
+                        "friction": 0.5,
+                        "halfExtent": [
+                            0.5,
+                            0.5,
+                            0.5
+                        ],
+                        "mass": 1.0,
+                        "motion": "Dynamic",
+                        "radius": 0.20000000298023224,
+                        "restitution": 0.30000001192092896,
+                        "shape": "Sphere"
+                    },
+                    "type": "RigidBody"
+                }
+            ],
+            "enabled": true,
+            "name": "Point Light",
+            "transform": {
+                "position": [
+                    -1.6599997282028198,
+                    0.189304918050766,
+                    0.4066794812679291
+                ],
+                "rotation": [
+                    -120.5015869140625,
+                    32.92333984375,
+                    99.36797332763672
+                ],
+                "scale": [
+                    0.20000000298023224,
+                    0.20000000298023224,
+                    0.20000000298023224
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "materials": [
+                            {
+                                "emissiveColor": [
+                                    1.0,
+                                    1.0,
+                                    1.0
+                                ],
+                                "emissiveIntensity": 0.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "roughness": 0.07999999821186066
+                            },
+                            {
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 15.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "roughness": 0.8399999737739563
+                            },
+                            {
+                                "emissiveColor": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ],
+                                "emissiveIntensity": 15.0,
+                                "heightScale": 0.05000000074505806,
+                                "metallic": 0.0,
+                                "roughness": 0.4399999976158142
+                            }
+                        ],
+                        "path": "../assets/models/painting.glb"
+                    },
+                    "type": "Model"
+                }
+            ],
+            "enabled": true,
+            "name": "Painting",
+            "transform": {
+                "position": [
+                    0.03999999910593033,
+                    0.5199999809265137,
+                    -0.6000000238418579
                 ],
                 "rotation": [
                     0.0,

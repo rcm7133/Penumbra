@@ -2,6 +2,7 @@
 #include "config.h"
 #include "scene.h"
 #include "rigidbody.h"
+#include "rigidbodyComponent.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
@@ -15,13 +16,15 @@
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Character/CharacterVirtual.h>
 
 namespace Layers
 {
     static constexpr JPH::ObjectLayer NON_MOVING = 0;
     static constexpr JPH::ObjectLayer MOVING = 1;
-    static constexpr JPH::uint NUM_LAYERS = 2;
-};
+    static constexpr JPH::ObjectLayer CHARACTER = 2;
+    static constexpr JPH::uint NUM_LAYERS = 3;
+};;
 
 // Determines which object layers can collide
 class ObjectLayerPairFilterImpl : public JPH::ObjectLayerPairFilter
@@ -32,7 +35,8 @@ public:
         switch (a)
         {
             case Layers::NON_MOVING: return b == Layers::MOVING;
-            case Layers::MOVING:     return true;
+            case Layers::MOVING:     return b != Layers::CHARACTER;
+            case Layers::CHARACTER:  return b == Layers::NON_MOVING;
             default:                 return false;
         }
     }
@@ -43,7 +47,8 @@ namespace BPLayers
 {
     static constexpr JPH::BroadPhaseLayer NON_MOVING(0);
     static constexpr JPH::BroadPhaseLayer MOVING(1);
-    static constexpr JPH::uint NUM_LAYERS = 2;
+    static constexpr JPH::BroadPhaseLayer CHARACTER(2);
+    static constexpr JPH::uint NUM_LAYERS = 3;
 };
 
 class BPLayerInterfaceImpl : public JPH::BroadPhaseLayerInterface
@@ -54,8 +59,8 @@ public:
     {
         layers[Layers::NON_MOVING] = BPLayers::NON_MOVING;
         layers[Layers::MOVING]     = BPLayers::MOVING;
+        layers[Layers::CHARACTER]  = BPLayers::CHARACTER;
     }
-
     JPH::uint GetNumBroadPhaseLayers() const override { return BPLayers::NUM_LAYERS; }
     JPH::BroadPhaseLayer GetBroadPhaseLayer(JPH::ObjectLayer l) const override { return layers[l]; }
 };
@@ -68,9 +73,27 @@ public:
         switch (obj)
         {
             case Layers::NON_MOVING: return bp == BPLayers::MOVING;
-            case Layers::MOVING:     return true;
+            case Layers::MOVING:     return bp != BPLayers::CHARACTER;
+            case Layers::CHARACTER:  return bp == BPLayers::NON_MOVING;
             default:                 return false;
         }
+    }
+};
+
+class CharacterContactListenerImpl : public JPH::CharacterContactListener
+{
+public:
+    void OnContactAdded(const JPH::CharacterVirtual* character,
+                        const JPH::BodyID& bodyID,
+                        const JPH::SubShapeID& subShapeID,
+                        JPH::RVec3Arg contactPosition,
+                        JPH::Vec3Arg contactNormal,
+                        JPH::CharacterContactSettings& settings) override
+    {
+        // Reject dynamic bodies as a supported surface
+        // but still allow the collision to happen (so we push them)
+        settings.mCanPushCharacter = true;   // dynamic body CAN push char (false = ghosting)
+        settings.mCanReceiveImpulses = true; // char pushes the dynamic body
     }
 };
 
@@ -211,7 +234,8 @@ public:
         JPH::Factory::sInstance = nullptr;
     }
 
-    JPH::PhysicsSystem& GetSystem() { return physicsSystem; }
+    JPH::PhysicsSystem* GetSystem() { return &physicsSystem; }
+    JPH::TempAllocatorImpl* GetTempAllocator() { return tempAllocator.get(); }
 
 
 private:

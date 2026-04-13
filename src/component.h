@@ -1,8 +1,6 @@
 #pragma once
 #include "config.h"
 
-#include "gameobject.h"
-
 class GameObject;
 
 class Component {

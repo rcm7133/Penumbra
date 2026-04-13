@@ -1,0 +1,41 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "capsuleHalfHeight": 0.5,
+                "friction": 0.5,
+                "halfExtent": [
+                    1.8899999856948853,
+                    0.029999999329447746,
+                    0.699999988079071
+                ],
+                "mass": 0.5099999904632568,
+                "motion": "Static",
+                "radius": 0.5,
+                "restitution": 0.30000001192092896,
+                "shape": "Box"
+            },
+            "type": "RigidBody"
+        }
+    ],
+    "enabled": true,
+    "name": "FloorCollider",
+    "transform": {
+        "position": [
+            0.0,
+            -0.03999999910593033,
+            0.0
+        ],
+        "rotation": [
+            0.0,
+            -0.0,
+            0.0
+        ],
+        "scale": [
+            1.0,
+            1.0,
+            1.0
+        ]
+    }
+}

@@ -19,10 +19,11 @@ add_executable(Penumbra
         src/rendering/stb_image.cpp
         src/rendering/renderer.cpp
         src/settings.cpp
-        src/rendering/shaderutils.cpp
-        src/rendering/colliderDebugRenderer.cpp
+        src/utils/shaderutils.cpp
+        src/rendering/debug/colliderDebugRenderer.cpp
         src/rendering/mesh/model.cpp
         src/utils/sceneLoader.cpp
+        src/physics/camera/characterControllerComponent.cpp
         dependencies/imgui/imgui.cpp
         dependencies/imgui/imgui_draw.cpp
         dependencies/imgui/imgui_tables.cpp
