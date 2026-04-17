@@ -11,6 +11,7 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
 find_package(Jolt CONFIG REQUIRED)
+find_package(OpenMP REQUIRED)
 
 add_executable(Penumbra
         src/main.cpp
@@ -22,6 +23,7 @@ add_executable(Penumbra
         src/utils/shaderutils.cpp
         src/rendering/debug/colliderDebugRenderer.cpp
         src/rendering/mesh/model.cpp
+        src/rendering/pathTracing/pathTracer.cpp
         src/utils/sceneLoader.cpp
         src/physics/camera/characterControllerComponent.cpp
         dependencies/imgui/imgui.cpp
@@ -47,6 +49,15 @@ target_link_libraries(Penumbra PRIVATE
         glm::glm
         Jolt::Jolt
 )
+
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(Penumbra PRIVATE OpenMP::OpenMP_CXX)
+    target_compile_options(Penumbra PRIVATE ${OpenMP_CXX_FLAGS})
+endif()
+
+if(MSVC)
+    target_compile_options(Penumbra PRIVATE /openmp)
+endif()
 
 target_compile_definitions(Penumbra PRIVATE NOMINMAX)
 target_compile_features(Penumbra PRIVATE cxx_std_23)

@@ -1,0 +1,54 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "emissiveColor": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "emissiveIntensity": 0.0,
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 0.33000001311302185,
+                        "roughness": 0.3199999928474426
+                    },
+                    {
+                        "emissiveColor": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "emissiveIntensity": 0.0,
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 1.0,
+                        "roughness": 0.05000000074505806
+                    }
+                ],
+                "path": "../assets/models/door/door.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "Door",
+    "transform": {
+        "position": [
+            1.899999976158142,
+            0.0,
+            0.0
+        ],
+        "rotation": [
+            0.0,
+            89.98021697998047,
+            0.0
+        ],
+        "scale": [
+            0.6000000238418579,
+            0.6000000238418579,
+            0.6000000238418579
+        ]
+    }
+}

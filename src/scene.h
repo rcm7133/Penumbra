@@ -7,12 +7,14 @@
 #include "rendering/effects/lights/lightComponent.h"
 #include "rendering/effects/cubemaps/skybox.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
+#include "rendering/globalIllumination/ProbeGrid.h"
 
 class Scene
 {
 public:
     std::vector<std::shared_ptr<GameObject>> objects;
     std::shared_ptr<Skybox> skybox;
+    ProbeGrid probeGrid;
 
     void LoadSkybox(const std::string& directory) {
         std::vector<std::string> faces = {
@@ -58,6 +60,7 @@ public:
         int normalMatLoc    = glGetUniformLocation(gBufferShader, "normalMatrix");
         int emissiveColorLoc = glGetUniformLocation(gBufferShader, "emissiveColor");
         int emissiveIntensityLoc = glGetUniformLocation(gBufferShader, "emissiveIntensity");
+        int isStaticLoc = glGetUniformLocation(gBufferShader, "isStatic");
 
         for (const auto& obj : objects) {
             if (!obj->enabled) continue;
@@ -70,23 +73,27 @@ public:
 
             glm::mat3 normalMat = glm::mat3(glm::transpose(glm::inverse(modelMat)));
             glUniformMatrix3fv(normalMatLoc, 1, GL_FALSE, glm::value_ptr(normalMat));
-
+            glUniform1f(isStaticLoc, obj->isStatic ? 1.0f : 0.0f);
             mc->model->Draw(gBufferShader, roughnessLoc, metallicLoc,
                             hasNormalMapLoc, hasHeightMapLoc, heightScaleLoc, emissiveColorLoc, emissiveIntensityLoc);
         }
     }
 
-    void UploadLights(unsigned int shader) const {
+    void UploadLights(unsigned int shader, bool staticOnly = false) const {
         std::vector<std::shared_ptr<GameObject>> lightObjects;
 
         for (const auto& obj : objects) {
             auto lc = obj->GetComponent<LightComponent>();
-            if (obj->enabled && lc && lc->light->castsShadow)
+            if (!obj->enabled || !lc) continue;
+            if (staticOnly && !obj->isStatic) continue;
+            if (lc->light->castsShadow)
                 lightObjects.push_back(obj);
         }
         for (const auto& obj : objects) {
             auto lc = obj->GetComponent<LightComponent>();
-            if (obj->enabled && lc && !lc->light->castsShadow)
+            if (!obj->enabled || !lc) continue;
+            if (staticOnly && !obj->isStatic) continue;
+            if (!lc->light->castsShadow)
                 lightObjects.push_back(obj);
         }
 

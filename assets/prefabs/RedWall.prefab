@@ -1,0 +1,44 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "albedo": "../assets/textures/red.png",
+                        "emissiveColor": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "emissiveIntensity": 15.0,
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 0.0,
+                        "roughness": 1.0
+                    }
+                ],
+                "path": "../assets/models/plane.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "RedWall",
+    "transform": {
+        "position": [
+            0.0,
+            1.0,
+            -1.0
+        ],
+        "rotation": [
+            90.0,
+            -0.0,
+            0.0
+        ],
+        "scale": [
+            1.0,
+            1.0,
+            1.0
+        ]
+    }
+}

@@ -30,6 +30,9 @@ bool fWasPressed = false;
 extern bool DEBUG_COLLIDERS;
 extern bool FREECAM_ENABLED;
 extern std::string CURRENT_SCENE;
+extern int GI_MODE;
+extern float GI_INTENSITY;
+extern bool DEBUG_PROBES;
 
 Profiler profiler;
 ParticleSystemManager particleManager;
@@ -108,6 +111,15 @@ int main()
     renderer.AssignDefaultShader(scene);
 	scene->Start();
 	scene->LoadSkybox("../assets/textures/skybox");
+	scene->probeGrid.Load();
+
+	if (!scene->probeGrid.probes.empty()) {
+		bool anyBaked = false;
+		for (auto& p : scene->probeGrid.probes)
+			if (p.baked) { anyBaked = true; break; }
+		if (anyBaked)
+			renderer.UploadProbeData(scene->probeGrid);
+	}
 
     renderer.InitShadowMaps(scene);
 	// Create collider debug renderer
@@ -121,7 +133,7 @@ int main()
 
 	// Create Player
 	auto playerObj = std::make_shared<GameObject>("Player");
-	playerObj->transform.position = glm::vec3(0, 2, 0); // spawn position
+	playerObj->transform.position = glm::vec3(0, 0.56f, 0); // spawn position
 	auto controller = playerObj->AddComponent<CharacterControllerComponent>();
 	controller->Init(physics);
 	controller->moveSpeed = 1.5f;
@@ -158,6 +170,12 @@ int main()
     		FREECAM_ENABLED = !FREECAM_ENABLED;
     	}
     	fWasPressed = fPressed;
+
+    	static bool gWasPressed = false;
+    	bool gPressed = glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
+    	if (gPressed && !gWasPressed)
+    		GI_MODE = (GI_MODE + 1) % 3; // cycles 0 -> 1 -> 2 -> 0
+    	gWasPressed = gPressed;
 
         bool tabPressed = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
         if (tabPressed && !tabWasPressed)
@@ -214,7 +232,44 @@ int main()
 
 		// Render
         renderer.RenderFrame(camera, scene, profiler);
-    	if (DEBUG_COLLIDERS) { DebugColliders(scene, debugRenderer, camera, projection); }
+    	if (DEBUG_COLLIDERS) {
+    		DebugColliders(scene, debugRenderer, camera, projection);
+    	}
+
+    	if (GI_MODE >= 1 && DEBUG_PROBES) {
+    		auto& grid = scene->probeGrid;
+
+    		// Draw the bounding box
+    		glm::vec3 center = (grid.boundsMin + grid.boundsMax) * 0.5f;
+    		glm::vec3 half = (grid.boundsMax - grid.boundsMin) * 0.5f;
+    		debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1, 1, 0));
+
+    		// Draw grid cell wireframes
+    		glm::vec3 cellSize = (grid.boundsMax - grid.boundsMin) /
+				glm::vec3(glm::max(grid.countX - 1, 1),
+						  glm::max(grid.countY - 1, 1),
+						  glm::max(grid.countZ - 1, 1));
+
+    		glm::vec3 cellHalf = cellSize * 0.5f;
+
+    		for (int z = 0; z < grid.countZ - 1; z++) {
+    			for (int y = 0; y < grid.countY - 1; y++) {
+    				for (int x = 0; x < grid.countX - 1; x++) {
+    					glm::vec3 cellMin = grid.boundsMin + glm::vec3(x, y, z) * cellSize;
+    					glm::vec3 cellCenter = cellMin + cellHalf;
+    					debugRenderer.AddBox(cellCenter, glm::quat(1, 0, 0, 0), cellHalf,
+											 glm::vec3(0.3f, 0.3f, 0.15f));
+    				}
+    			}
+    		}
+
+    		// Draw probes as spheres
+    		for (const auto& probe : grid.probes) {
+    			glm::vec3 color = probe.baked ? glm::vec3(0, 1, 0.5) : glm::vec3(0.5, 0.5, 0.5);
+    			debugRenderer.AddSphere(probe.position, 0.08f, color);
+    		}
+    	}
+
         GUI(scene, deltaTime, profiler, renderer, physics, controller);
         glfwSwapBuffers(window);
     }
@@ -328,6 +383,48 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::Checkbox("Skybox", &SKYBOX_ENABLED);
 	}
 
+	if (GI_MODE >= 1) {
+		ImGui::Checkbox("Debug Probe Grid", &DEBUG_PROBES);
+		ImGui::SliderFloat("GI Intensity", &GI_INTENSITY, 0.0f, 3.0f);
+		ImGui::Separator();
+		ImGui::Text("Probe Grid");
+
+		auto& grid = scene->probeGrid;
+
+		bool gridChanged = false;
+		gridChanged |= ImGui::DragFloat3("Grid Min", &grid.boundsMin.x, 0.1f);
+		gridChanged |= ImGui::DragFloat3("Grid Max", &grid.boundsMax.x, 0.1f);
+		gridChanged |= ImGui::DragInt("Probes X", &grid.countX, 1, 2, 32);
+		gridChanged |= ImGui::DragInt("Probes Y", &grid.countY, 1, 2, 16);
+		gridChanged |= ImGui::DragInt("Probes Z", &grid.countZ, 1, 2, 32);
+
+		if (gridChanged)
+			grid.Init();
+
+		ImGui::Text("Total probes: %d", grid.TotalProbes());
+
+		int bakedCount = 0;
+		for (auto& p : grid.probes)
+			if (p.baked) bakedCount++;
+		ImGui::Text("Baked: %d / %d", bakedCount, grid.TotalProbes());
+
+		if (GI_MODE == 1) {
+			if (ImGui::Button("Bake (Rasterized)"))
+				renderer.BakeLightProbes(scene);
+		} else if (GI_MODE == 2) {
+			ImGui::DragInt("Bounces", &PATH_TRACING_GI_BOUNCES, 1, 1, 5);
+			ImGui::DragInt("Samples", &PATH_TRACING_GI_SAMPLES, 1, 1, 32);
+			ImGui::DragInt("Face Size", &PATH_TRACING_GI_FACE_SIZE, 1, 1, 64);
+			if (ImGui::Button("Bake (Path Traced)"))
+				renderer.BakeLightProbes(scene);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Bake")) {
+			grid.Init();
+			renderer.ClearProbes();
+		}
+	}
+
 	ImGui::End();
 
 
@@ -413,6 +510,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     if (ImGui::CollapsingHeader(obj->name.c_str())) {
         ImGui::Checkbox("Enabled", &obj->enabled);
+    	ImGui::Checkbox("Is Static", &obj->isStatic);
 
     	// Add Component
     	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume", "Interactive Water"};

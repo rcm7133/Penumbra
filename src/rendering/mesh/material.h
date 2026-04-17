@@ -4,7 +4,7 @@
 struct Material
 {
     unsigned int shader;
-    unsigned int diffuseTexture;
+    unsigned int diffuseTexture = 0;
     unsigned int normalMap = 0;
     unsigned int heightMap = 0;
     unsigned int emissiveTexture = 0;
@@ -23,7 +23,7 @@ struct Material
     float metallic = 0.0f;
 
     glm::vec3 emissiveColor = glm::vec3(0.0f);
-    float emissiveIntensity = 15.0f;
+    float emissiveIntensity = 0.0f;
 
     std::string modelPath;
     std::string texturePath;

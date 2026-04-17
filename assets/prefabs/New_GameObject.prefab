@@ -1,0 +1,44 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "albedo": "../assets/textures/white.png",
+                        "emissiveColor": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "emissiveIntensity": 15.0,
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 0.0,
+                        "roughness": 0.05000000074505806
+                    }
+                ],
+                "path": "../assets/models/plane.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "New GameObject",
+    "transform": {
+        "position": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "rotation": [
+            0.0,
+            -0.0,
+            0.0
+        ],
+        "scale": [
+            1.0,
+            1.0,
+            1.0
+        ]
+    }
+}

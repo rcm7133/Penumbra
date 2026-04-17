@@ -10,9 +10,19 @@
 #include "mesh/meshComponent.h"
 #include "effects/lights/lightComponent.h"
 #include "../rendering/effects/water/interactiveWaterComponent.h"
+#include "rendering/pathTracing/pathTracer.h"
 
 extern float AMBIENT_MULTIPLIER;
 extern bool SKYBOX_ENABLED;
+
+// GI
+extern int GI_MODE;
+extern float GI_INTENSITY;
+
+// PT
+extern int PATH_TRACING_GI_SAMPLES;
+extern int PATH_TRACING_GI_BOUNCES;
+extern int PATH_TRACING_GI_FACE_SIZE;
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;
@@ -60,12 +70,19 @@ public:
     unsigned int GetLightingShader() const { return lightingShader; }
     unsigned int GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const;
 
+    void BakeLightProbes(std::shared_ptr<Scene> scene);
+    void ClearProbes();
+    void UploadProbeData(const ProbeGrid& grid);
+
 private:
     int w, h;
     glm::mat4 projection;
 
     GBuffer gbuffer;
     ScreenQuad quad;
+
+    PTScene ptScene;
+    bool ptSceneBuilt = false;
 
     // FBOs and textures
     unsigned int litFBO;
@@ -96,6 +113,10 @@ private:
     unsigned int particleUnlitShader;
     unsigned int pointShadowShader;
     unsigned int skyboxShader;
+    unsigned int probeBakeShader;
+
+    // SSBO
+    unsigned int probeSSBO = 0;
 
     // Geometry shader caches
     int gBuf_model, gBuf_view, gBuf_projection, gBuf_normalMat;
@@ -113,7 +134,7 @@ private:
     void CacheUniforms();
 
     // Passes
-    void ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler);
+    void ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler, bool staticOnly = false);
     void GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene, const Camera& camera, Profiler& profiler);
     void SSAOPass(const glm::mat4& view, Profiler& profiler);
     void LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
@@ -125,6 +146,11 @@ private:
     void WaterPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler);
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene);
+
+    unsigned int RenderCubemapFromPoint(const glm::vec3& position, std::shared_ptr<Scene> scene, int faceSize = 64);
+    unsigned int PathTraceCubemapFromPoint(const glm::vec3& position, std::shared_ptr<Scene> scene, int faceSize = 64);
+
+    void EncodeSH(const float* cubemapData, int faceSize, glm::vec3 outSH[9]);
 
     std::vector<glm::vec3> ssaoKernelCache;
     static unsigned int GenerateNoiseTexture(int size);

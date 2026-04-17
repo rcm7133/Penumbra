@@ -123,6 +123,7 @@ void Renderer::InitShadowMaps(std::shared_ptr<Scene> scene)
             glBindFramebuffer(GL_FRAMEBUFFER, light->shadowFBO);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                                    GL_TEXTURE_2D, light->shadowMap, 0);
+            glDrawBuffer(GL_NONE);
             glReadBuffer(GL_NONE);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
@@ -265,6 +266,7 @@ void Renderer::LoadShaders()
     particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
     pointShadowShader = ShaderUtils::MakeShaderProgram("../shaders/shadows/pointShadowVert.glsl", "../shaders/shadows/pointShadowFrag.glsl");
     skyboxShader = ShaderUtils::MakeShaderProgram("../shaders/skybox/skyboxVert.glsl","../shaders/skybox/skyboxFrag.glsl");
+    probeBakeShader = ShaderUtils::MakeShaderProgram("../shaders/lighting/probeBakeVert.glsl", "../shaders/lighting/probeBakeFrag.glsl");
 }
 
 void Renderer::CacheUniforms()
@@ -352,7 +354,7 @@ void Renderer::RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profile
     FXAAPass(profiler);
 }
 
-void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
+void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler, bool staticOnly)
 {
     profiler.Begin("Shadow Pass");
     int idx = 0;
@@ -363,6 +365,7 @@ void Renderer::ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler)
     {
         auto lc = obj->GetComponent<LightComponent>();
         if (!lc || !lc->light->castsShadow) continue;
+        if (staticOnly && !obj->isStatic) continue;
         if (idx >= MAX_SHADOW_LIGHTS) break;
 
         auto& light = lc->light;
@@ -651,6 +654,20 @@ void Renderer::LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int sh
                 camera.transform.position.z);
 
     scene->UploadLights(lightingShader);
+
+    glUniform1i(glGetUniformLocation(lightingShader, "giMode"), GI_MODE);
+    glUniform1f(glGetUniformLocation(lightingShader, "giIntensity"), GI_INTENSITY);
+
+    if (GI_MODE >= 1 && probeSSBO != 0) {
+        auto& grid = scene->probeGrid;
+        glUniform3fv(glGetUniformLocation(lightingShader, "probeGridMin"),
+                     1, glm::value_ptr(grid.boundsMin));
+        glUniform3fv(glGetUniformLocation(lightingShader, "probeGridMax"),
+                     1, glm::value_ptr(grid.boundsMax));
+        glUniform3i(glGetUniformLocation(lightingShader, "probeGridCount"),
+                    grid.countX, grid.countY, grid.countZ);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, probeSSBO);
+    }
 
     quad.Draw();
 
@@ -1064,5 +1081,437 @@ unsigned int Renderer::GetDebugTexture(int mode, std::shared_ptr<Scene> scene) c
         }
         case 9: return fogTexture;
         default: return 0;
+    }
+}
+
+unsigned int Renderer::PathTraceCubemapFromPoint(const glm::vec3& position,
+                                                  std::shared_ptr<Scene> scene,
+                                                  int faceSize)
+{
+    // Build PT scene once per bake session
+    if (!ptSceneBuilt) {
+        ptScene = BuildPTScene(scene);
+        ptSceneBuilt = true;
+    }
+
+    int triOffset = 0;
+    for (auto& obj : scene->objects) {
+        if (!obj->enabled || !obj->isStatic) continue;
+        auto mc = obj->GetComponent<MeshComponent>();
+        if (!mc || !mc->model) continue;
+        if (obj->IsForwardRendered()) continue;
+
+        int objTris = 0;
+        for (auto& sm : mc->model->subMeshes)
+            objTris += (int)sm.indices.size() / 3;
+
+        printf("Object '%s': tris %d-%d texIdx=%d\n",
+               obj->name.c_str(), triOffset, triOffset + objTris - 1,
+               triOffset < (int)ptScene.triTextureIndex.size() ? ptScene.triTextureIndex[triOffset] : -99);
+        triOffset += objTris;
+    }
+
+    std::vector<PTLight> lights = ExtractLights(scene);
+
+    // Cubemap face directions
+    const glm::vec3 faceDirs[6] = {
+        glm::vec3( 1, 0, 0), glm::vec3(-1, 0, 0),
+        glm::vec3( 0, 1, 0), glm::vec3( 0,-1, 0),
+        glm::vec3( 0, 0, 1), glm::vec3( 0, 0,-1),
+    };
+    const glm::vec3 faceUps[6] = {
+        glm::vec3(0,-1, 0), glm::vec3(0,-1, 0),
+        glm::vec3(0, 0, 1), glm::vec3(0, 0,-1),
+        glm::vec3(0,-1, 0), glm::vec3(0,-1, 0),
+    };
+
+    // Allocate pixel data for all 6 faces
+    std::vector<float> facePixels(faceSize * faceSize * 3 * 6, 0.0f);
+
+    struct FaceBasis { glm::vec3 forward, right, up; };
+    FaceBasis basis[6];
+    for (int face = 0; face < 6; face++) {
+        basis[face].forward = faceDirs[face];
+        basis[face].up      = faceUps[face];
+        basis[face].right   = glm::normalize(glm::cross(faceDirs[face], faceUps[face]));
+        basis[face].up      = glm::normalize(glm::cross(basis[face].right, faceDirs[face]));
+    }
+
+    // Multi thread Path Tracing
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < 6 * faceSize * faceSize; i++)
+    {
+        int face = i / (faceSize * faceSize);
+        int px   = i % (faceSize * faceSize);
+        int x    = px % faceSize;
+        int y    = px / faceSize;
+
+        std::mt19937 localRng(42 + i);
+
+        float u = (2.0f * (x + 0.5f) / faceSize) - 1.0f;
+        float v = (2.0f * (y + 0.5f) / faceSize) - 1.0f;
+
+        glm::vec3 dir = glm::normalize(basis[face].forward + basis[face].right * u + basis[face].up * v);
+
+        glm::vec3 radiance = PathTraceProbe(
+            ptScene, lights, position, dir,
+            PATH_TRACING_GI_SAMPLES,
+            PATH_TRACING_GI_BOUNCES,
+            localRng
+        );
+
+        int idx = i * 3;
+        facePixels[idx + 0] = radiance.r;
+        facePixels[idx + 1] = radiance.g;
+        facePixels[idx + 2] = radiance.b;
+    }
+
+    // Upload to GL cubemap so BakeLightProbes can read it back with glGetTexImage
+    unsigned int cubeTex;
+    glGenTextures(1, &cubeTex);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeTex);
+    for (int face = 0; face < 6; face++) {
+        float* faceData = facePixels.data() + face * faceSize * faceSize * 3;
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_RGB16F,
+                     faceSize, faceSize, 0, GL_RGB, GL_FLOAT, faceData);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+    return cubeTex;
+}
+
+unsigned int Renderer::RenderCubemapFromPoint(const glm::vec3& position,
+                                               std::shared_ptr<Scene> scene,
+                                               int faceSize)
+{
+    unsigned int cubeFBO, cubeTex, cubeDepth;
+
+    glGenFramebuffers(1, &cubeFBO);
+    glGenTextures(1, &cubeTex);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubeTex);
+    for (int i = 0; i < 6; i++) {
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+                     faceSize, faceSize, 0, GL_RGB, GL_FLOAT, nullptr);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    glGenRenderbuffers(1, &cubeDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, cubeDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, faceSize, faceSize);
+
+    glm::mat4 captureProj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);
+
+    glm::mat4 captureViews[6] = {
+        glm::lookAt(position, position + glm::vec3( 1, 0, 0), glm::vec3(0,-1, 0)),
+        glm::lookAt(position, position + glm::vec3(-1, 0, 0), glm::vec3(0,-1, 0)),
+        glm::lookAt(position, position + glm::vec3( 0, 1, 0), glm::vec3(0, 0, 1)),
+        glm::lookAt(position, position + glm::vec3( 0,-1, 0), glm::vec3(0, 0,-1)),
+        glm::lookAt(position, position + glm::vec3( 0, 0, 1), glm::vec3(0,-1, 0)),
+        glm::lookAt(position, position + glm::vec3( 0, 0,-1), glm::vec3(0,-1, 0)),
+    };
+
+    GLint prevViewport[4];
+    glGetIntegerv(GL_VIEWPORT, prevViewport);
+    glViewport(0, 0, faceSize, faceSize);
+
+    int bake_modelLoc     = glGetUniformLocation(probeBakeShader, "model");
+    int bake_viewLoc      = glGetUniformLocation(probeBakeShader, "view");
+    int bake_projLoc      = glGetUniformLocation(probeBakeShader, "projection");
+    int bake_normalMatLoc = glGetUniformLocation(probeBakeShader, "normalMatrix");
+    int bake_cameraPosLoc = glGetUniformLocation(probeBakeShader, "cameraPos");
+    int bake_ambientLoc   = glGetUniformLocation(probeBakeShader, "ambientMultiplier");
+    int bake_roughnessLoc = glGetUniformLocation(probeBakeShader, "roughness");
+    int bake_metallicLoc  = glGetUniformLocation(probeBakeShader, "metallic");
+    int bake_diffuseTexLoc = glGetUniformLocation(probeBakeShader, "diffuseTex");
+    int bake_shadowCountLoc = glGetUniformLocation(probeBakeShader, "shadowLightCount");
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+
+    for (int face = 0; face < 6; face++) {
+        glBindFramebuffer(GL_FRAMEBUFFER, cubeFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, cubeTex, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                  GL_RENDERBUFFER, cubeDepth);
+
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Render geometry with bake shader
+        glUseProgram(probeBakeShader);
+        glUniformMatrix4fv(bake_projLoc, 1, GL_FALSE, glm::value_ptr(captureProj));
+        glUniformMatrix4fv(bake_viewLoc, 1, GL_FALSE, glm::value_ptr(captureViews[face]));
+        glUniform3fv(bake_cameraPosLoc, 1, glm::value_ptr(position));
+        glUniform1f(bake_ambientLoc, AMBIENT_MULTIPLIER);
+        glUniform1i(bake_diffuseTexLoc, 0);
+
+        // Upload lights
+        scene->UploadLights(probeBakeShader, true);
+
+        // Bind shadow maps (slot 1+)
+        int shadowCount = 0;
+        int si = 0;
+        for (auto& obj : scene->objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
+            if (!obj->isStatic) continue;
+            if (si >= MAX_SHADOW_LIGHTS) break;
+
+            glActiveTexture(GL_TEXTURE1 + si);
+            if (lc->light->type == LightType::Point)
+                glBindTexture(GL_TEXTURE_2D, 0);
+            else
+                glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
+
+            std::string name = "shadowMap[" + std::to_string(si) + "]";
+            glUniform1i(glGetUniformLocation(probeBakeShader, name.c_str()), 1 + si);
+            std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
+            glUniformMatrix4fv(glGetUniformLocation(probeBakeShader, lsm.c_str()),
+                               1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
+            si++;
+            shadowCount++;
+        }
+
+        int cubeStart = 1 + si;
+        int ci = 0;
+        for (auto& obj : scene->objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
+            if (!obj->isStatic) continue;
+            if (ci >= MAX_SHADOW_LIGHTS) break;
+
+
+            glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
+            if (lc->light->type == LightType::Point)
+                glBindTexture(GL_TEXTURE_CUBE_MAP, lc->light->shadowCubemap);
+            else
+                glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+            std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
+            glUniform1i(glGetUniformLocation(probeBakeShader, name.c_str()), cubeStart + ci);
+            ci++;
+        }
+
+        int fi = 0;
+        for (auto& obj : scene->objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (!lc || !lc->light->castsShadow || !obj->enabled) continue;
+            if (!obj->isStatic) continue;
+            if (fi >= MAX_SHADOW_LIGHTS) break;
+            float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
+            std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
+            glUniform1f(glGetUniformLocation(probeBakeShader, name.c_str()), fp);
+            fi++;
+        }
+        glUniform1i(bake_shadowCountLoc, shadowCount);
+
+        // Render each object using the bake shader
+        for (auto& obj : scene->objects) {
+            if (!obj->enabled) continue;
+            auto mc = obj->GetComponent<MeshComponent>();
+            if (!mc || !mc->model) continue;
+            if (obj->IsForwardRendered()) continue;
+
+            glm::mat4 modelMat = obj->transform.GetMatrix();
+            static Material defaultMat = Model::DefaultMaterial();
+
+            for (auto& sm : mc->model->subMeshes) {
+                glm::mat4 finalModel = modelMat * sm.nodeTransform;
+                glUniformMatrix4fv(bake_modelLoc, 1, GL_FALSE, glm::value_ptr(finalModel));
+
+                glm::mat3 normalMat = glm::mat3(glm::transpose(glm::inverse(finalModel)));
+                glUniformMatrix3fv(bake_normalMatLoc, 1, GL_FALSE, glm::value_ptr(normalMat));
+
+                Material& mat = (sm.materialIndex >= 0 &&
+                                 sm.materialIndex < (int)mc->model->materials.size())
+                    ? mc->model->materials[sm.materialIndex]
+                    : defaultMat;
+
+                glUniform1f(bake_roughnessLoc, mat.roughness);
+                glUniform1f(bake_metallicLoc, mat.metallic);
+
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, mat.diffuseTexture);
+
+                glBindVertexArray(sm.VAO);
+                glDrawElements(GL_TRIANGLES, sm.indexCount, GL_UNSIGNED_INT, 0);
+            }
+        }
+        glBindVertexArray(0);
+
+        // Render skybox into this face
+        if (SKYBOX_ENABLED && scene->skybox) {
+            glDepthFunc(GL_LEQUAL);
+            glDisable(GL_CULL_FACE);
+            glUseProgram(skyboxShader);
+
+            glm::mat4 skyView = glm::mat4(glm::mat3(captureViews[face]));
+            glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"),
+                               1, GL_FALSE, glm::value_ptr(skyView));
+            glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"),
+                               1, GL_FALSE, glm::value_ptr(captureProj));
+            glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+
+            scene->skybox->Draw();
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+            glEnable(GL_CULL_FACE);
+            glDepthFunc(GL_LESS);
+        }
+    }
+
+    // Restore state
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+    glClearColor(0, 0, 0, 1);
+
+    glDeleteRenderbuffers(1, &cubeDepth);
+    glDeleteFramebuffers(1, &cubeFBO);
+
+    return cubeTex;
+}
+
+void Renderer::BakeLightProbes(std::shared_ptr<Scene> scene) {
+
+    auto& grid = scene->probeGrid;
+    if (grid.probes.empty()) {
+        std::cerr << "No probes to bake — call Build() first" << std::endl;
+        return;
+    }
+
+    Profiler dummyProfiler;
+    ShadowPass(scene, dummyProfiler, true);
+
+    ptSceneBuilt = false;
+
+    int faceSize = (GI_MODE == 2) ? PATH_TRACING_GI_FACE_SIZE : 64;
+    int totalPixels = faceSize * faceSize * 6;
+    std::vector<float> pixelData(totalPixels * 3);
+
+    std::cout << "Baking " << grid.TotalProbes() << " light probes ("
+              << (GI_MODE == 2 ? "path traced" : "rasterized") << ")..." << std::endl;
+
+    for (int i = 0; i < (int)grid.probes.size(); i++) {
+        auto& probe = grid.probes[i];
+
+        // Create cubemap at point
+        unsigned int cubeTex = (GI_MODE == 2)
+            ? PathTraceCubemapFromPoint(probe.position, scene, faceSize)
+            : RenderCubemapFromPoint(probe.position, scene, faceSize);
+
+        // Read back cubemap
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubeTex);
+        for (int face = 0; face < 6; face++) {
+            glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0,
+                          GL_RGB, GL_FLOAT,
+                          &pixelData[face * faceSize * faceSize * 3]);
+        }
+
+        // Encode into SH
+        EncodeSH(pixelData.data(), faceSize, probe.shCoeffs);
+        probe.baked = true;
+
+        // Clean up cubemap
+        glDeleteTextures(1, &cubeTex);
+
+        if ((i + 1) % 10 == 0 || i == (int)grid.probes.size() - 1)
+            std::cout << "  Baked " << (i + 1) << " / " << grid.TotalProbes() << std::endl;
+    }
+
+    UploadProbeData(grid);
+    std::cout << "Light probe baking complete." << std::endl;
+}
+
+void Renderer::UploadProbeData(const ProbeGrid& grid) {
+    std::vector<glm::vec4> shData(grid.TotalProbes() * 9);
+    for (int p = 0; p < grid.TotalProbes(); p++) {
+        for (int i = 0; i < 9; i++) {
+            shData[p * 9 + i] = glm::vec4(grid.probes[p].shCoeffs[i], 0);
+        }
+    }
+
+    if (probeSSBO == 0)
+        glGenBuffers(1, &probeSSBO);
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, probeSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, shData.size() * sizeof(glm::vec4),
+                 shData.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
+void Renderer::EncodeSH(const float* cubemapData, int faceSize, glm::vec3 outSH[9]) {
+    for (int i = 0; i < 9; i++) {
+        outSH[i] = glm::vec3(0);
+    }
+
+    float weightSum = 0;
+    // Loop over each texel in the cubemap
+    for (int face = 0; face < 6; face++) {
+        for (int y = 0; y < faceSize; y++) {
+            for (int x = 0; x < faceSize; x++) {
+                // Get UV coordinates for texel
+                float u = (2.0f * (x + 0.5f) / faceSize) - 1.0f;
+                float v = (2.0f * (y + 0.5f) / faceSize) - 1.0f;
+                // Get face direction and normalize
+                glm::vec3 dir;
+                switch (face) {
+                    case 0: dir = glm::vec3( 1, -v, -u); break;
+                    case 1: dir = glm::vec3(-1, -v,  u); break;
+                    case 2: dir = glm::vec3( u,  1,  v); break;
+                    case 3: dir = glm::vec3( u, -1, -v); break;
+                    case 4: dir = glm::vec3( u, -v,  1); break;
+                    case 5: dir = glm::vec3(-u, -v, -1); break;
+                }
+                dir = glm::normalize(dir);
+                // Get solid angle, projecting cube map texel onto sphere to account for cube to sphere distortion
+                // temp = 1 + u^2 + v^2
+                // solid angle = 4 / (temp * sqrt(temp))
+                float temp = 1.0f + u * u + v * v;
+                float weight = 4.0f / (sqrt(temp) * temp);
+                weightSum += weight;
+                // read pixel rgb from flattened texel array
+                int idx = (face * faceSize * faceSize + y * faceSize + x) * 3;
+                glm::vec3 color(cubemapData[idx], cubemapData[idx+1], cubemapData[idx+2]);
+                // ???????? Voodoo fuckery ??????????????
+                // 9 coefficient spherical harmonic (l = 2)
+                float basis[9];
+                basis[0] = 0.282095f;                                     // l=0, 1
+                basis[1] = 0.488603f * dir.y;                             // l=1, 2-4
+                basis[2] = 0.488603f * dir.z;
+                basis[3] = 0.488603f * dir.x;
+                basis[4] = 1.092548f * dir.x * dir.y;                     // l=2, 5-9
+                basis[5] = 1.092548f * dir.y * dir.z;
+                basis[6] = 0.315392f * (3.0f * dir.z * dir.z - 1.0f);
+                basis[7] = 1.092548f * dir.x * dir.z;
+                basis[8] = 0.546274f * (dir.x * dir.x - dir.y * dir.y);
+
+                for (int i = 0; i < 9; i++) {
+                    outSH[i] += color * basis[i] * weight;
+                }
+            }
+        }
+    }
+    float norm = (4.0f * 3.14159265f) / weightSum;
+    for (int i = 0; i < 9; i++)
+        outSH[i] *= norm;
+}
+
+void Renderer::ClearProbes() {
+    if (probeSSBO != 0) {
+        glDeleteBuffers(1, &probeSSBO);
+        probeSSBO = 0;
     }
 }

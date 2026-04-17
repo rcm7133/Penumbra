@@ -9,6 +9,11 @@ struct SubMesh
     unsigned int EBO = 0;
     int indexCount = 0;
     int materialIndex = -1; // index into Model::materials, -1 = default
+    glm::mat4 nodeTransform = glm::mat4(1.0f);
+
+    std::vector<glm::vec3> positions;
+    std::vector<unsigned int> indices;
+    std::vector<glm::vec2> uvs;
 };
 
 class Model {

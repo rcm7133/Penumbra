@@ -207,6 +207,7 @@ json SceneLoader::SerializeGameObject(const std::shared_ptr<GameObject>& obj) {
     json j;
     j["name"]      = obj->name;
     j["enabled"]   = obj->enabled;
+    j["static"] = obj->isStatic;
     j["transform"] = SerializeTransform(obj->transform);
     j["class"]     = "GameObject";
 
@@ -226,6 +227,27 @@ void SceneLoader::Save(const std::shared_ptr<Scene>& scene, const std::string& f
         if (obj->runtimeOnly) continue;
         root["objects"].push_back(SerializeGameObject(obj));
     }
+    // Save probe grid
+    json gridJson;
+    gridJson["boundsMin"] = SerializeVec3(scene->probeGrid.boundsMin);
+    gridJson["boundsMax"] = SerializeVec3(scene->probeGrid.boundsMax);
+    gridJson["countX"] = scene->probeGrid.countX;
+    gridJson["countY"] = scene->probeGrid.countY;
+    gridJson["countZ"] = scene->probeGrid.countZ;
+
+    json probesJson = json::array();
+    for (const auto& probe : scene->probeGrid.probes) {
+        if (!probe.baked) continue;
+        json pj;
+        pj["pos"] = SerializeVec3(probe.position);
+        json shJson = json::array();
+        for (int i = 0; i < 9; i++)
+            shJson.push_back(SerializeVec3(probe.shCoeffs[i]));
+        pj["sh"] = shJson;
+        probesJson.push_back(pj);
+    }
+    gridJson["probes"] = probesJson;
+    root["probeGrid"] = gridJson;
 
     std::ofstream file(filepath);
     if (!file.is_open()) {
@@ -393,6 +415,7 @@ std::shared_ptr<GameObject> SceneLoader::DeserializeGameObject(const json& j, Pa
     std::string name = j["name"].get<std::string>();
     auto obj = std::make_shared<GameObject>(name);
     obj->enabled = j.value("enabled", true);
+    obj->isStatic = j.value("static", true);
 
     if (j.contains("transform"))
         DeserializeTransform(j["transform"], obj->transform);
@@ -422,6 +445,30 @@ std::shared_ptr<Scene> SceneLoader::Load(const std::string& filepath, ParticleSy
         for (const auto& objJson : root["objects"])
             if (auto obj = DeserializeGameObject(objJson, particleManager))
                 scene->Add(obj);
+    // Load probe grid
+    if (root.contains("probeGrid")) {
+        auto& gj = root["probeGrid"];
+        scene->probeGrid.boundsMin = DeserializeVec3(gj["boundsMin"]);
+        scene->probeGrid.boundsMax = DeserializeVec3(gj["boundsMax"]);
+        scene->probeGrid.countX = gj["countX"].get<int>();
+        scene->probeGrid.countY = gj["countY"].get<int>();
+        scene->probeGrid.countZ = gj["countZ"].get<int>();
+        scene->probeGrid.Init();
+
+        if (gj.contains("probes")) {
+            int idx = 0;
+            for (const auto& pj : gj["probes"]) {
+                if (idx >= (int)scene->probeGrid.probes.size()) break;
+                auto& probe = scene->probeGrid.probes[idx];
+                probe.position = DeserializeVec3(pj["pos"]);
+                for (int i = 0; i < 9; i++)
+                    probe.shCoeffs[i] = DeserializeVec3(pj["sh"][i]);
+                probe.baked = true;
+                idx++;
+            }
+        }
+    }
+
     std::cout << "Scene loaded from " << filepath
               << " (" << scene->objects.size() << " objects)" << std::endl;
     return scene;

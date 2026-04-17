@@ -22,6 +22,7 @@ Material Model::DefaultMaterial()
     mat.metallic = 0.0f;
     mat.hasNormalMap = false;
     mat.hasHeightMap = false;
+    mat.diffuseTexture = 0;
     return mat;
 }
 
@@ -314,6 +315,21 @@ void Model::ProcessPrimitive(const cgltf_primitive* prim,
     // Upload to GPU
     SubMesh sm;
 
+    // CPU copies for path tracing
+    sm.positions.reserve(vertCount);
+    for (cgltf_size v = 0; v < vertCount; v++) {
+        sm.positions.emplace_back(
+            vertices[v * 11 + 0],
+            vertices[v * 11 + 1],
+            vertices[v * 11 + 2]
+        );
+        sm.uvs.emplace_back(
+            vertices[v * 11 + 3],
+            vertices[v * 11 + 4]
+        );
+    }
+    sm.indices = indices;
+
     glGenVertexArrays(1, &sm.VAO);
     glGenBuffers(1, &sm.VBO);
     glGenBuffers(1, &sm.EBO);
@@ -348,6 +364,7 @@ void Model::ProcessPrimitive(const cgltf_primitive* prim,
         sm.materialIndex = (int)matIdx;
     }
 
+    sm.nodeTransform = transform;
     subMeshes.push_back(sm);
 }
 

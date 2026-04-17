@@ -17,7 +17,7 @@ uniform int steps;
 uniform float fogScale;
 uniform float fogScrollSpeed;
 
-float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
+float SampleShadowMapFog(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
 {
     vec4 fragPosLightSpace = lsm * vec4(fragPos, 1.0);
     vec3 proj = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -28,15 +28,6 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
 
     float closestDepth = texture(map, proj.xy).r;
     float currentDepth = proj.z;
-    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
-}
-
-float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float farPlane)
-{
-    vec3 fragToLight = fragPos - lightPos;
-    float currentDepth = length(fragToLight) / farPlane;
-    float closestDepth = texture(cubeMap, fragToLight).r;
-    float bias = 0.005;
     return currentDepth - bias > closestDepth ? 1.0 : 0.0;
 }
 
@@ -93,7 +84,7 @@ vec3 ComputeLighting(vec3 samplePos)
             if (lights[i].type == LIGHT_POINT)
             shadow = SamplePointShadow(shadowCubeMap[i], samplePos, lights[i].position, lightFarPlane[i]);
             else
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], samplePos, 0.0001);
+            shadow = SampleShadowMapFog(shadowMap[i], lightSpaceMatrix[i], samplePos, 0.0001);
         }
 
         lighting += lights[i].color * lights[i].intensity * atten * (1.0 - shadow);

@@ -1,0 +1,45 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "albedo": "../assets/textures/white.png",
+                        "emissiveColor": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "emissiveIntensity": 15.0,
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 0.0,
+                        "roughness": 1.0
+                    }
+                ],
+                "path": "../assets/models/plane.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "CornellBoxWall",
+    "static": true,
+    "transform": {
+        "position": [
+            1.0,
+            1.0,
+            0.0
+        ],
+        "rotation": [
+            90.0,
+            -89.96573638916016,
+            0.0
+        ],
+        "scale": [
+            1.0,
+            1.0,
+            1.0
+        ]
+    }
+}

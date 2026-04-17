@@ -2,10 +2,19 @@
 
 // Scene settings
 std::string CURRENT_SCENE = "default.scene";
-float AMBIENT_MULTIPLIER = 0.05f;
-bool SKYBOX_ENABLED = false;
-
+float AMBIENT_MULTIPLIER = 0.01f;
+bool SKYBOX_ENABLED = true;
 bool FREECAM_ENABLED = false;
+
+// Global Illumination Settings
+int GI_MODE = 1;
+float GI_INTENSITY = 0.05f;
+bool DEBUG_PROBES = false;
+
+// Path Tracing
+int PATH_TRACING_GI_BOUNCES = 3;  // Bounces per pixel
+int PATH_TRACING_GI_SAMPLES = 4; // Samples per pixel
+int PATH_TRACING_GI_FACE_SIZE = 16; // Resolution of cubemap
 
 // Shadow settings
 int MAX_SHADOW_LIGHTS = 3;

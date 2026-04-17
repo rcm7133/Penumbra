@@ -11,17 +11,6 @@ uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
 uniform sampler2D gEmissive;
 uniform vec3  cameraPos;
-uniform float ambientMultiplier;
-uniform float shadowNormalOffset;
-uniform float shadowBias;
-
-
-// PCF
-uniform int pcfKernelSize;
-uniform int pcfEnabled;
-// SSAO
-uniform sampler2D ssaoTexture;
-uniform bool ssaoEnabled;
 
 //---------------------------
 // PBR Functions
@@ -63,48 +52,6 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0)
 }
 
 
-float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 toLight)
-{
-    float nDotL = dot(normal, toLight);
-    vec3 offsetPos = fragPos + normal * (shadowNormalOffset * (1.0 - nDotL));
-    vec4 fragPosLightSpace = lsm * vec4(offsetPos, 1.0);
-    vec3 proj = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    proj = proj * 0.5 + 0.5;
-    if (proj.z > 1.0) return 0.0;
-
-    float currentDepth = proj.z;
-    float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(map, 0);
-
-    if (pcfEnabled == 0)
-    {
-        float closestDepth = texture(map, proj.xy).r;
-        return currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
-    }
-
-    int halfKernel = pcfKernelSize / 2;
-    int sampleCount = 0;
-    for (int x = -halfKernel; x <= halfKernel; x++)
-    {
-        for (int y = -halfKernel; y <= halfKernel; y++)
-        {
-            float closestDepth = texture(map, proj.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
-            sampleCount++;
-        }
-    }
-    return shadow / float(sampleCount);
-}
-
-float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float farPlane)
-{
-    vec3 fragToLight = fragPos - lightPos;
-    float currentDepth = length(fragToLight) / farPlane;
-    float closestDepth = texture(cubeMap, fragToLight).r;
-    float bias = 0.005;
-    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
-}
-
 void main()
 {
     vec3 fragPos = texture(gPosition, fragUV).rgb;
@@ -120,11 +67,22 @@ void main()
     // Dielectrics reflect about 4% gray, metals reflect their albedo color
     vec3 F0 = mix(vec3(0.04), albedo, metallic);
 
-    // Ambient
-    // TODO: Replace with Image Based Lighting
     vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
     float ao = ssaoEnabled ? texture(ssaoTexture, screenUV).r : 1.0;
-    vec3 ambient = ambientMultiplier * albedo * ao;
+
+    float isStatic = texture(gEmissive, fragUV).a;
+
+    // Ambient / GI
+    vec3 ambient;
+    if (giMode >= 1 && isStatic > 0.5) {
+        vec3 indirect = SampleProbeGrid(fragPos, N);
+        // Probes capture full irradiance including albedo of surrounding surfaces,
+        // but we still need to modulate by this surface's albedo
+        ambient = indirect * albedo * giIntensity * ao;
+    } else {
+        // Dynamic objects (or GI off) use flat ambient
+        ambient = ambientMultiplier * albedo * ao;
+    }
 
     // Emission
     vec3 Lo = texture(gEmissive, fragUV).rgb;

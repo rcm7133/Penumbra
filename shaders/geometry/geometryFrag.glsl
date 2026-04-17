@@ -25,6 +25,8 @@ uniform float emissiveIntensity;
 uniform float roughness;
 uniform float metallic;
 
+uniform float isStatic;
+
 vec2 ParallaxOcclusionMap(vec2 uv, vec3 viewDir)
 {
     // More layers at grazing angles
@@ -61,10 +63,11 @@ vec2 ParallaxOcclusionMap(vec2 uv, vec3 viewDir)
 
 void main()
 {
+    vec3 emissive = vec3(0.0);
     if (emissiveIntensity > 0.0)
-        gEmissive = vec4(emissiveColor * emissiveIntensity, 1.0);
-    else
-        gEmissive = vec4(0.0);
+    emissive = emissiveColor * emissiveIntensity;
+
+    gEmissive = vec4(emissive, isStatic);
 
     // Apply parallax first
     vec2 uv = fragUV;

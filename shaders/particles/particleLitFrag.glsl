@@ -19,15 +19,6 @@ float ShadowCalc(int idx, vec3 worldPos)
     return current - 0.005 > closest ? 1.0 : 0.0;
 }
 
-float SamplePointShadow(samplerCube cubeMap, vec3 fragPos, vec3 lightPos, float farPlane)
-{
-    vec3 fragToLight = fragPos - lightPos;
-    float currentDepth = length(fragToLight) / farPlane;
-    float closestDepth = texture(cubeMap, fragToLight).r;
-    float bias = 0.005;
-    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
-}
-
 void main() {
     vec2 coord = gl_PointCoord - vec2(0.5);
     float dist = length(coord);

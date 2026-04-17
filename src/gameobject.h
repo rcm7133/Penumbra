@@ -13,6 +13,7 @@ public:
     Transform transform;
     bool enabled = true;
     bool runtimeOnly = false;
+    bool isStatic = false;
     std::string name = "GameObject";
 
     std::vector<std::shared_ptr<Component>> components;
