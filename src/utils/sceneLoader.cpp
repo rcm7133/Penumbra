@@ -1,6 +1,7 @@
 #include "sceneLoader.h"
 #include <filesystem>
 
+#include "rendering/effects/reflections/reflectionProbe.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
 
 using json = nlohmann::json;
@@ -150,6 +151,15 @@ json SceneLoader::SerializeFogVolume(const FogVolume& fv) {
     return j;
 }
 
+json SceneLoader::SerializeReflectionProbe(const ReflectionProbe& rp) {
+    json j;
+    j["boundsMin"]   = SerializeVec3(rp.boundsMin);
+    j["boundsMax"]   = SerializeVec3(rp.boundsMax);
+    j["blendRadius"] = rp.blendRadius;
+    j["resolution"] = rp.resolution;
+    return j;
+}
+
 json SceneLoader::SerializeInteractiveWater(const InteractiveWaterComponent& iw) {
     json j;
     j["resolution"]        = iw.resolution;
@@ -193,6 +203,11 @@ json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
         else if (auto iw = std::dynamic_pointer_cast<InteractiveWaterComponent>(comp)) {
             c["type"] = "InteractiveWater";
             c["data"] = SerializeInteractiveWater(*iw);
+        }
+
+        else if (auto rpc = std::dynamic_pointer_cast<ReflectionProbeComponent>(comp)) {
+            c["type"] = "ReflectionProbe";
+            c["data"] = SerializeReflectionProbe(*rpc->probe);
         }
 
         if (!c.empty())
@@ -407,6 +422,15 @@ void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObjec
             iw->specularStrength = data.value("specularStrength", 1.0f);
             iw->shallowColor     = DeserializeVec3(data["shallowColor"]);
             iw->deepColor         = DeserializeVec3(data["deepColor"]);
+        }
+
+        else if (type == "ReflectionProbe") {
+            auto comp = obj->AddComponent<ReflectionProbeComponent>();
+            comp->probe->boundsMin = DeserializeVec3(data["boundsMin"]);
+            comp->probe->boundsMax = DeserializeVec3(data["boundsMax"]);
+            comp->probe->blendRadius = data.value("blendRadius", 1.0f);
+            comp->probe->resolution = data.value("resolution", 128);
+            comp->probe->baked = false; // always needs rebaking on load
         }
     }
 }

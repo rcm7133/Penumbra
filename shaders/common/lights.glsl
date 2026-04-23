@@ -28,7 +28,7 @@ uniform sampler2D ssaoTexture;
 uniform bool ssaoEnabled;
 
 // Light Probes / GI
-uniform int giMode;           // 0 = off, 1 = light probes
+uniform int giMode;           // 0 = off, 1 = rasterized light probes, 2 = path traced light probes
 uniform float giIntensity;
 uniform vec3 probeGridMin;
 uniform vec3 probeGridMax;

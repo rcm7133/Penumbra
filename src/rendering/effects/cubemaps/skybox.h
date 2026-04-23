@@ -8,6 +8,8 @@ public:
 
     unsigned int VAO = 0, VBO = 0;
 
+    unsigned int GetCubemapID() const { return cubemap; }
+
     void Load(const std::vector<std::string>& faces) {
         cubemap = LoadCubemap(faces);
         CreateCube();

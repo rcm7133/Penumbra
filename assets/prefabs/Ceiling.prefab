@@ -1,0 +1,46 @@
+{
+    "class": "GameObject",
+    "components": [
+        {
+            "data": {
+                "materials": [
+                    {
+                        "albedo": "../assets/textures/materials/drywall/albedo.jpg",
+                        "emissiveColor": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "emissiveIntensity": 0.0,
+                        "heightScale": 0.05000000074505806,
+                        "metallic": 0.0,
+                        "normalMap": "../assets/textures/materials/drywall/normal.jpg",
+                        "roughness": 0.800000011920929
+                    }
+                ],
+                "path": "../assets/models/plane.glb"
+            },
+            "type": "Model"
+        }
+    ],
+    "enabled": true,
+    "name": "Ceiling",
+    "static": true,
+    "transform": {
+        "position": [
+            0.0,
+            1.4700000286102295,
+            0.0
+        ],
+        "rotation": [
+            180.0,
+            -4.4528261151010815e-14,
+            7.355542684649263e-20
+        ],
+        "scale": [
+            2.0,
+            1.0,
+            1.0
+        ]
+    }
+}

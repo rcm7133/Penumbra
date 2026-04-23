@@ -11,6 +11,7 @@
 #include "effects/lights/lightComponent.h"
 #include "../rendering/effects/water/interactiveWaterComponent.h"
 #include "rendering/pathTracing/pathTracer.h"
+#include "../rendering/effects/reflections/reflectionProbe.h"
 
 extern float AMBIENT_MULTIPLIER;
 extern bool SKYBOX_ENABLED;
@@ -23,6 +24,16 @@ extern float GI_INTENSITY;
 extern int PATH_TRACING_GI_SAMPLES;
 extern int PATH_TRACING_GI_BOUNCES;
 extern int PATH_TRACING_GI_FACE_SIZE;
+
+// SSR
+extern bool SSR_ENABLED;
+extern bool REFLECTION_PROBE_ENABLED;
+extern float SSR_MIN_STEP_SIZE;
+extern float SSR_MAX_STEP_SIZE;
+extern int SSR_RAYMARCH_STEPS;
+
+// Reflection Probes
+extern int MAX_REFLECTION_PROBES;
 
 // Shadow settings
 extern int SHADOW_RESOLUTION;
@@ -57,28 +68,43 @@ extern float FXAA_EDGE_THRESHOLD_MIN;
 class Renderer
 {
 public:
-    Renderer(int width, int height, const glm::mat4& projection);
+    Renderer(int width, int height, const glm::mat4& projection,
+        std::shared_ptr<Scene> scene, Camera& camera, Profiler& profiler)
+            : w(width), h(height), projection(projection), gbuffer(width, height), scene(std::move(scene)), camera(camera), profiler(profiler) {
+        CreateFBOS();
+        LoadShaders();
+        CacheUniforms();
+        fogNoiseTexture = GenerateNoiseTexture(64);
+    }
     ~Renderer();
 
     void InitShadowMaps(std::shared_ptr<Scene> scene);
 
-    void AssignDefaultShader(std::shared_ptr<Scene> scene);
+    void AssignDefaultShader();
 
-    void RenderFrame(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler);
+    void RenderFrame();
 
-    unsigned int GetGBufferShader()  const { return gBufferShader; }
-    unsigned int GetLightingShader() const { return lightingShader; }
-    unsigned int GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const;
+    [[nodiscard]] unsigned int GetGBufferShader()  const { return gBufferShader; }
+    [[nodiscard]] unsigned int GetLightingShader() const { return lightingShader; }
+    [[nodiscard]] unsigned int GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const;
 
-    void BakeLightProbes(std::shared_ptr<Scene> scene);
+    void BakeLightProbes();
     void ClearProbes();
     void UploadProbeData(const ProbeGrid& grid);
 
+    void CollectReflectionProbes();
+    void BakeReflectionProbes();
+    bool HasReflectionProbes() const { return !reflectionProbes.empty(); }
 private:
     int w, h;
     glm::mat4 projection;
-
     GBuffer gbuffer;
+    std::shared_ptr<Scene> scene;
+    Camera& camera;
+    Profiler& profiler;
+
+    std::vector<std::pair<std::shared_ptr<ReflectionProbe>, glm::vec3>> reflectionProbes;
+
     ScreenQuad quad;
 
     PTScene ptScene;
@@ -98,6 +124,10 @@ private:
     unsigned int fxaaFBO;
     unsigned int fxaaTexture;
     unsigned int litDepthRBO;
+    unsigned int ssrFBO;
+    unsigned int ssrTexture;
+    unsigned int ssrCompositeFBO;
+    unsigned int ssrCompositeTexture;
 
     // Shaders
     unsigned int gBufferShader;
@@ -114,6 +144,8 @@ private:
     unsigned int pointShadowShader;
     unsigned int skyboxShader;
     unsigned int probeBakeShader;
+    unsigned int ssrShader;
+    unsigned int ssrCompositeShader;
 
     // SSBO
     unsigned int probeSSBO = 0;
@@ -130,25 +162,30 @@ private:
     void CreateFogFBO();
     void CreateSSAO();
     void CreateFXAA();
+    void CreateSSR();
+
     void LoadShaders();
     void CacheUniforms();
+    void CreateFBOS();
 
     // Passes
-    void ShadowPass(std::shared_ptr<Scene> scene, Profiler& profiler, bool staticOnly = false);
-    void GeometryPass(const glm::mat4& view, std::shared_ptr<Scene> scene, const Camera& camera, Profiler& profiler);
-    void SSAOPass(const glm::mat4& view, Profiler& profiler);
-    void LightingPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
-    void FogPass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
+    void ShadowPass(bool staticOnly = false);
+    void GeometryPass(const glm::mat4& view);
+    void SSAOPass(const glm::mat4& view);
+    void SSRPass();
+    void SSRCompositePass();
+    void LightingPass(int shadowCount);
+    void FogPass(int shadowCount);
     void PassthroughPass();
-    void FXAAPass(Profiler& profiler);
-    void ParticlePass(Camera& camera, std::shared_ptr<Scene> scene, int shadowCount, Profiler& profiler);
-    void SkyboxPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler);
-    void WaterPass(Camera& camera, std::shared_ptr<Scene> scene, Profiler& profiler);
+    void FXAAPass();
+    void ParticlePass(int shadowCount);
+    void SkyboxPass();
+    void WaterPass();
 
-    void RenderShadowMap(const glm::mat4& lightSpaceMatrix, std::shared_ptr<Scene> scene);
+    void RenderShadowMap(const glm::mat4& lightSpaceMatrix);
 
-    unsigned int RenderCubemapFromPoint(const glm::vec3& position, std::shared_ptr<Scene> scene, int faceSize = 64);
-    unsigned int PathTraceCubemapFromPoint(const glm::vec3& position, std::shared_ptr<Scene> scene, int faceSize = 64);
+    unsigned int RenderCubemapFromPoint(const glm::vec3& position, int faceSize = 64);
+    unsigned int PathTraceCubemapFromPoint(const glm::vec3& position, int faceSize = 64);
 
     void EncodeSH(const float* cubemapData, int faceSize, glm::vec3 outSH[9]);
 

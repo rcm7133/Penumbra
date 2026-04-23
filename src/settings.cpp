@@ -5,9 +5,10 @@ std::string CURRENT_SCENE = "default.scene";
 float AMBIENT_MULTIPLIER = 0.01f;
 bool SKYBOX_ENABLED = true;
 bool FREECAM_ENABLED = false;
+bool GUI_ENABLED = true;
 
 // Global Illumination Settings
-int GI_MODE = 1;
+int GI_MODE = 2;
 float GI_INTENSITY = 0.05f;
 bool DEBUG_PROBES = false;
 
@@ -15,6 +16,17 @@ bool DEBUG_PROBES = false;
 int PATH_TRACING_GI_BOUNCES = 3;  // Bounces per pixel
 int PATH_TRACING_GI_SAMPLES = 4; // Samples per pixel
 int PATH_TRACING_GI_FACE_SIZE = 16; // Resolution of cubemap
+
+// SSR
+bool SSR_ENABLED = true;
+bool REFLECTION_PROBE_ENABLED = true;
+int SSR_RAYMARCH_STEPS = 16;
+float SSR_MAX_STEP_SIZE = 0.5;
+float SSR_MIN_STEP_SIZE = 0.0025;
+
+// Reflection Probes
+bool DEBUG_REFLECTION_PROBES = true;
+int MAX_REFLECTION_PROBES = 8;
 
 // Shadow settings
 int MAX_SHADOW_LIGHTS = 3;

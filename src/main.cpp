@@ -16,6 +16,7 @@
 #include "rendering/effects/water/interactiveWaterComponent.h"
 #include "physics/camera/characterControllerComponent.h"
 #include "physics/camera/camera.h"
+#include "rendering/effects/reflections/reflectionProbeComponent.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -26,13 +27,16 @@ bool firstMouse  = true;
 bool cursorEnabled = false;
 bool tabWasPressed = false;
 bool fWasPressed = false;
+bool tWasPressed = false;
 
 extern bool DEBUG_COLLIDERS;
 extern bool FREECAM_ENABLED;
+extern bool GUI_ENABLED;
 extern std::string CURRENT_SCENE;
 extern int GI_MODE;
 extern float GI_INTENSITY;
 extern bool DEBUG_PROBES;
+extern bool DEBUG_REFLECTION_PROBES;
 
 Profiler profiler;
 ParticleSystemManager particleManager;
@@ -105,10 +109,10 @@ int main()
 	//--------------------------
     // Create renderer and scene
 	// -------------------------
-    Renderer renderer(w, h, projection);
 	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
+	Renderer renderer(w, h, projection, scene, camera, profiler);
 
-    renderer.AssignDefaultShader(scene);
+    renderer.AssignDefaultShader();
 	scene->Start();
 	scene->LoadSkybox("../assets/textures/skybox");
 	scene->probeGrid.Load();
@@ -139,6 +143,8 @@ int main()
 	controller->moveSpeed = 1.5f;
 	playerObj->runtimeOnly = true;
 	scene->Add(playerObj);
+
+	renderer.BakeReflectionProbes();
 
     double lastTime = glfwGetTime();
     int frameCount = 0;
@@ -171,10 +177,17 @@ int main()
     	}
     	fWasPressed = fPressed;
 
+    	bool tPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+
+    	if (tPressed && !tWasPressed) {
+    		GUI_ENABLED = !GUI_ENABLED;
+    	}
+    	tWasPressed = tPressed;
+
     	static bool gWasPressed = false;
     	bool gPressed = glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
     	if (gPressed && !gWasPressed)
-    		GI_MODE = (GI_MODE + 1) % 3; // cycles 0 -> 1 -> 2 -> 0
+    		GI_MODE = (GI_MODE + 1) % 3;
     	gWasPressed = gPressed;
 
         bool tabPressed = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
@@ -231,12 +244,36 @@ int main()
     	}
 
 		// Render
-        renderer.RenderFrame(camera, scene, profiler);
-    	if (DEBUG_COLLIDERS) {
+        renderer.RenderFrame();
+    	if (DEBUG_COLLIDERS && GUI_ENABLED) {
     		DebugColliders(scene, debugRenderer, camera, projection);
     	}
 
-    	if (GI_MODE >= 1 && DEBUG_PROBES) {
+    	if (DEBUG_REFLECTION_PROBES && GUI_ENABLED) {
+    		for (auto& obj : scene->objects) {
+    			if (!obj->enabled) continue;
+    			auto rp = obj->GetComponent<ReflectionProbeComponent>();
+    			if (!rp) continue;
+
+    			glm::vec3 probePos = obj->transform.position;
+    			glm::vec3 worldMin = rp->probe->boundsMin + probePos;
+    			glm::vec3 worldMax = rp->probe->boundsMax + probePos;
+    			glm::vec3 boundsCenter = (worldMin + worldMax) * 0.5f;
+    			glm::vec3 boundsHalf   = (worldMax - worldMin) * 0.5f;
+
+    			// Origin sphere
+    			glm::vec3 sphereColor = rp->probe->baked ? glm::vec3(0.0f, 1.0f, 0.2f)
+														  : glm::vec3(1.0f, 0.1f, 0.1f);
+    			debugRenderer.AddSphere(probePos, 0.12f, sphereColor);
+
+    			// Bounds box
+    			debugRenderer.AddBox(boundsCenter, glm::quat(1, 0, 0, 0), boundsHalf,
+									 glm::vec3(0.0f, 0.8f, 1.0f));
+    		}
+    		debugRenderer.Render(camera.GetViewMatrix(), projection);
+    	}
+
+    	if (GI_MODE >= 1 && DEBUG_PROBES && GUI_ENABLED) {
     		auto& grid = scene->probeGrid;
 
     		// Draw the bounding box
@@ -270,7 +307,8 @@ int main()
     		}
     	}
 
-        GUI(scene, deltaTime, profiler, renderer, physics, controller);
+    	if (GUI_ENABLED)
+			GUI(scene, deltaTime, profiler, renderer, physics, controller);
         glfwSwapBuffers(window);
     }
 
@@ -383,6 +421,12 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::Checkbox("Skybox", &SKYBOX_ENABLED);
 	}
 
+	if (renderer.HasReflectionProbes()) {
+		if (ImGui::Button("Bake Reflection Probes")) {
+			renderer.BakeReflectionProbes();
+		}
+	}
+
 	if (GI_MODE >= 1) {
 		ImGui::Checkbox("Debug Probe Grid", &DEBUG_PROBES);
 		ImGui::SliderFloat("GI Intensity", &GI_INTENSITY, 0.0f, 3.0f);
@@ -410,13 +454,13 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
 		if (GI_MODE == 1) {
 			if (ImGui::Button("Bake (Rasterized)"))
-				renderer.BakeLightProbes(scene);
+				renderer.BakeLightProbes();
 		} else if (GI_MODE == 2) {
 			ImGui::DragInt("Bounces", &PATH_TRACING_GI_BOUNCES, 1, 1, 5);
 			ImGui::DragInt("Samples", &PATH_TRACING_GI_SAMPLES, 1, 1, 32);
 			ImGui::DragInt("Face Size", &PATH_TRACING_GI_FACE_SIZE, 1, 1, 64);
 			if (ImGui::Button("Bake (Path Traced)"))
-				renderer.BakeLightProbes(scene);
+				renderer.BakeLightProbes();
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear Bake")) {
@@ -442,6 +486,12 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::SliderInt("SSAO Samples", &SSAO_KERNEL_SIZE, 8, 64);
 	}
 
+	ImGui::Checkbox("SSR", &SSR_ENABLED);
+	ImGui::Checkbox("Reflection Probes ", &REFLECTION_PROBE_ENABLED);
+	ImGui::SliderInt("SSR Steps", &SSR_RAYMARCH_STEPS, 1, 64);
+	ImGui::SliderFloat("SSR Max Step Size", &SSR_MAX_STEP_SIZE, 0.01f, 0.5f);
+	ImGui::SliderFloat("SSR Min Step Size", &SSR_MIN_STEP_SIZE, 0.001f, 0.05f);
+
 	ImGui::Checkbox("FXAA", &FXAA_ENABLED);
 
     ImGui::Checkbox("PCF shadows", &PCF_ENABLED);
@@ -454,6 +504,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
 	ImGui::Begin("Debug");
 	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
+	ImGui::Checkbox("Show Reflection Probes", &DEBUG_REFLECTION_PROBES);
 	ImGui::SliderFloat("Move Speed", &controller->moveSpeed, 0.1f, 5.0f);
 	ImGui::Checkbox("Free Cam", &FREECAM_ENABLED);
 	if (FREECAM_ENABLED)
@@ -498,7 +549,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		auto obj = SceneLoader::LoadPrefab(prefabList[selectedPrefab], particleManager);
 		if (obj) {
 			scene->Add(obj);
-			renderer.AssignDefaultShader(scene);
+			renderer.AssignDefaultShader();
 			renderer.InitShadowMaps(scene);
 		}
 	}
@@ -513,7 +564,9 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     	ImGui::Checkbox("Is Static", &obj->isStatic);
 
     	// Add Component
-    	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume", "Interactive Water"};
+    	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume",
+    		"Interactive Water", "Reflection Probe"
+    	};
     	static int selectedComponent = -1;
     	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
     	if (ImGui::BeginCombo("##AddComponent", "Add Component...")) {
@@ -530,7 +583,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			case 0: // Model
     				if (!obj->GetComponent<MeshComponent>()) {
     					auto model = std::make_shared<Model>();
-    					model->Load("../assets/models/sphere.glb");
+    					model->Load("../assets/models/plane.glb");
     					obj->AddComponent<MeshComponent>(model);
     				}
     				break;
@@ -555,6 +608,9 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			case 5: // Interactive Water
     				if (!obj->GetComponent<InteractiveWaterComponent>())
     					obj->AddComponent<InteractiveWaterComponent>();
+    			case 6: // Reflection Probe
+    				if (!obj->GetComponent<ReflectionProbeComponent>())
+    					obj->AddComponent<ReflectionProbeComponent>();
     		}
     		selectedComponent = -1;
     	}
@@ -626,7 +682,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		                auto newModel = std::make_shared<Model>();
 		                if (newModel->Load(std::string(modelPathBuf))) {
 		                    mc->model = newModel;
-		                    renderer.AssignDefaultShader(scene);
+		                    renderer.AssignDefaultShader();
 		                    renderer.InitShadowMaps(scene);
 		                }
 		                editingModelIndex = -1;
@@ -820,6 +876,18 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			ImGui::TreePop();
     		}
     	}
+
+    	auto rp = obj->GetComponent<ReflectionProbeComponent>();
+    	if (rp) {
+    		if (ImGui::TreeNode("Reflection Probe")) {
+    			ImGui::DragInt("Resolution", &rp->probe->resolution, 1, 32, 512);
+    			ImGui::DragFloat3("Bounds Min", &rp->probe->boundsMin.x, 0.1f);
+    			ImGui::DragFloat3("Bounds Max", &rp->probe->boundsMax.x, 0.1f);
+    			ImGui::DragFloat("Blend Radius", &rp->probe->blendRadius, 0.1f, 0.0f, 1.0f);
+
+    			ImGui::TreePop();
+    		}
+    	}
     }
 
     ImGui::PopID();
@@ -844,7 +912,7 @@ void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer,
 {
 	particleManager.Reset();
 	scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
-	renderer.AssignDefaultShader(scene);
+	renderer.AssignDefaultShader();
 	scene->Start();
 	renderer.InitShadowMaps(scene);
 	physics.RegisterScene(scene);

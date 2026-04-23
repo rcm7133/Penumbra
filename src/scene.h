@@ -7,7 +7,7 @@
 #include "rendering/effects/lights/lightComponent.h"
 #include "rendering/effects/cubemaps/skybox.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
-#include "rendering/globalIllumination/ProbeGrid.h"
+#include "rendering/effects/globalIllumination/ProbeGrid.h"
 
 class Scene
 {

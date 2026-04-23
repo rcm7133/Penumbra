@@ -178,7 +178,7 @@
                 ],
                 "rotation": [
                     90.0,
-                    -89.96573638916016,
+                    -89.96043395996094,
                     0.0
                 ],
                 "scale": [
@@ -269,7 +269,7 @@
                 "rotation": [
                     0.0,
                     -0.0,
-                    180.0
+                    -180.0
                 ],
                 "scale": [
                     1.0,
@@ -314,7 +314,7 @@
                 "rotation": [
                     0.0,
                     -0.0,
-                    -180.0
+                    180.0
                 ],
                 "scale": [
                     0.25,
@@ -494,7 +494,49 @@
                 ],
                 "rotation": [
                     90.0,
-                    89.96043395996094,
+                    89.96573638916016,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "blendRadius": 1.0,
+                        "boundsMax": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "boundsMin": [
+                            -1.0,
+                            -1.0,
+                            -1.0
+                        ],
+                        "resolution": 128
+                    },
+                    "type": "ReflectionProbe"
+                }
+            ],
+            "enabled": true,
+            "name": "New GameObject",
+            "static": false,
+            "transform": {
+                "position": [
+                    0.0,
+                    1.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
                     0.0
                 ],
                 "scale": [

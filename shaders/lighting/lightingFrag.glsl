@@ -141,6 +141,7 @@ void main()
 
         // Shadows
         float shadow = 0.0;
+        /*
         if (i < shadowLightCount)
         {
             if (lights[i].type == LIGHT_POINT)
@@ -148,8 +149,10 @@ void main()
             else
             shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, N, L);
         }
+        */
         // Accumulate
         Lo += (1.0 - shadow) * (diffuse + specular) * radiance * NdotL;
+
     }
 
     vec3 color = ambient + Lo;

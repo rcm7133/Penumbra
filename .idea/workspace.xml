@@ -28,36 +28,47 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/assets/scenes/cornellbox.scene" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/green.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/red.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/white.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/credits.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dependencies/nanoRT/nanort.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/lighting/probeBakeFrag.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/lighting/probeBakeVert.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/globalIllumination/ProbeGrid.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/pathTracing/pathTracer.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/pathTracing/pathTracer.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/beanbag.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/carpet.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/couch.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/die.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/factory.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/pantstand.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/tablelamp.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/teapot.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/models/walllamp.glb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/albedo.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/disp.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/normal.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/rough.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/common/reflectionProbes.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/ssr/ssrCompositeFrag.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/reflections/reflectionProbe.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/reflections/reflectionProbeComponent.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/scripting/core/ScriptComponent.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Wood_Floor.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/assets/prefabs/Wood_Floor.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/scenes/cornellbox.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/cornellbox.scene" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/scenes/default.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/default.scene" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/common/lights.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/common/lights.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/fog/fogFrag.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/particles/particleLitFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/particles/particleLitFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gameobject.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/gameobject.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/ssr/ssrFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssr/ssrFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/ssr/ssrVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssr/ssrVert.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/mesh/material.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/mesh/material.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/mesh/model.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/mesh/model.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/mesh/model.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/mesh/model.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/globalIllumination/ProbeGrid.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/globalIllumination/ProbeGrid.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -85,6 +96,7 @@
     <setting file="file://$PROJECT_DIR$/src/physics/camera/characterControllerComponent.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/physics/camera/characterControllerComponent.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/rendering/effects/globalIllumination/ProbeGrid.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/scene.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/transform.h" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -122,7 +134,7 @@
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/dependencies/nanoRT&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/assets/models&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -134,18 +146,18 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nanoRT" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
+      <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nanoRT" />
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nlohmann" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
-      <recent name="C:\Users\m16ga\code\Penumbra\src\physics" />
-      <recent name="C:\Users\m16ga\code\Penumbra\src\utils" />
-      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\camera" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\mud" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\brick" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\woodFloor" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
@@ -153,11 +165,6 @@
       <method v="2" />
     </configuration>
     <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -210,7 +217,21 @@
       <workItem from="1776130524070" duration="9907000" />
       <workItem from="1776213899885" duration="3933000" />
       <workItem from="1776396442158" duration="6735000" />
-      <workItem from="1776430271151" duration="12876000" />
+      <workItem from="1776430271151" duration="24341000" />
+      <workItem from="1776464421524" duration="3810000" />
+      <workItem from="1776475277997" duration="1126000" />
+      <workItem from="1776476748762" duration="863000" />
+      <workItem from="1776563791335" duration="375000" />
+      <workItem from="1776564199872" duration="7103000" />
+      <workItem from="1776604427346" duration="4794000" />
+      <workItem from="1776649276218" duration="3085000" />
+      <workItem from="1776692000603" duration="1147000" />
+      <workItem from="1776708330611" duration="1322000" />
+      <workItem from="1776722072029" duration="3165000" />
+      <workItem from="1776727151854" duration="1319000" />
+      <workItem from="1776826704542" duration="643000" />
+      <workItem from="1776905086361" duration="7017000" />
+      <workItem from="1776919129994" duration="404000" />
     </task>
     <servers />
   </component>
@@ -221,6 +242,17 @@
     <isAutomaticCheckingOnLaunch value="false" />
     <isAutomaticFoundErrors value="true" />
     <isAutomaticReloadCMake value="true" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

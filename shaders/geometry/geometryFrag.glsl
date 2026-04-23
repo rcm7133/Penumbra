@@ -39,7 +39,12 @@ vec2 ParallaxOcclusionMap(vec2 uv, vec3 viewDir)
     float currentLayerDepth = 0.0;
 
     // How much to shift UVs per layer
-    vec2 P = viewDir.xy / viewDir.z * heightScale;
+    vec2 P = viewDir.xy / max(viewDir.z, 0.1) * heightScale;
+
+    // Fade out at grazing angles
+    float grazeAttenuation = smoothstep(0.0, 0.25, viewDir.z);
+    P *= grazeAttenuation;
+
     vec2 deltaUV = P / numLayers;
 
     vec2  currentUV = uv;

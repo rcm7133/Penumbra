@@ -28,7 +28,7 @@ void main()
     vec3 T = normalize(normalMatrix * vertexTangent);
     vec3 N = normalize(fragNormal);
     T = normalize(T - dot(T, N) * N);   // re-orthogonalize
-    vec3 B = cross(N, T);
+    vec3 B = cross(T, N);
     TBN = mat3(T, B, N);
 
     // View direction in tangent space for parallax mapping
