@@ -23,6 +23,7 @@ add_executable(Penumbra
         src/utils/shaderutils.cpp
         src/rendering/debug/colliderDebugRenderer.cpp
         src/rendering/mesh/model.cpp
+        src/rendering/effects/water/interactiveWater.cpp
         src/rendering/pathTracing/pathTracer.cpp
         src/utils/sceneLoader.cpp
         src/physics/camera/characterControllerComponent.cpp

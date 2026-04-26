@@ -9,6 +9,7 @@ namespace ShaderUtils
     unsigned int MakeShaderProgram(const std::string& vertexPath,
                                 const std::string& geometryPath,
                                 const std::string& fragmentPath);
+    unsigned int LoadTexture(const std::string& path);
     unsigned int LoadComputeShader(const std::string& path);
 
 }

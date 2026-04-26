@@ -244,7 +244,7 @@ int main()
     	}
 
 		// Render
-        renderer.RenderFrame();
+        renderer.RenderFrame(deltaTime);
     	if (DEBUG_COLLIDERS && GUI_ENABLED) {
     		DebugColliders(scene, debugRenderer, camera, projection);
     	}
@@ -608,9 +608,11 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			case 5: // Interactive Water
     				if (!obj->GetComponent<InteractiveWaterComponent>())
     					obj->AddComponent<InteractiveWaterComponent>();
+    				break;
     			case 6: // Reflection Probe
     				if (!obj->GetComponent<ReflectionProbeComponent>())
     					obj->AddComponent<ReflectionProbeComponent>();
+    				break;
     		}
     		selectedComponent = -1;
     	}
@@ -865,13 +867,36 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     	auto iw = obj->GetComponent<InteractiveWaterComponent>();
     	if (iw) {
     		if (ImGui::TreeNode("Interactive Water")) {
-    			ImGui::DragInt("Resolution", &iw->resolution, 2, 64, 1024);
-    			ImGui::DragFloat("Wave Speed", &iw->waveSpeed, 0.1f, 0.1f, 4.0f);
-    			ImGui::DragFloat("Ripple Strength", &iw->rippleStrength, 0.1f, 0.1f, 1.0f);
-    			ImGui::DragFloat("Fresnel Power", &iw->fresnelPower, 0.1f, 0.1f, 10.0f);
+    			ImGui::DragInt("Resolution", &iw->interactiveWater->resolution, 2, 64, 1024);
+    			ImGui::DragFloat("Wave Speed", &iw->interactiveWater->waveSpeed, 0.1f, 0.1f, 4.0f);
+    			ImGui::DragFloat("Ripple Strength", &iw->interactiveWater->rippleStrength, 0.1f, 0.1f, 1.0f);
+    			ImGui::DragFloat("Fresnel Power", &iw->interactiveWater->fresnelPower, 0.1f, 0.1f, 10.0f);
+    			ImGui::DragFloat3("Shallow Color", &iw->interactiveWater->shallowColor.x, 0.01f, 0.01f, 1.0f);
+    			ImGui::DragFloat3("Deep Color", &iw->interactiveWater->deepColor.x, 0.01f, 0.01f, 1.0f);
 
-    			ImGui::DragFloat3("Shallow Color", &iw->shallowColor.x, 0.01f, 0.01f, 1.0f);
-    			ImGui::DragFloat3("Deep Color", &iw->deepColor.x, 0.01f, 0.01f, 1.0f);
+    			ImGui::Separator();
+    			ImGui::Text("Height Map Debug");
+
+    			// Display size — small enough to fit in the panel
+    			ImVec2 texSize(128, 128);
+
+    			// GetHeightMapPing/Pong need to be exposed — see note below
+    			ImGui::Text("Ping"); ImGui::SameLine();
+    			ImGui::Text("Pong");
+
+    			ImGui::Image(
+					(ImTextureID)(intptr_t)iw->interactiveWater->GetHeightMapPing(),
+					texSize, ImVec2(0,1), ImVec2(1,0)  // flipped UVs — OpenGL origin is bottom-left
+				);
+    			ImGui::SameLine();
+    			ImGui::Image(
+					(ImTextureID)(intptr_t)iw->interactiveWater->GetHeightMapPong(),
+					texSize, ImVec2(0,1), ImVec2(1,0)
+				);
+
+    			// Show which one is currently active
+    			bool ping = iw->interactiveWater->IsPing();
+    			ImGui::Text("Active: %s", ping ? "Ping" : "Pong");
 
     			ImGui::TreePop();
     		}

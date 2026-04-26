@@ -20,12 +20,12 @@ int PATH_TRACING_GI_FACE_SIZE = 16; // Resolution of cubemap
 // SSR
 bool SSR_ENABLED = true;
 bool REFLECTION_PROBE_ENABLED = true;
-int SSR_RAYMARCH_STEPS = 16;
+int SSR_RAYMARCH_STEPS = 40;
 float SSR_MAX_STEP_SIZE = 0.5;
 float SSR_MIN_STEP_SIZE = 0.0025;
 
 // Reflection Probes
-bool DEBUG_REFLECTION_PROBES = true;
+bool DEBUG_REFLECTION_PROBES = false;
 int MAX_REFLECTION_PROBES = 8;
 
 // Shadow settings

@@ -82,7 +82,7 @@ public:
 
     void AssignDefaultShader();
 
-    void RenderFrame();
+    void RenderFrame(float deltaTime);
 
     [[nodiscard]] unsigned int GetGBufferShader()  const { return gBufferShader; }
     [[nodiscard]] unsigned int GetLightingShader() const { return lightingShader; }
@@ -180,7 +180,7 @@ private:
     void FXAAPass();
     void ParticlePass(int shadowCount);
     void SkyboxPass();
-    void WaterPass();
+    void WaterPass(float deltaTime);
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix);
 

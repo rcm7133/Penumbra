@@ -28,47 +28,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/assets/models/beanbag.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/carpet.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/couch.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/die.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/factory.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/pantstand.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/tablelamp.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/teapot.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/models/walllamp.glb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/albedo.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/disp.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/normal.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/textures/materials/mud/rough.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/common/reflectionProbes.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/ssr/ssrCompositeFrag.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/reflections/reflectionProbe.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/reflections/reflectionProbeComponent.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/scripting/core/ScriptComponent.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/textures/moss.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/water/mossDensityCompute.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/water/waterRippleCompute.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/prefabs/Wood_Floor.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/assets/prefabs/Wood_Floor.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/scenes/cornellbox.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/cornellbox.scene" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/scenes/default.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/default.scene" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/common/lights.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/common/lights.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/geometry/geometryVert.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/ssr/ssrFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssr/ssrFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/ssr/ssrVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssr/ssrVert.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/compute/water/waterNormalCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/water/waterNormalCompute.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/water/waterFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/water/waterFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/water/waterVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/water/waterVert.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/globalIllumination/ProbeGrid.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/globalIllumination/ProbeGrid.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWaterComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWaterComponent.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/shaderutils.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/shaderutils.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/shaderutils.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/shaderutils.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,11 +132,11 @@
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nlohmann" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\mud" />
       <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\brick" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\woodFloor" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
@@ -231,7 +210,13 @@
       <workItem from="1776727151854" duration="1319000" />
       <workItem from="1776826704542" duration="643000" />
       <workItem from="1776905086361" duration="7017000" />
-      <workItem from="1776919129994" duration="404000" />
+      <workItem from="1776919129994" duration="2231000" />
+      <workItem from="1776989174203" duration="9093000" />
+      <workItem from="1777005449083" duration="4797000" />
+      <workItem from="1777034885380" duration="11000" />
+      <workItem from="1777070301662" duration="1342000" />
+      <workItem from="1777084639486" duration="2493000" />
+      <workItem from="1777151945876" duration="2914000" />
     </task>
     <servers />
   </component>

@@ -357,7 +357,7 @@
         ssaoKernelCache.clear();
     }
 
-    void Renderer::RenderFrame()
+    void Renderer::RenderFrame(float deltaTime)
     {
         glm::mat4 view = camera.GetViewMatrix();
 
@@ -392,7 +392,7 @@
 
         SkyboxPass();
         ParticlePass(shadowCount);
-        WaterPass();
+        WaterPass(deltaTime);
 
         if (FOG_ENABLED) FogPass(shadowCount);
         else PassthroughPass();
@@ -1125,7 +1125,7 @@
         profiler.End("Skybox Pass");
     }
 
-    void Renderer::WaterPass() {
+    void Renderer::WaterPass(float deltaTime) {
         profiler.Begin("Water Pass");
         glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
         glEnable(GL_DEPTH_TEST);
@@ -1138,22 +1138,147 @@
         for (auto& obj: scene->objects) {
             if (!obj->enabled) continue;
             auto wc = obj->GetComponent<InteractiveWaterComponent>();
-            auto mc = obj->GetComponent<MeshComponent>();
-            if (!wc || !mc) continue;
+            if (!wc) continue;
+
+            glm::vec3 playerPos = camera.transform.position;
+            glm::vec3 waterPos  = obj->transform.position;
+            float waterSize     = obj->transform.scale.x;
+
+            // Simulate
+            wc->interactiveWater->Update(deltaTime);
+            if (abs(playerPos.y - waterPos.y) < 1.5f)
+                wc->interactiveWater->AddRippleWorld(playerPos, waterPos, waterSize);
+            wc->interactiveWater->ComputeHeightMap();
+            wc->interactiveWater->ComputeNormals();
 
             unsigned int shader = wc->GetWaterShader();
             glUseProgram(shader);
 
-            glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "model"),
+            // Matrices
+            glUniformMatrix4fv(glGetUniformLocation(shader, "model"),
                 1, GL_FALSE, glm::value_ptr(obj->transform.GetMatrix()));
-
-            glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "view"),
+            glUniformMatrix4fv(glGetUniformLocation(shader, "view"),
                 1, GL_FALSE, glm::value_ptr(view));
+            glUniformMatrix4fv(glGetUniformLocation(shader, "projection"),
+                1, GL_FALSE, glm::value_ptr(projection));
 
-            glUniformMatrix4fv(glGetUniformLocation(wc->GetWaterShader(), "projection"),
-                               1, GL_FALSE, glm::value_ptr(projection));
+            // Water params
+            glUniform1f(glGetUniformLocation(shader, "rippleStrength"),
+                wc->interactiveWater->rippleStrength);
+            glUniform3fv(glGetUniformLocation(shader, "cameraPos"), 1,
+                glm::value_ptr(camera.transform.position));
+            glUniform3fv(glGetUniformLocation(shader, "shallowColor"), 1,
+                glm::value_ptr(wc->interactiveWater->shallowColor));
+            glUniform3fv(glGetUniformLocation(shader, "deepColor"), 1,
+                glm::value_ptr(wc->interactiveWater->deepColor));
+            glUniform1f(glGetUniformLocation(shader, "fresnelPower"),
+                wc->interactiveWater->fresnelPower);
+            glUniform1f(glGetUniformLocation(shader, "specularStrength"),
+                wc->interactiveWater->specularStrength);
 
-            mc->model->DrawGeometry();
+            // Slot 0: height map
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, wc->interactiveWater->GetHeightMap());
+            glUniform1i(glGetUniformLocation(shader, "heightMap"), 0);
+
+            // Slot 1: normal map
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, wc->interactiveWater->GetNormalMap());
+            glUniform1i(glGetUniformLocation(shader, "normalMap"), 1);
+
+            // Scene lights
+            scene->UploadLights(shader);
+
+            // Slots 2+: shadow maps
+            int si = 0;
+            for (auto& shadowObj : scene->objects) {
+                auto lc = shadowObj->GetComponent<LightComponent>();
+                if (!lc || !lc->light->castsShadow || !shadowObj->enabled) continue;
+                if (si >= MAX_SHADOW_LIGHTS) break;
+
+                glActiveTexture(GL_TEXTURE2 + si);
+                if (lc->light->type == LightType::Point)
+                    glBindTexture(GL_TEXTURE_2D, 0);
+                else
+                    glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
+
+                glUniform1i(glGetUniformLocation(shader,
+                    ("shadowMap[" + std::to_string(si) + "]").c_str()), 2 + si);
+                glUniformMatrix4fv(glGetUniformLocation(shader,
+                    ("lightSpaceMatrix[" + std::to_string(si) + "]").c_str()),
+                    1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
+                si++;
+            }
+
+            // Cubemap shadows
+            int cubeStart = 2 + si;
+            int ci = 0;
+            for (auto& shadowObj : scene->objects) {
+                auto lc = shadowObj->GetComponent<LightComponent>();
+                if (!lc || !lc->light->castsShadow || !shadowObj->enabled) continue;
+                if (ci >= MAX_SHADOW_LIGHTS) break;
+
+                glActiveTexture(GL_TEXTURE0 + cubeStart + ci);
+                if (lc->light->type == LightType::Point)
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, lc->light->shadowCubemap);
+                else
+                    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+                glUniform1i(glGetUniformLocation(shader,
+                    ("shadowCubeMap[" + std::to_string(ci) + "]").c_str()), cubeStart + ci);
+                ci++;
+            }
+
+            // Far planes
+            int fi = 0;
+            for (auto& shadowObj : scene->objects) {
+                auto lc = shadowObj->GetComponent<LightComponent>();
+                if (!lc || !lc->light->castsShadow || !shadowObj->enabled) continue;
+                if (fi >= MAX_SHADOW_LIGHTS) break;
+                float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
+                glUniform1f(glGetUniformLocation(shader,
+                    ("lightFarPlane[" + std::to_string(fi) + "]").c_str()), fp);
+                fi++;
+            }
+
+            glUniform1i(glGetUniformLocation(shader, "shadowLightCount"), si);
+            glUniform1f(glGetUniformLocation(shader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
+
+            // Reflection probes
+            int probeStart = cubeStart + ci;
+            int probeCount = (int)std::min(reflectionProbes.size(), (size_t)MAX_REFLECTION_PROBES);
+            glUniform1i(glGetUniformLocation(shader, "probeCount"), probeCount);
+            for (int i = 0; i < probeCount; i++) {
+                auto& [probe, pos] = reflectionProbes[i];
+                glm::vec3 worldMin = probe->boundsMin + pos;
+                glm::vec3 worldMax = probe->boundsMax + pos;
+
+                glActiveTexture(GL_TEXTURE0 + probeStart + i);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, probe->baked ? probe->cubemap : 0);
+                glUniform1i(glGetUniformLocation(shader,
+                    ("reflectionProbes[" + std::to_string(i) + "]").c_str()), probeStart + i);
+                glUniform3fv(glGetUniformLocation(shader,
+                    ("probeBoundsMin[" + std::to_string(i) + "]").c_str()), 1, glm::value_ptr(worldMin));
+                glUniform3fv(glGetUniformLocation(shader,
+                    ("probeBoundsMax[" + std::to_string(i) + "]").c_str()), 1, glm::value_ptr(worldMax));
+                glUniform3fv(glGetUniformLocation(shader,
+                    ("probePositions[" + std::to_string(i) + "]").c_str()), 1, glm::value_ptr(pos));
+                glUniform1f(glGetUniformLocation(shader,
+                    ("probeBlendRadius[" + std::to_string(i) + "]").c_str()), probe->blendRadius);
+            }
+
+            // Skybox
+            int skyboxSlot = probeStart + probeCount;
+            if (scene->skybox) {
+                glActiveTexture(GL_TEXTURE0 + skyboxSlot);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, scene->skybox->GetCubemapID());
+                glUniform1i(glGetUniformLocation(shader, "skybox"), skyboxSlot);
+                glUniform1i(glGetUniformLocation(shader, "hasSkybox"), 1);
+            } else {
+                glUniform1i(glGetUniformLocation(shader, "hasSkybox"), 0);
+            }
+
+            wc->interactiveWater->DrawPlane();
         }
 
         glDepthMask(GL_TRUE);

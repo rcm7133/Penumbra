@@ -162,14 +162,14 @@ json SceneLoader::SerializeReflectionProbe(const ReflectionProbe& rp) {
 
 json SceneLoader::SerializeInteractiveWater(const InteractiveWaterComponent& iw) {
     json j;
-    j["resolution"]        = iw.resolution;
-    j["waveSpeed"]         = iw.waveSpeed;
-    j["dampening"]         = iw.dampening;
-    j["rippleStrength"]    = iw.rippleStrength;
-    j["fresnelPower"]      = iw.fresnelPower;
-    j["specularStrength"]  = iw.specularStrength;
-    j["shallowColor"]      = SerializeVec3(iw.shallowColor);
-    j["deepColor"]         = SerializeVec3(iw.deepColor);
+    j["resolution"]        = iw.interactiveWater->resolution;
+    j["waveSpeed"]         = iw.interactiveWater->waveSpeed;
+    j["dampening"]         = iw.interactiveWater->dampening;
+    j["rippleStrength"]    = iw.interactiveWater->rippleStrength;
+    j["fresnelPower"]      = iw.interactiveWater->fresnelPower;
+    j["specularStrength"]  = iw.interactiveWater->specularStrength;
+    j["shallowColor"]      = SerializeVec3(iw.interactiveWater->shallowColor);
+    j["deepColor"]         = SerializeVec3(iw.interactiveWater->deepColor);
     return j;
 }
 
@@ -415,13 +415,13 @@ void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObjec
         else if (type == "InteractiveWater") {
             int res = data.value("resolution", 256);
             float speed = data.value("waveSpeed", 2.0f);
-            auto iw = obj->AddComponent<InteractiveWaterComponent>(res, speed);
-            iw->dampening        = data.value("dampening", 0.995f);
-            iw->rippleStrength   = data.value("rippleStrength", 0.5f);
-            iw->fresnelPower     = data.value("fresnelPower", 3.0f);
-            iw->specularStrength = data.value("specularStrength", 1.0f);
-            iw->shallowColor     = DeserializeVec3(data["shallowColor"]);
-            iw->deepColor         = DeserializeVec3(data["deepColor"]);
+            auto iw = obj->AddComponent<InteractiveWaterComponent>();
+            iw->interactiveWater->dampening        = data.value("dampening", 0.995f);
+            iw->interactiveWater->rippleStrength   = data.value("rippleStrength", 0.5f);
+            iw->interactiveWater->fresnelPower     = data.value("fresnelPower", 3.0f);
+            iw->interactiveWater->specularStrength = data.value("specularStrength", 1.0f);
+            iw->interactiveWater->shallowColor     = DeserializeVec3(data["shallowColor"]);
+            iw->interactiveWater->deepColor         = DeserializeVec3(data["deepColor"]);
         }
 
         else if (type == "ReflectionProbe") {
