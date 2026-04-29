@@ -173,6 +173,31 @@ json SceneLoader::SerializeInteractiveWater(const InteractiveWaterComponent& iw)
     return j;
 }
 
+json SceneLoader::SerializeCloudVolume(const CloudVolumeComponent& cv) {
+    json j;
+    // Noise generator settings
+    j["resolution"]       = cv.volume->noiseGenerator.resolution;
+    j["voxelResolutionR"] = cv.volume->noiseGenerator.voxelResolutionR;
+    j["voxelResolutionG"] = cv.volume->noiseGenerator.voxelResolutionG;
+    j["voxelResolutionB"] = cv.volume->noiseGenerator.voxelResolutionB;
+    j["voxelResolutionA"] = cv.volume->noiseGenerator.voxelResolutionA;
+    j["inverted"]         = cv.volume->noiseGenerator.inverted;
+    // Volume settings
+    j["min"]          = SerializeVec3(cv.volume->min);
+    j["max"]          = SerializeVec3(cv.volume->max);
+    j["scrollSpeed"]  = cv.volume->scrollSpeed;
+    j["scale"]        = cv.volume->scale;
+    j["rWeight"]      = cv.volume->rWeight;
+    j["gWeight"]      = cv.volume->gWeight;
+    j["bWeight"]      = cv.volume->bWeight;
+    j["aWeight"]      = cv.volume->aWeight;
+    // Lighting voxel grid
+    j["voxelGridX"]   = cv.volume->lightingVoxelGridSize.x;
+    j["voxelGridY"]   = cv.volume->lightingVoxelGridSize.y;
+    j["voxelGridZ"]   = cv.volume->lightingVoxelGridSize.z;
+    return j;
+}
+
 json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
     json comps = json::array();
 
@@ -208,6 +233,11 @@ json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
         else if (auto rpc = std::dynamic_pointer_cast<ReflectionProbeComponent>(comp)) {
             c["type"] = "ReflectionProbe";
             c["data"] = SerializeReflectionProbe(*rpc->probe);
+        }
+
+        else if (auto cv = std::dynamic_pointer_cast<CloudVolumeComponent>(comp)) {
+            c["type"] = "CloudVolume";
+            c["data"] = SerializeCloudVolume(*cv);
         }
 
         if (!c.empty())
@@ -431,6 +461,34 @@ void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObjec
             comp->probe->blendRadius = data.value("blendRadius", 1.0f);
             comp->probe->resolution = data.value("resolution", 128);
             comp->probe->baked = false; // always needs rebaking on load
+        }
+
+        else if (type == "CloudVolume") {
+            auto comp = obj->AddComponent<CloudVolumeComponent>();
+            auto& vol = comp->volume;
+
+            vol->noiseGenerator.resolution       = data.value("resolution", 64);
+            vol->noiseGenerator.voxelResolutionR = data.value("voxelResolutionR", 4);
+            vol->noiseGenerator.voxelResolutionG = data.value("voxelResolutionG", 4);
+            vol->noiseGenerator.voxelResolutionB = data.value("voxelResolutionB", 4);
+            vol->noiseGenerator.voxelResolutionA = data.value("voxelResolutionA", 4);
+            vol->noiseGenerator.inverted         = data.value("inverted", true);
+
+            if (data.contains("min")) vol->min = DeserializeVec3(data["min"]);
+            if (data.contains("max")) vol->max = DeserializeVec3(data["max"]);
+            vol->scrollSpeed = data.value("scrollSpeed", 0.1f);
+            vol->scale       = data.value("scale", 0.5f);
+            vol->rWeight     = data.value("rWeight", 1.0f);
+            vol->gWeight     = data.value("gWeight", 1.0f);
+            vol->bWeight     = data.value("bWeight", 1.0f);
+            vol->aWeight     = data.value("aWeight", 1.0f);
+
+            vol->lightingVoxelGridSize.x = data.value("voxelGridX", 64);
+            vol->lightingVoxelGridSize.y = data.value("voxelGridY", 32);
+            vol->lightingVoxelGridSize.z = data.value("voxelGridZ", 64);
+
+            vol->GenerateNoise();
+            vol->InitializeVoxelGrid();
         }
     }
 }

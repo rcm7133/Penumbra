@@ -7,31 +7,55 @@
 
     Renderer::~Renderer()
     {
-        glDeleteFramebuffers(1, &litFBO);
-        glDeleteTextures(1, &litTexture);
-        glDeleteFramebuffers(1, &fogFBO);
-        glDeleteTextures(1, &fogTexture);
-        glDeleteFramebuffers(1, &ssaoFBO);
-        glDeleteTextures(1, &ssaoTexture);
-        glDeleteFramebuffers(1, &ssaoBlurFBO);
-        glDeleteTextures(1, &ssaoBlurTexture);
-        glDeleteTextures(1, &ssaoNoiseTex);
-        glDeleteTextures(1, &fogNoiseTexture);
+        glDeleteFramebuffers(1, &rt.litFBO);
+        glDeleteTextures(1, &rt.litTexture);
+        glDeleteFramebuffers(1, &rt.fogFBO);
+        glDeleteTextures(1, &rt.fogTexture);
+        glDeleteFramebuffers(1, &rt.ssaoFBO);
+        glDeleteTextures(1, &rt.ssaoTexture);
+        glDeleteFramebuffers(1, &rt.ssaoBlurFBO);
+        glDeleteTextures(1, &rt.ssaoBlurTexture);
+        glDeleteTextures(1, &rt.ssaoNoiseTex);
+        glDeleteTextures(1, &rt.fogNoiseTexture);
 
-        glDeleteProgram(gBufferShader);
-        glDeleteProgram(lightingShader);
-        glDeleteProgram(shadowShader);
-        glDeleteProgram(fogShader);
-        glDeleteProgram(passthroughShader);
-        glDeleteProgram(fogCompositeShader);
-        glDeleteProgram(ssaoShader);
-        glDeleteProgram(skyboxShader);
-        glDeleteProgram(fxaaShader);
+        glDeleteProgram(shaders.gBuffer);
+        glDeleteProgram(shaders.lighting);
+        glDeleteProgram(shaders.shadow);
+        glDeleteProgram(shaders.fog);
+        glDeleteProgram(shaders.passthrough);
+        glDeleteProgram(shaders.fogComposite);
+        glDeleteProgram(shaders.ssao);
+        glDeleteProgram(shaders.skybox);
+        glDeleteProgram(shaders.fxaa);
 
-        glDeleteFramebuffers(1, &fxaaFBO);
-        glDeleteTextures(1, &fxaaTexture);
-        glDeleteProgram(fxaaShader);
-        glDeleteProgram(ssaoBlurShader);
+        glDeleteFramebuffers(1, &rt.fxaaFBO);
+        glDeleteTextures(1, &rt.fxaaTexture);
+        glDeleteProgram(shaders.fxaa);
+        glDeleteProgram(shaders.ssaoBlur);
+        glDeleteProgram(shaders.cloud);
+        glDeleteTextures(1, &rt.cloudTexture);
+    }
+
+    void Renderer::LoadShaders() {
+        shaders.gBuffer = ShaderUtils::MakeShaderProgram("../shaders/geometry/geometryVert.glsl",    "../shaders/geometry/geometryFrag.glsl");
+        shaders.lighting = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/lighting/lightingFrag.glsl");
+        shaders.shadow = ShaderUtils::MakeShaderProgram("../shaders/shadows/shadowVert.glsl",        "../shaders/shadows/shadowFrag.glsl");
+        shaders.fog = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogFrag.glsl");
+        shaders.passthrough = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/passthrough/passthroughFrag.glsl");
+        shaders.fogComposite = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogCompositeFrag.glsl");
+        shaders.ssao = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoFrag.glsl");
+        shaders.ssaoBlur = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoBlurFrag.glsl");
+        shaders.fxaa = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
+        shaders.particleLit = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleLitFrag.glsl");
+        shaders.particleUnlit = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
+        shaders.pointShadow = ShaderUtils::MakeShaderProgram("../shaders/shadows/pointShadowVert.glsl", "../shaders/shadows/pointShadowFrag.glsl");
+        shaders.skybox = ShaderUtils::MakeShaderProgram("../shaders/skybox/skyboxVert.glsl","../shaders/skybox/skyboxFrag.glsl");
+        shaders.probeBake = ShaderUtils::MakeShaderProgram("../shaders/lighting/probeBakeVert.glsl", "../shaders/lighting/probeBakeFrag.glsl");
+        shaders.ssr = ShaderUtils::MakeShaderProgram("../shaders/ssr/ssrVert.glsl", "../shaders/ssr/ssrFrag.glsl");
+        shaders.ssrComposite = ShaderUtils::MakeShaderProgram("../shaders/ssr/ssrVert.glsl", "../shaders/ssr/ssrCompositeFrag.glsl");
+        shaders.cloud= ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/clouds/cloudFrag.glsl");
+        shaders.cloudComposite = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/clouds/cloudComposite.glsl");
+        shaders.cloudLighting = ShaderUtils::LoadComputeShader("../shaders/compute/cloud/lightingVoxelCompute.glsl");
     }
 
     void Renderer::CreateFBOS() {
@@ -40,6 +64,7 @@
         CreateFXAA();
         CreateSSAO();
         CreateSSR();
+        CreateCloudFBO();
     }
 
 
@@ -136,76 +161,108 @@
             auto mc = obj->GetComponent<MeshComponent>();
             if (mc) {
                 for (auto& mat : mc->model->materials)
-                    mat.shader = gBufferShader;
+                    mat.shader = shaders.gBuffer;
             }
         }
     }
 
     void Renderer::CreateLitFBO()
     {
-        glGenFramebuffers(1, &litFBO);
-        glGenTextures(1, &litTexture);
-        glBindTexture(GL_TEXTURE_2D, litTexture);
+        glGenFramebuffers(1, &rt.litFBO);
+        glGenTextures(1, &rt.litTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.litTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 
-        glGenRenderbuffers(1, &litDepthRBO);
-        glBindRenderbuffer(GL_RENDERBUFFER, litDepthRBO);
+        glGenRenderbuffers(1, &rt.litDepthRBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, rt.litDepthRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, litTexture, 0);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, litDepthRBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.litFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.litTexture, 0);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rt.litDepthRBO);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void Renderer::CreateFogFBO()
     {
-        glGenFramebuffers(1, &fogFBO);
-        glGenTextures(1, &fogTexture);
-        glBindTexture(GL_TEXTURE_2D, fogTexture);
+        glGenFramebuffers(1, &rt.fogFBO);
+        glGenTextures(1, &rt.fogTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.fogTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F,
                      w / FOG_RESOLUTION_SCALE, h / FOG_RESOLUTION_SCALE,
                      0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindFramebuffer(GL_FRAMEBUFFER, fogFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fogTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fogFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.fogTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void Renderer::CreateCloudFBO() {
+        glGenFramebuffers(1, &rt.cloudFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.cloudFBO);
+
+        glGenTextures(1, &rt.cloudTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.cloudTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F,
+        w / CLOUD_RESOLUTION_SCALE, h / CLOUD_RESOLUTION_SCALE,
+        0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.cloudTexture, 0);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cerr << "Cloud FBO incomplete!" << std::endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glGenFramebuffers(1, &rt.cloudCompositeFBO);
+        glGenTextures(1, &rt.cloudCompositeTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.cloudCompositeTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.cloudCompositeFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.cloudCompositeTexture, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     void Renderer::CreateSSR() {
         // SSR FBO
-        glGenFramebuffers(1, &ssrFBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, ssrFBO);
+        glGenFramebuffers(1, &rt.ssrFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssrFBO);
 
-        glGenTextures(1, &ssrTexture);
-        glBindTexture(GL_TEXTURE_2D, ssrTexture);
+        glGenTextures(1, &rt.ssrTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.ssrTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssrTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.ssrTexture, 0);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             std::cerr << "SSR FBO incomplete!" << std::endl;
 
         // SSR Composite
-        glGenFramebuffers(1, &ssrCompositeFBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, ssrCompositeFBO);
+        glGenFramebuffers(1, &rt.ssrCompositeFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssrCompositeFBO);
 
-        glGenTextures(1, &ssrCompositeTexture);
-        glBindTexture(GL_TEXTURE_2D, ssrCompositeTexture);
+        glGenTextures(1, &rt.ssrCompositeTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.ssrCompositeTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_FLOAT, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssrCompositeTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.ssrCompositeTexture, 0);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -214,16 +271,17 @@
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void Renderer::CreateFXAA()
-    {
-        glGenFramebuffers(1, &fxaaFBO);
-        glGenTextures(1, &fxaaTexture);
-        glBindTexture(GL_TEXTURE_2D, fxaaTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    void Renderer::CreateFXAA() {
+        glGenFramebuffers(1, &rt.fxaaFBO);
+        glGenTextures(1, &rt.fxaaTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.fxaaTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGB, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glBindFramebuffer(GL_FRAMEBUFFER, fxaaFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fxaaTexture, 0); // was fxaaFBO
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fxaaFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.fxaaTexture, 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cerr << "FXAA FBO incomplete!" << std::endl;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
@@ -252,8 +310,8 @@
         for (int i = 0; i < 16; i++)
             noise.emplace_back(rng(gen) * 2.0f - 1.0f, rng(gen) * 2.0f - 1.0f, 0.0f);
 
-        glGenTextures(1, &ssaoNoiseTex);
-        glBindTexture(GL_TEXTURE_2D, ssaoNoiseTex);
+        glGenTextures(1, &rt.ssaoNoiseTex);
+        glBindTexture(GL_TEXTURE_2D, rt.ssaoNoiseTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 4, 4, 0, GL_RGB, GL_FLOAT, noise.data());
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -261,98 +319,79 @@
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
         // SSAO FBO
-        glGenFramebuffers(1, &ssaoFBO);
-        glGenTextures(1, &ssaoTexture);
-        glBindTexture(GL_TEXTURE_2D, ssaoTexture);
+        glGenFramebuffers(1, &rt.ssaoFBO);
+        glGenTextures(1, &rt.ssaoTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.ssaoTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssaoFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.ssaoTexture, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // SSAO blur FBO
-        glGenFramebuffers(1, &ssaoBlurFBO);
-        glGenTextures(1, &ssaoBlurTexture);
-        glBindTexture(GL_TEXTURE_2D, ssaoBlurTexture);
+        glGenFramebuffers(1, &rt.ssaoBlurFBO);
+        glGenTextures(1, &rt.ssaoBlurTexture);
+        glBindTexture(GL_TEXTURE_2D, rt.ssaoBlurTexture);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoBlurTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssaoBlurFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt.ssaoBlurTexture, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         ssaoKernelCache = std::move(kernel);
     }
 
-    void Renderer::LoadShaders() {
-        gBufferShader      = ShaderUtils::MakeShaderProgram("../shaders/geometry/geometryVert.glsl",    "../shaders/geometry/geometryFrag.glsl");
-        lightingShader     = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/lighting/lightingFrag.glsl");
-        shadowShader       = ShaderUtils::MakeShaderProgram("../shaders/shadows/shadowVert.glsl",        "../shaders/shadows/shadowFrag.glsl");
-        fogShader          = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogFrag.glsl");
-        passthroughShader  = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/passthrough/passthroughFrag.glsl");
-        fogCompositeShader = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/fog/fogCompositeFrag.glsl");
-        ssaoShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoFrag.glsl");
-        ssaoBlurShader     = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/ssao/ssaoBlurFrag.glsl");
-        fxaaShader         = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",       "../shaders/fxaa/fxaaFrag.glsl");
-        particleLitShader   = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleLitFrag.glsl");
-        particleUnlitShader = ShaderUtils::MakeShaderProgram("../shaders/particles/particleVert.glsl", "../shaders/particles/particleUnlitFrag.glsl");
-        pointShadowShader = ShaderUtils::MakeShaderProgram("../shaders/shadows/pointShadowVert.glsl", "../shaders/shadows/pointShadowFrag.glsl");
-        skyboxShader = ShaderUtils::MakeShaderProgram("../shaders/skybox/skyboxVert.glsl","../shaders/skybox/skyboxFrag.glsl");
-        probeBakeShader = ShaderUtils::MakeShaderProgram("../shaders/lighting/probeBakeVert.glsl", "../shaders/lighting/probeBakeFrag.glsl");
-        ssrShader = ShaderUtils::MakeShaderProgram("../shaders/ssr/ssrVert.glsl", "../shaders/ssr/ssrFrag.glsl");
-        ssrCompositeShader = ShaderUtils::MakeShaderProgram("../shaders/ssr/ssrVert.glsl", "../shaders/ssr/ssrCompositeFrag.glsl");
-    }
-
     void Renderer::CacheUniforms()
     {
         // Geometry shader
-        gBuf_model      = glGetUniformLocation(gBufferShader, "model");
-        gBuf_view       = glGetUniformLocation(gBufferShader, "view");
-        gBuf_projection = glGetUniformLocation(gBufferShader, "projection");
-        gBuf_normalMat  = glGetUniformLocation(gBufferShader, "normalMatrix");
-        gBuf_roughness = glGetUniformLocation(gBufferShader, "roughness");
-        gBuf_metallic  = glGetUniformLocation(gBufferShader, "metallic");
-        gBuf_diffuseTex = glGetUniformLocation(gBufferShader, "diffuseTex");
-        gBuf_normalMap  = glGetUniformLocation(gBufferShader, "normalMap");
-        gBuf_hasNormalMap = glGetUniformLocation(gBufferShader, "hasNormalMap");
+        gBuf.model      = glGetUniformLocation(shaders.gBuffer, "model");
+        gBuf.view       = glGetUniformLocation(shaders.gBuffer, "view");
+        gBuf.projection = glGetUniformLocation(shaders.gBuffer, "projection");
+        gBuf.normalMat  = glGetUniformLocation(shaders.gBuffer, "normalMatrix");
+        gBuf.roughness = glGetUniformLocation(shaders.gBuffer, "roughness");
+        gBuf.metallic  = glGetUniformLocation(shaders.gBuffer, "metallic");
+        gBuf.diffuseTex = glGetUniformLocation(shaders.gBuffer, "diffuseTex");
+        gBuf.normalMap  = glGetUniformLocation(shaders.gBuffer, "normalMap");
+        gBuf.hasNormalMap = glGetUniformLocation(shaders.gBuffer, "hasNormalMap");
 
-        glUseProgram(gBufferShader);
-        glUniform1i(gBuf_diffuseTex, 0);
-        glUniform1i(gBuf_normalMap, 1);
-        glUniform1i(glGetUniformLocation(gBufferShader, "heightMap"), 2);
-        glUniform1i(glGetUniformLocation(gBufferShader, "metallicRoughnessMap"), 3);
-        glUniformMatrix4fv(gBuf_projection, 1, GL_FALSE, glm::value_ptr(projection));
+        glUseProgram(shaders.gBuffer);
+        glUniform1i(gBuf.diffuseTex, 0);
+        glUniform1i(gBuf.normalMap, 1);
+        glUniform1i(glGetUniformLocation(shaders.gBuffer, "heightMap"), 2);
+        glUniform1i(glGetUniformLocation(shaders.gBuffer, "metallicRoughnessMap"), 3);
+        glUniformMatrix4fv(gBuf.projection, 1, GL_FALSE, glm::value_ptr(projection));
 
         glm::mat4 identity(1.0f);
         glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(identity)));
-        glUniformMatrix4fv(gBuf_model, 1, GL_FALSE, glm::value_ptr(identity));
-        glUniformMatrix3fv(gBuf_normalMat, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+        glUniformMatrix4fv(gBuf.model, 1, GL_FALSE, glm::value_ptr(identity));
+        glUniformMatrix3fv(gBuf.normalMat, 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
         // Lighting shader
-        light_gPosition = glGetUniformLocation(lightingShader, "gPosition");
-        light_gNormal   = glGetUniformLocation(lightingShader, "gNormal");
-        light_gAlbedo   = glGetUniformLocation(lightingShader, "gAlbedo");
-        light_cameraPos = glGetUniformLocation(lightingShader, "cameraPos");
-        light_ambient   = glGetUniformLocation(lightingShader, "ambientMultiplier");
+        lighting.gPosition = glGetUniformLocation(shaders.lighting, "gPosition");
+        lighting.gNormal   = glGetUniformLocation(shaders.lighting, "gNormal");
+        lighting.gAlbedo   = glGetUniformLocation(shaders.lighting, "gAlbedo");
+        lighting.cameraPos = glGetUniformLocation(shaders.lighting, "cameraPos");
+        lighting.ambient   = glGetUniformLocation(shaders.lighting, "ambientMultiplier");
 
-        glUseProgram(lightingShader);
-        glUniform1i(light_gPosition, 0);
-        glUniform1i(light_gNormal, 1);
-        glUniform1i(light_gAlbedo, 2);
-        glUniform1f(light_ambient, AMBIENT_MULTIPLIER);
+        glUseProgram(shaders.lighting);
+        glUniform1i(lighting.gPosition, 0);
+        glUniform1i(lighting.gNormal, 1);
+        glUniform1i(lighting.gAlbedo, 2);
+        glUniform1f(lighting.ambient, AMBIENT_MULTIPLIER);
 
         // upload SSAO kernel samples
-        glUseProgram(ssaoShader);
+        glUseProgram(shaders.ssao);
         for (int i = 0; i < (int)ssaoKernelCache.size(); i++)
         {
             std::string name = "samples[" + std::to_string(i) + "]";
-            glUniform3fv(glGetUniformLocation(ssaoShader, name.c_str()), 1,
+            glUniform3fv(glGetUniformLocation(shaders.ssao, name.c_str()), 1,
                          glm::value_ptr(ssaoKernelCache[i]));
         }
-        glUniform1i(glGetUniformLocation(ssaoShader, "gPosition"), 0);
-        glUniform1i(glGetUniformLocation(ssaoShader, "gNormal"), 1);
-        glUniform1i(glGetUniformLocation(ssaoShader, "noiseTexture"), 2);
+        glUniform1i(glGetUniformLocation(shaders.ssao, "gPosition"), 0);
+        glUniform1i(glGetUniformLocation(shaders.ssao, "gNormal"), 1);
+        glUniform1i(glGetUniformLocation(shaders.ssao, "noiseTexture"), 2);
 
         ssaoKernelCache.clear();
     }
@@ -377,16 +416,16 @@
         LightingPass(shadowCount);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.FBO);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, rt.litFBO);
         glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.litFBO);
 
         if (SSR_ENABLED) {
             SSRPass();
             SSRCompositePass();
 
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, ssrCompositeFBO);
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, litFBO);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, rt.ssrCompositeFBO);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, rt.litFBO);
             glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         }
 
@@ -394,8 +433,37 @@
         ParticlePass(shadowCount);
         WaterPass(deltaTime);
 
+        std::shared_ptr<CloudVolumeComponent> cv = nullptr;
+        for (auto& obj : scene->objects)
+        {
+            cv = obj->GetComponent<CloudVolumeComponent>();
+            if (cv)
+                break;
+        }
+
         if (FOG_ENABLED) FogPass(shadowCount);
         else PassthroughPass();
+
+        if (CLOUD_ENABLED && cv) {
+            Light* sun = scene->GetMainLight();
+            if (sun) {
+                CloudLightingPass(*cv->volume, sun);
+                CloudPass(*cv->volume, sun);
+                CloudCompositePass();
+            }
+        }
+
+        if (CLOUD_ENABLED && cv) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glUseProgram(shaders.passthrough);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, rt.cloudTexture); // try switching this to rt.litTexture, rt.cloudTexture, rt.cloudCompositeTexture one at a time
+            glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
+            quad.Draw();
+            return; // skip FXAAPass
+        }
+
         FXAAPass();
     }
 
@@ -403,7 +471,7 @@
     {
         profiler.Begin("Shadow Pass");
         int idx = 0;
-        glUseProgram(shadowShader);
+        glUseProgram(shaders.shadow);
         glDisable(GL_CULL_FACE);
 
         for (auto& obj : scene->objects)
@@ -417,7 +485,7 @@
 
             if (light->type == LightType::Point)
             {
-                glUseProgram(pointShadowShader);
+                glUseProgram(shaders.pointShadow);
                 glEnable(GL_DEPTH_TEST);
 
                 float near = 0.1f;
@@ -434,8 +502,8 @@
                     shadowProj * glm::lookAt(pos, pos + glm::vec3( 0, 0,-1), glm::vec3(0,-1, 0)),
                 };
 
-                glUniform3fv(glGetUniformLocation(pointShadowShader, "lightPos"), 1, glm::value_ptr(pos));
-                glUniform1f(glGetUniformLocation(pointShadowShader, "farPlane"), far);
+                glUniform3fv(glGetUniformLocation(shaders.pointShadow, "lightPos"), 1, glm::value_ptr(pos));
+                glUniform1f(glGetUniformLocation(shaders.pointShadow, "farPlane"), far);
 
                 glViewport(0, 0, POINT_SHADOW_RESOLUTION, POINT_SHADOW_RESOLUTION);
 
@@ -453,7 +521,7 @@
                     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
                     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-                    glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "lightSpaceMatrix"),
+                    glUniformMatrix4fv(glGetUniformLocation(shaders.pointShadow, "lightSpaceMatrix"),
                                        1, GL_FALSE, glm::value_ptr(shadowTransforms[face]));
 
                     for (auto& renderObj : scene->objects)
@@ -462,7 +530,7 @@
                         if (!mc || !renderObj->enabled) continue;
                         if (renderObj->IsForwardRendered()) continue;
                         glm::mat4 model = renderObj->transform.GetMatrix();
-                        glUniformMatrix4fv(glGetUniformLocation(pointShadowShader, "model"),
+                        glUniformMatrix4fv(glGetUniformLocation(shaders.pointShadow, "model"),
                                            1, GL_FALSE, glm::value_ptr(model));
                         mc->model->DrawGeometry();
                     }
@@ -477,7 +545,7 @@
             else
             {
                 // Existing directional/spot shadow code
-                glUseProgram(shadowShader);
+                glUseProgram(shaders.shadow);
                 glm::mat4 lightProj, lightView;
 
                 if (light->type == LightType::Directional)
@@ -525,13 +593,13 @@
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glFrontFace(GL_CCW);
-        glUseProgram(gBufferShader);
-        glUniformMatrix4fv(gBuf_view, 1, GL_FALSE, glm::value_ptr(view));
-        glUniform3f(glGetUniformLocation(gBufferShader, "viewPos"),
+        glUseProgram(shaders.gBuffer);
+        glUniformMatrix4fv(gBuf.view, 1, GL_FALSE, glm::value_ptr(view));
+        glUniform3f(glGetUniformLocation(shaders.gBuffer, "viewPos"),
                 camera.transform.position.x,
                 camera.transform.position.y,
                 camera.transform.position.z);
-        scene->RenderGeometry(gBufferShader, gBuf_model);
+        scene->RenderGeometry(shaders.gBuffer, gBuf.model);
         gbuffer.Unbind();
         profiler.End("Geometry Pass");
     }
@@ -540,20 +608,20 @@
     {
         // SSAO
         profiler.Begin("SSAO Pass");
-        glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssaoFBO);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(ssaoShader);
+        glUseProgram(shaders.ssao);
 
         glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
         glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
-        glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, ssaoNoiseTex);
+        glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, rt.ssaoNoiseTex);
 
-        glUniformMatrix4fv(glGetUniformLocation(ssaoShader, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(ssaoShader, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniform2f(glGetUniformLocation(ssaoShader, "screenSize"), (float)w, (float)h);
-        glUniform1f(glGetUniformLocation(ssaoShader, "radius"), SSAO_RADIUS);
-        glUniform1f(glGetUniformLocation(ssaoShader, "bias"), SSAO_BIAS);
-        glUniform1i(glGetUniformLocation(ssaoShader, "kernelSize"), SSAO_KERNEL_SIZE);
+        glUniformMatrix4fv(glGetUniformLocation(shaders.ssao, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(shaders.ssao, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniform2f(glGetUniformLocation(shaders.ssao, "screenSize"), (float)w, (float)h);
+        glUniform1f(glGetUniformLocation(shaders.ssao, "radius"), SSAO_RADIUS);
+        glUniform1f(glGetUniformLocation(shaders.ssao, "bias"), SSAO_BIAS);
+        glUniform1i(glGetUniformLocation(shaders.ssao, "kernelSize"), SSAO_KERNEL_SIZE);
 
         quad.Draw();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -561,12 +629,12 @@
 
         // Blur
         profiler.Begin("SSAO Blur");
-        glBindFramebuffer(GL_FRAMEBUFFER, ssaoBlurFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssaoBlurFBO);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(ssaoBlurShader);
+        glUseProgram(shaders.ssaoBlur);
 
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, ssaoTexture);
-        glUniform1i(glGetUniformLocation(ssaoBlurShader, "ssaoInput"), 0);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rt.ssaoTexture);
+        glUniform1i(glGetUniformLocation(shaders.ssaoBlur, "ssaoInput"), 0);
 
         quad.Draw();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -576,41 +644,39 @@
     void Renderer::LightingPass(int shadowCount)
     {
         profiler.Begin("Lighting Pass");
-        glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.litFBO);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(lightingShader);
+        glUseProgram(shaders.lighting);
 
-        glUniform1f(light_ambient, AMBIENT_MULTIPLIER);
+        glUniform1f(lighting.ambient, AMBIENT_MULTIPLIER);
 
-        glUniform1i(glGetUniformLocation(lightingShader, "pcfKernelSize"), PCF_KERNEL_SIZE);
-        glUniform1i(glGetUniformLocation(lightingShader, "shadowLightCount"), shadowCount);
-        glUniform1i(glGetUniformLocation(lightingShader, "pcfEnabled"), PCF_ENABLED ? 1 : 0);
-        glUniform1f(glGetUniformLocation(lightingShader, "shadowBias"), SHADOW_BIAS);
-        glUniform1f(glGetUniformLocation(lightingShader, "shadowNormalOffset"), SHADOW_NORMAL_OFFSET);
-        glUniform1f(glGetUniformLocation(lightingShader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "pcfKernelSize"), PCF_KERNEL_SIZE);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "shadowLightCount"), shadowCount);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "pcfEnabled"), PCF_ENABLED ? 1 : 0);
+        glUniform1f(glGetUniformLocation(shaders.lighting, "shadowBias"), SHADOW_BIAS);
+        glUniform1f(glGetUniformLocation(shaders.lighting, "shadowNormalOffset"), SHADOW_NORMAL_OFFSET);
+        glUniform1f(glGetUniformLocation(shaders.lighting, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
 
-        // ------------------------
-        // GBUFFER (LOCKED SLOTS)
-        // ------------------------
+
+        // GBUFFER locked slots 0-3
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
-        glUniform1i(glGetUniformLocation(lightingShader, "gPosition"), 0);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "gPosition"), 0);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
-        glUniform1i(glGetUniformLocation(lightingShader, "gNormal"), 1);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "gNormal"), 1);
 
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gAlbedo);
-        glUniform1i(glGetUniformLocation(lightingShader, "gAlbedo"), 2);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "gAlbedo"), 2);
 
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gEmissive);
-        glUniform1i(glGetUniformLocation(lightingShader, "gEmissive"), 3);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "gEmissive"), 3);
 
-        // ------------------------
-        // SHADOW MAPS START HERE
-        // ------------------------
+
+        // Shadow maps 4+
         int baseSlot = 4;
 
         int si = 0;
@@ -628,18 +694,16 @@
                 glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
 
             std::string name = "shadowMap[" + std::to_string(si) + "]";
-            glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), baseSlot + si);
+            glUniform1i(glGetUniformLocation(shaders.lighting, name.c_str()), baseSlot + si);
 
             std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(lightingShader, lsm.c_str()),
+            glUniformMatrix4fv(glGetUniformLocation(shaders.lighting, lsm.c_str()),
                                1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
 
             si++;
         }
 
-        // ------------------------
-        // CUBEMAPS
-        // ------------------------
+        // Cube maps after shadow maps
         int cubeStart = baseSlot + si;
 
         int ci = 0;
@@ -657,14 +721,12 @@
                 glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
             std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
-            glUniform1i(glGetUniformLocation(lightingShader, name.c_str()), cubeStart + ci);
+            glUniform1i(glGetUniformLocation(shaders.lighting, name.c_str()), cubeStart + ci);
 
             ci++;
         }
 
-        // ------------------------
-        // FAR PLANES
-        // ------------------------
+        // Far planes after cube maps
         int fi = 0;
         for (auto& obj : scene->objects)
         {
@@ -675,42 +737,41 @@
             float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
 
             std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
-            glUniform1f(glGetUniformLocation(lightingShader, name.c_str()), fp);
+            glUniform1f(glGetUniformLocation(shaders.lighting, name.c_str()), fp);
 
             fi++;
         }
 
-        // ------------------------
-        // SSAO (LAST SLOT)
-        // ------------------------
+
+        // SSAO last slot
+
         int ssaoSlot = cubeStart + ci;
 
         glActiveTexture(GL_TEXTURE0 + ssaoSlot);
-        glBindTexture(GL_TEXTURE_2D, SSAO_ENABLED ? ssaoBlurTexture : 0);
+        glBindTexture(GL_TEXTURE_2D, SSAO_ENABLED ? rt.ssaoBlurTexture : 0);
 
-        glUniform1i(glGetUniformLocation(lightingShader, "ssaoTexture"), ssaoSlot);
-        glUniform1i(glGetUniformLocation(lightingShader, "ssaoEnabled"), SSAO_ENABLED ? 1 : 0);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "ssaoTexture"), ssaoSlot);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "ssaoEnabled"), SSAO_ENABLED ? 1 : 0);
 
-        // ------------------------
-        // CAMERA
-        // ------------------------
-        glUniform3f(light_cameraPos,
+
+        // Camera
+        glUniform3f(lighting.cameraPos,
                     camera.transform.position.x,
                     camera.transform.position.y,
                     camera.transform.position.z);
 
-        scene->UploadLights(lightingShader);
+        scene->UploadLights(shaders.lighting);
 
-        glUniform1i(glGetUniformLocation(lightingShader, "giMode"), GI_MODE);
-        glUniform1f(glGetUniformLocation(lightingShader, "giIntensity"), GI_INTENSITY);
+        glUniform1i(glGetUniformLocation(shaders.lighting, "giMode"), GI_MODE);
+        glUniform1f(glGetUniformLocation(shaders.lighting, "giIntensity"), GI_INTENSITY);
 
         if (GI_MODE >= 1 && probeSSBO != 0) {
             auto& grid = scene->probeGrid;
-            glUniform3fv(glGetUniformLocation(lightingShader, "probeGridMin"),
+            glUniform3fv(glGetUniformLocation(shaders.lighting, "probeGridMin"),
                          1, glm::value_ptr(grid.boundsMin));
-            glUniform3fv(glGetUniformLocation(lightingShader, "probeGridMax"),
+            glUniform3fv(glGetUniformLocation(shaders.lighting, "probeGridMax"),
                          1, glm::value_ptr(grid.boundsMax));
-            glUniform3i(glGetUniformLocation(lightingShader, "probeGridCount"),
+            glUniform3i(glGetUniformLocation(shaders.lighting, "probeGridCount"),
                         grid.countX, grid.countY, grid.countZ);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, probeSSBO);
         }
@@ -723,25 +784,24 @@
 
     void Renderer::FogPass(int shadowCount)
     {
-        // Volumetric fog
         profiler.Begin("Fog Pass");
         glDisable(GL_DEPTH_TEST);
-        glBindFramebuffer(GL_FRAMEBUFFER, fogFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fogFBO);
         glViewport(0, 0, w / FOG_RESOLUTION_SCALE, h / FOG_RESOLUTION_SCALE);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(fogShader);
+        glUseProgram(shaders.fog);
 
-        scene->UploadFogVolumes(fogShader);
+        scene->UploadFogVolumes(shaders.fog);
 
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, litTexture);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rt.litTexture);
         glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
-        glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_3D, fogNoiseTexture);
+        glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_3D, rt.fogNoiseTexture);
 
-        glUniform1i(glGetUniformLocation(fogShader, "litScene"), 0);
-        glUniform1i(glGetUniformLocation(fogShader, "gPosition"), 1);
-        glUniform1i(glGetUniformLocation(fogShader, "noiseTexture"), 2);
-        glUniform1f(glGetUniformLocation(fogShader, "fogScale"), FOG_SCALE);
-        glUniform1f(glGetUniformLocation(fogShader, "fogScrollSpeed"), FOG_SCROLL_SPEED);
+        glUniform1i(glGetUniformLocation(shaders.fog, "litScene"), 0);
+        glUniform1i(glGetUniformLocation(shaders.fog, "gPosition"), 1);
+        glUniform1i(glGetUniformLocation(shaders.fog, "noiseTexture"), 2);
+        glUniform1f(glGetUniformLocation(shaders.fog, "fogScale"), FOG_SCALE);
+        glUniform1f(glGetUniformLocation(shaders.fog, "fogScrollSpeed"), FOG_SCROLL_SPEED);
 
         int si = 0;
         for (auto& obj : scene->objects)
@@ -757,9 +817,9 @@
                 glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
 
             std::string name = "shadowMap[" + std::to_string(si) + "]";
-            glUniform1i(glGetUniformLocation(fogShader, name.c_str()), 3 + si);
+            glUniform1i(glGetUniformLocation(shaders.fog, name.c_str()), 3 + si);
             std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
-            glUniformMatrix4fv(glGetUniformLocation(fogShader, lsm.c_str()),
+            glUniformMatrix4fv(glGetUniformLocation(shaders.fog, lsm.c_str()),
                                1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
             si++;
         }
@@ -779,7 +839,7 @@
                 glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
             std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
-            glUniform1i(glGetUniformLocation(fogShader, name.c_str()), cubeStart + ci);
+            glUniform1i(glGetUniformLocation(shaders.fog, name.c_str()), cubeStart + ci);
             ci++;
         }
 
@@ -792,54 +852,173 @@
 
             float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
             std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
-            glUniform1f(glGetUniformLocation(fogShader, name.c_str()), fp);
+            glUniform1f(glGetUniformLocation(shaders.fog, name.c_str()), fp);
             fi++;
         }
 
-        glUniform1f(glGetUniformLocation(fogShader, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
+        glUniform1f(glGetUniformLocation(shaders.fog, "pointShadowFarPlane"), POINT_SHADOW_FAR_PLANE);
 
-        glUniform3f(glGetUniformLocation(fogShader, "cameraPos"),
+        glUniform3f(glGetUniformLocation(shaders.fog, "cameraPos"),
                     camera.transform.position.x,
                     camera.transform.position.y,
                     camera.transform.position.z);
-        glUniform1f(glGetUniformLocation(fogShader, "time"), (float)glfwGetTime());
-        glUniform1f(glGetUniformLocation(fogShader, "fogDensity"), FOG_DENSITY);
-        glUniform1i(glGetUniformLocation(fogShader, "steps"), FOG_STEPS);
-        glUniform1i(glGetUniformLocation(fogShader, "shadowLightCount"), shadowCount);
+        glUniform1f(glGetUniformLocation(shaders.fog, "time"), (float)glfwGetTime());
+        glUniform1f(glGetUniformLocation(shaders.fog, "fogDensity"), FOG_DENSITY);
+        glUniform1i(glGetUniformLocation(shaders.fog, "steps"), FOG_STEPS);
+        glUniform1i(glGetUniformLocation(shaders.fog, "shadowLightCount"), shadowCount);
 
-        scene->UploadLights(fogShader);
+        scene->UploadLights(shaders.fog);
         quad.Draw();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         profiler.End("Fog Pass");
 
         // Composite
         profiler.Begin("Fog Composite Pass");
-        glBindFramebuffer(GL_FRAMEBUFFER, fxaaFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fxaaFBO);
         glViewport(0, 0, w, h);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(fogCompositeShader);
-        glBindFramebuffer(GL_FRAMEBUFFER, fxaaFBO);
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, litTexture);
-        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, fogTexture);
-        glUniform1i(glGetUniformLocation(fogCompositeShader, "litScene"), 0);
-        glUniform1i(glGetUniformLocation(fogCompositeShader, "fogBuffer"), 1);
-        glUniform2f(glGetUniformLocation(fogCompositeShader, "resolution"), (float)w, (float)h);
-        glUniform2f(glGetUniformLocation(fogCompositeShader, "fogResolution"),
+        glUseProgram(shaders.fogComposite);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fxaaFBO);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rt.litTexture);
+        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, rt.fogTexture);
+        glUniform1i(glGetUniformLocation(shaders.fogComposite, "litScene"), 0);
+        glUniform1i(glGetUniformLocation(shaders.fogComposite, "fogBuffer"), 1);
+        glUniform2f(glGetUniformLocation(shaders.fogComposite, "resolution"), (float)w, (float)h);
+        glUniform2f(glGetUniformLocation(shaders.fogComposite, "fogResolution"),
                     (float)(w / FOG_RESOLUTION_SCALE), (float)(h / FOG_RESOLUTION_SCALE));
-        glUniform1i(glGetUniformLocation(fogCompositeShader, "fogBlurKernelSize"), FOG_BLUR_KERNEL_SIZE);
+        glUniform1i(glGetUniformLocation(shaders.fogComposite, "fogBlurKernelSize"), FOG_BLUR_KERNEL_SIZE);
 
         quad.Draw();
         glEnable(GL_DEPTH_TEST);
         profiler.End("Fog Composite Pass");
     }
 
+    void Renderer::CloudPass(CloudVolume& vol, Light* sun) {
+        profiler.Begin("Cloud Pass");
+
+        glDisable(GL_DEPTH_TEST);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.cloudFBO);
+        glViewport(0, 0, w / CLOUD_RESOLUTION_SCALE, h / CLOUD_RESOLUTION_SCALE);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(shaders.cloud);
+
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
+        glUniform1i(glGetUniformLocation(shaders.cloud, "gPosition"), 0);
+
+        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_3D, vol.noiseTex);
+        glUniform1i(glGetUniformLocation(shaders.cloud, "noiseTex"), 1);
+
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "cloudMin"), 1, glm::value_ptr(vol.min));
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "cloudMax"), 1, glm::value_ptr(vol.max));
+        glUniform1f(glGetUniformLocation(shaders.cloud, "cloudScale"), vol.scale);
+        glUniform1f(glGetUniformLocation(shaders.cloud, "cloudScrollSpeed"), vol.scrollSpeed);
+
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "cameraPos"), 1, glm::value_ptr(camera.transform.position));
+        glUniform1f(glGetUniformLocation(shaders.cloud, "time"), (float)glfwGetTime());
+        glUniform1i(glGetUniformLocation(shaders.cloud, "cloudSteps"), CLOUD_RAYMARCH_STEPS);
+        glUniformMatrix4fv(glGetUniformLocation(shaders.cloud, "invViewProj"), 1, GL_FALSE,
+            glm::value_ptr(glm::inverse(projection * camera.GetViewMatrix())));
+
+        glUniform1f(glGetUniformLocation(shaders.cloud, "cloudAbsorption"), CLOUD_ABSORPTION);
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "lightDir"), 1, glm::value_ptr(sun->direction));
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "lightColor"), 1, glm::value_ptr(sun->color));
+
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_3D, vol.voxelLightTexture);
+        glUniform1i(glGetUniformLocation(shaders.cloud, "voxelLightTex"), 2);
+        std::cout << "CloudPass vol.min: " << vol.min.x << " " << vol.min.y << " " << vol.min.z << std::endl;
+        std::cout << "CloudPass vol.max: " << vol.max.x << " " << vol.max.y << " " << vol.max.z << std::endl;
+        std::cout << "CloudPass noiseTex: " << vol.noiseTex << " voxelLightTex: " << vol.voxelLightTexture << std::endl;
+
+        quad.Draw();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        profiler.End("Cloud Pass");
+    }
+
+    void Renderer::CloudCompositePass() {
+        profiler.Begin("Cloud Composite Pass");
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.cloudCompositeFBO);
+        glViewport(0, 0, w, h);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(shaders.cloudComposite);
+
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rt.fxaaTexture);
+        glUniform1i(glGetUniformLocation(shaders.cloudComposite, "litScene"), 0);
+
+        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, rt.cloudTexture);
+        glUniform1i(glGetUniformLocation(shaders.cloudComposite, "cloudBuffer"), 1);
+
+        quad.Draw();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        profiler.End("Cloud Composite Pass");
+    }
+
+    void Renderer::CloudLightingPass(CloudVolume& vol, Light* sun) {
+        if (!sun) return;
+
+        if (vol.voxelLightTexture == 0) {
+            vol.InitializeVoxelGrid();
+        }
+
+        cloudLightingFrameCounter++;
+        if (cloudLightingFrameCounter % CLOUD_LIGHTING_UPDATE_INTERVAL != 0) return;
+
+        profiler.Begin("Cloud Lighting Pass");
+
+        glUseProgram(shaders.cloudLighting);
+
+        glBindImageTexture(0, vol.voxelLightTexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA16F);
+        glUniform1i(glGetUniformLocation(shaders.cloudLighting, "voxelOutput"), 0);
+
+        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "cloudMin"), 1, glm::value_ptr(vol.min));
+        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "cloudMax"), 1, glm::value_ptr(vol.max));
+        glUniform3i(glGetUniformLocation(shaders.cloudLighting, "voxelResolution"),
+            vol.lightingVoxelGridSize.x, vol.lightingVoxelGridSize.y, vol.lightingVoxelGridSize.z);
+
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "cloudScale"), vol.scale);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "cloudScrollSpeed"), vol.scrollSpeed);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "time"), (float)glfwGetTime());
+
+        // RGBA Weights
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "rWeight"), vol.rWeight);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "gWeight"), vol.gWeight);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "bWeight"), vol.bWeight);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "aWeight"), vol.aWeight);
+
+        // Lighting settings
+        glUniform1i(glGetUniformLocation(shaders.cloudLighting, "lightingSteps"), CLOUD_RAYMARCH_LIGHTING_STEPS);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "lightingStepScale"), CLOUD_RAYMARCH_LIGHTING_RAY_DEPTH);
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "cloudAbsorption"), CLOUD_ABSORPTION);
+
+        // Sun
+        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "lightDir"), 1, glm::value_ptr(sun->direction));
+        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "lightColor"), 1, glm::value_ptr(sun->color));
+        glUniform1f(glGetUniformLocation(shaders.cloudLighting, "lightIntensity"), sun->intensity);
+
+        // Noise texture for density sampling
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_3D, vol.noiseTex);
+        glUniform1i(glGetUniformLocation(shaders.cloudLighting, "cloudNoiseTex"), 0);
+
+        glDispatchCompute(
+        (vol.lightingVoxelGridSize.x + 7) / 8,
+        (vol.lightingVoxelGridSize.y + 7) / 8,
+        (vol.lightingVoxelGridSize.z + 7) / 8
+        );
+
+        glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT);
+
+        profiler.End("Cloud Lighting Pass");
+    }
+
+
     void Renderer::PassthroughPass()
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, fxaaFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.fxaaFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(passthroughShader);
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, litTexture);
-        glUniform1i(glGetUniformLocation(passthroughShader, "litScene"), 0);
+        glUseProgram(shaders.passthrough);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rt.litTexture);
+        glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
         quad.Draw();
     }
 
@@ -853,20 +1032,22 @@
 
         if (FXAA_ENABLED)
         {
-            glUseProgram(fxaaShader);
+            glUseProgram(shaders.fxaa);
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, fxaaTexture);
-            glUniform1i(glGetUniformLocation(fxaaShader, "screenTexture"), 0);
-            glUniform2f(glGetUniformLocation(fxaaShader, "resolution"), (float)w, (float)h);
-            glUniform1f(glGetUniformLocation(fxaaShader, "edgeThreshold"), FXAA_EDGE_THRESHOLD);
-            glUniform1f(glGetUniformLocation(fxaaShader, "edgeThresholdMin"), FXAA_EDGE_THRESHOLD_MIN);
+            GLuint fxaaInput = (CLOUD_ENABLED) ? rt.cloudCompositeTexture : rt.fxaaTexture;
+            glBindTexture(GL_TEXTURE_2D, fxaaInput);
+            glUniform1i(glGetUniformLocation(shaders.fxaa, "screenTexture"), 0);
+            glUniform2f(glGetUniformLocation(shaders.fxaa, "resolution"), (float)w, (float)h);
+            glUniform1f(glGetUniformLocation(shaders.fxaa, "edgeThreshold"), FXAA_EDGE_THRESHOLD);
+            glUniform1f(glGetUniformLocation(shaders.fxaa, "edgeThresholdMin"), FXAA_EDGE_THRESHOLD_MIN);
         }
         else
         {
-            glUseProgram(passthroughShader);
+            glUseProgram(shaders.passthrough);
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, fxaaTexture);
-            glUniform1i(glGetUniformLocation(passthroughShader, "litScene"), 0);
+            GLuint fxaaInput = (CLOUD_ENABLED) ? rt.cloudCompositeTexture : rt.fxaaTexture;
+            glBindTexture(GL_TEXTURE_2D, fxaaInput);
+            glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
         }
 
         quad.Draw();
@@ -878,33 +1059,33 @@
     {
         profiler.Begin("SSR Pass");
 
-        glBindFramebuffer(GL_FRAMEBUFFER, ssrFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssrFBO);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(ssrShader);
+        glUseProgram(shaders.ssr);
 
         // gAlbedo
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gAlbedo);
-        glUniform1i(glGetUniformLocation(ssrShader, "gAlbedo"), 0);
+        glUniform1i(glGetUniformLocation(shaders.ssr, "gAlbedo"), 0);
         // gNormal
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
-        glUniform1i(glGetUniformLocation(ssrShader, "gNormal"), 1);
+        glUniform1i(glGetUniformLocation(shaders.ssr, "gNormal"), 1);
         // gPosition
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
-        glUniform1i(glGetUniformLocation(ssrShader, "gPosition"), 2);
+        glUniform1i(glGetUniformLocation(shaders.ssr, "gPosition"), 2);
         // sceneColor (lit buffer)
         glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, litTexture);
-        glUniform1i(glGetUniformLocation(ssrShader, "sceneColor"), 3);
+        glBindTexture(GL_TEXTURE_2D, rt.litTexture);
+        glUniform1i(glGetUniformLocation(shaders.ssr, "sceneColor"), 3);
 
-        glUniform3fv(glGetUniformLocation(ssrShader, "cameraPos"), 1, &camera.transform.position[0]);
-        glUniformMatrix4fv(glGetUniformLocation(ssrShader, "view"), 1, GL_FALSE, &camera.GetViewMatrix()[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(ssrShader, "projection"), 1, GL_FALSE, &projection[0][0]);
-        glUniform1f(glGetUniformLocation(ssrShader, "minStepSize"), SSR_MIN_STEP_SIZE);
-        glUniform1f(glGetUniformLocation(ssrShader, "maxStepSize"), SSR_MAX_STEP_SIZE);
-        glUniform1i(glGetUniformLocation(ssrShader, "raymarchSteps"), SSR_RAYMARCH_STEPS);
+        glUniform3fv(glGetUniformLocation(shaders.ssr, "cameraPos"), 1, &camera.transform.position[0]);
+        glUniformMatrix4fv(glGetUniformLocation(shaders.ssr, "view"), 1, GL_FALSE, &camera.GetViewMatrix()[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(shaders.ssr, "projection"), 1, GL_FALSE, &projection[0][0]);
+        glUniform1f(glGetUniformLocation(shaders.ssr, "minStepSize"), SSR_MIN_STEP_SIZE);
+        glUniform1f(glGetUniformLocation(shaders.ssr, "maxStepSize"), SSR_MAX_STEP_SIZE);
+        glUniform1i(glGetUniformLocation(shaders.ssr, "raymarchSteps"), SSR_RAYMARCH_STEPS);
 
         quad.Draw();
 
@@ -916,38 +1097,38 @@
     void Renderer::SSRCompositePass() {
         profiler.Begin("SSR Composite Pass");
 
-        glBindFramebuffer(GL_FRAMEBUFFER, ssrCompositeFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.ssrCompositeFBO);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUseProgram(ssrCompositeShader);
+        glUseProgram(shaders.ssrComposite);
 
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "ssrEnabled"), SSR_ENABLED ? 1 : 0);
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "probeEnabled"), REFLECTION_PROBE_ENABLED ? 1 : 0);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "ssrEnabled"), SSR_ENABLED ? 1 : 0);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "probeEnabled"), REFLECTION_PROBE_ENABLED ? 1 : 0);
 
         // Upload all needed textures from gbuffer
-        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, litTexture);
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "litScene"), 0);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, rt.litTexture);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "litScene"), 0);
 
-        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, ssrTexture);
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "ssrTexture"), 1);
+        glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_2D, rt.ssrTexture);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "ssrTexture"), 1);
 
         glActiveTexture(GL_TEXTURE2); glBindTexture(GL_TEXTURE_2D, gbuffer.gNormal);
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "gNormal"), 2);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "gNormal"), 2);
 
         glActiveTexture(GL_TEXTURE3); glBindTexture(GL_TEXTURE_2D, gbuffer.gAlbedo);
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "gAlbedo"), 3);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "gAlbedo"), 3);
 
         glActiveTexture(GL_TEXTURE4); glBindTexture(GL_TEXTURE_2D, gbuffer.gPosition);
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "gPosition"), 4);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "gPosition"), 4);
 
-        glUniform3fv(glGetUniformLocation(ssrCompositeShader, "cameraPos"), 1, &camera.transform.position[0]);
+        glUniform3fv(glGetUniformLocation(shaders.ssrComposite, "cameraPos"), 1, &camera.transform.position[0]);
 
         // Upload Reflection probe textures at slot 5+
         int probeCount = REFLECTION_PROBE_ENABLED
             ? (int)std::min(reflectionProbes.size(), (size_t)MAX_REFLECTION_PROBES)
             : 0;
 
-        glUniform1i(glGetUniformLocation(ssrCompositeShader, "probeCount"), probeCount);
+        glUniform1i(glGetUniformLocation(shaders.ssrComposite, "probeCount"), probeCount);
 
         for (int i = 0; i < probeCount; i++) {
             auto& [probe, pos] = reflectionProbes[i];
@@ -967,21 +1148,21 @@
             std::string posU = "probePositions[" + std::to_string(i) + "]";
             std::string br   = "probeBlendRadius[" + std::to_string(i) + "]";
 
-            glUniform1i(glGetUniformLocation(ssrCompositeShader, slot.c_str()), 5 + i);
-            glUniform3fv(glGetUniformLocation(ssrCompositeShader, bMin.c_str()), 1, glm::value_ptr(worldMin));
-            glUniform3fv(glGetUniformLocation(ssrCompositeShader, bMax.c_str()), 1, glm::value_ptr(worldMax));
-            glUniform3fv(glGetUniformLocation(ssrCompositeShader, posU.c_str()), 1, glm::value_ptr(pos));
-            glUniform1f(glGetUniformLocation(ssrCompositeShader,  br.c_str()),   probe->blendRadius);
+            glUniform1i(glGetUniformLocation(shaders.ssrComposite, slot.c_str()), 5 + i);
+            glUniform3fv(glGetUniformLocation(shaders.ssrComposite, bMin.c_str()), 1, glm::value_ptr(worldMin));
+            glUniform3fv(glGetUniformLocation(shaders.ssrComposite, bMax.c_str()), 1, glm::value_ptr(worldMax));
+            glUniform3fv(glGetUniformLocation(shaders.ssrComposite, posU.c_str()), 1, glm::value_ptr(pos));
+            glUniform1f(glGetUniformLocation(shaders.ssrComposite,  br.c_str()),   probe->blendRadius);
         }
 
         if (scene->skybox) {
             int skyboxSlot = 5 + probeCount;
             glActiveTexture(GL_TEXTURE0 + skyboxSlot);
             glBindTexture(GL_TEXTURE_CUBE_MAP, scene->skybox->GetCubemapID());
-            glUniform1i(glGetUniformLocation(ssrCompositeShader, "skybox"), skyboxSlot);
-            glUniform1i(glGetUniformLocation(ssrCompositeShader, "hasSkybox"), 1);
+            glUniform1i(glGetUniformLocation(shaders.ssrComposite, "skybox"), skyboxSlot);
+            glUniform1i(glGetUniformLocation(shaders.ssrComposite, "hasSkybox"), 1);
         } else {
-            glUniform1i(glGetUniformLocation(ssrCompositeShader, "hasSkybox"), 0);
+            glUniform1i(glGetUniformLocation(shaders.ssrComposite, "hasSkybox"), 0);
         }
 
         quad.Draw();
@@ -992,12 +1173,12 @@
     void Renderer::ParticlePass(int shadowCount)
     {
         profiler.Begin("Particle Pass");
-        glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.litFBO);
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, gbuffer.FBO);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, rt.litFBO);
         glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-        glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.litFBO);
 
         glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
@@ -1015,7 +1196,7 @@
             auto ps = obj->GetComponent<ParticleSystemComponent>();
             if (!ps) continue;
 
-            unsigned int shader = ps->system->IsLit() ? particleLitShader : particleUnlitShader;
+            unsigned int shader = ps->system->IsLit() ? shaders.particleLit : shaders.particleUnlit;
             glUseProgram(shader);
 
             glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -1103,15 +1284,15 @@
 
         glDepthFunc(GL_LEQUAL);
         glDisable(GL_CULL_FACE);
-        glUseProgram(skyboxShader);
+        glUseProgram(shaders.skybox);
 
         glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 
-        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"),
+        glUniformMatrix4fv(glGetUniformLocation(shaders.skybox, "view"),
                            1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"),
+        glUniformMatrix4fv(glGetUniformLocation(shaders.skybox, "projection"),
                            1, GL_FALSE, glm::value_ptr(projection));
-        glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+        glUniform1i(glGetUniformLocation(shaders.skybox, "skybox"), 0);
 
         scene->skybox->Draw();
 
@@ -1127,7 +1308,7 @@
 
     void Renderer::WaterPass(float deltaTime) {
         profiler.Begin("Water Pass");
-        glBindFramebuffer(GL_FRAMEBUFFER, litFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, rt.litFBO);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1288,8 +1469,8 @@
 
     void Renderer::RenderShadowMap(const glm::mat4& lightSpaceMatrix)
     {
-        glUseProgram(shadowShader);
-        glUniformMatrix4fv(glGetUniformLocation(shadowShader, "lightSpaceMatrix"),
+        glUseProgram(shaders.shadow);
+        glUniformMatrix4fv(glGetUniformLocation(shaders.shadow, "lightSpaceMatrix"),
                            1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
 
         for (auto& obj : scene->objects)
@@ -1298,7 +1479,7 @@
             if (!mc || !obj->enabled) continue;
             if (obj->IsForwardRendered()) continue;
             glm::mat4 model = obj->transform.GetMatrix();
-            glUniformMatrix4fv(glGetUniformLocation(shadowShader, "model"),
+            glUniformMatrix4fv(glGetUniformLocation(shaders.shadow, "model"),
                                1, GL_FALSE, glm::value_ptr(model));
             mc->model->DrawGeometry();
         }
@@ -1348,9 +1529,9 @@
             case 0: return gbuffer.gPosition;
             case 1: return gbuffer.gNormal;
             case 2: return gbuffer.gAlbedo;
-            case 3: return ssaoTexture;
-            case 4: return ssaoBlurTexture;
-            case 5: return litTexture;
+            case 3: return rt.ssaoTexture;
+            case 4: return rt.ssaoBlurTexture;
+            case 5: return rt.litTexture;
             case 6:
             case 7:
             case 8:
@@ -1365,7 +1546,7 @@
                 }
                 return 0;
             }
-            case 9: return fogTexture;
+            case 9: return rt.fogTexture;
             default: return 0;
         }
     }
@@ -1507,16 +1688,16 @@
         glGetIntegerv(GL_VIEWPORT, prevViewport);
         glViewport(0, 0, faceSize, faceSize);
 
-        int bake_modelLoc     = glGetUniformLocation(probeBakeShader, "model");
-        int bake_viewLoc      = glGetUniformLocation(probeBakeShader, "view");
-        int bake_projLoc      = glGetUniformLocation(probeBakeShader, "projection");
-        int bake_normalMatLoc = glGetUniformLocation(probeBakeShader, "normalMatrix");
-        int bake_cameraPosLoc = glGetUniformLocation(probeBakeShader, "cameraPos");
-        int bake_ambientLoc   = glGetUniformLocation(probeBakeShader, "ambientMultiplier");
-        int bake_roughnessLoc = glGetUniformLocation(probeBakeShader, "roughness");
-        int bake_metallicLoc  = glGetUniformLocation(probeBakeShader, "metallic");
-        int bake_diffuseTexLoc = glGetUniformLocation(probeBakeShader, "diffuseTex");
-        int bake_shadowCountLoc = glGetUniformLocation(probeBakeShader, "shadowLightCount");
+        int bake_modelLoc     = glGetUniformLocation(shaders.probeBake, "model");
+        int bake_viewLoc      = glGetUniformLocation(shaders.probeBake, "view");
+        int bake_projLoc      = glGetUniformLocation(shaders.probeBake, "projection");
+        int bake_normalMatLoc = glGetUniformLocation(shaders.probeBake, "normalMatrix");
+        int bake_cameraPosLoc = glGetUniformLocation(shaders.probeBake, "cameraPos");
+        int bake_ambientLoc   = glGetUniformLocation(shaders.probeBake, "ambientMultiplier");
+        int bake_roughnessLoc = glGetUniformLocation(shaders.probeBake, "roughness");
+        int bake_metallicLoc  = glGetUniformLocation(shaders.probeBake, "metallic");
+        int bake_diffuseTexLoc = glGetUniformLocation(shaders.probeBake, "diffuseTex");
+        int bake_shadowCountLoc = glGetUniformLocation(shaders.probeBake, "shadowLightCount");
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -1540,7 +1721,7 @@
             glBindFramebuffer(GL_FRAMEBUFFER, cubeFBO);
 
             // Render geometry with bake shader
-            glUseProgram(probeBakeShader);
+            glUseProgram(shaders.probeBake);
             glUniformMatrix4fv(bake_projLoc, 1, GL_FALSE, glm::value_ptr(captureProj));
             glUniformMatrix4fv(bake_viewLoc, 1, GL_FALSE, glm::value_ptr(captureViews[face]));
             glUniform3fv(bake_cameraPosLoc, 1, glm::value_ptr(position));
@@ -1548,7 +1729,7 @@
             glUniform1i(bake_diffuseTexLoc, 0);
 
             // Upload lights
-            scene->UploadLights(probeBakeShader, true);
+            scene->UploadLights(shaders.probeBake, true);
 
             // Bind shadow maps (slot 1+)
             int shadowCount = 0;
@@ -1566,9 +1747,9 @@
                     glBindTexture(GL_TEXTURE_2D, lc->light->shadowMap);
 
                 std::string name = "shadowMap[" + std::to_string(si) + "]";
-                glUniform1i(glGetUniformLocation(probeBakeShader, name.c_str()), 1 + si);
+                glUniform1i(glGetUniformLocation(shaders.probeBake, name.c_str()), 1 + si);
                 std::string lsm = "lightSpaceMatrix[" + std::to_string(si) + "]";
-                glUniformMatrix4fv(glGetUniformLocation(probeBakeShader, lsm.c_str()),
+                glUniformMatrix4fv(glGetUniformLocation(shaders.probeBake, lsm.c_str()),
                                    1, GL_FALSE, glm::value_ptr(lc->light->lightSpaceMatrix));
                 si++;
                 shadowCount++;
@@ -1590,7 +1771,7 @@
                     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
                 std::string name = "shadowCubeMap[" + std::to_string(ci) + "]";
-                glUniform1i(glGetUniformLocation(probeBakeShader, name.c_str()), cubeStart + ci);
+                glUniform1i(glGetUniformLocation(shaders.probeBake, name.c_str()), cubeStart + ci);
                 ci++;
             }
 
@@ -1602,7 +1783,7 @@
                 if (fi >= MAX_SHADOW_LIGHTS) break;
                 float fp = (lc->light->type == LightType::Point) ? lc->light->radius : 50.0f;
                 std::string name = "lightFarPlane[" + std::to_string(fi) + "]";
-                glUniform1f(glGetUniformLocation(probeBakeShader, name.c_str()), fp);
+                glUniform1f(glGetUniformLocation(shaders.probeBake, name.c_str()), fp);
                 fi++;
             }
             glUniform1i(bake_shadowCountLoc, shadowCount);
@@ -1645,14 +1826,14 @@
             if (SKYBOX_ENABLED && scene->skybox) {
                 glDepthFunc(GL_LEQUAL);
                 glDisable(GL_CULL_FACE);
-                glUseProgram(skyboxShader);
+                glUseProgram(shaders.skybox);
 
                 glm::mat4 skyView = glm::mat4(glm::mat3(captureViews[face]));
-                glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "view"),
+                glUniformMatrix4fv(glGetUniformLocation(shaders.skybox, "view"),
                                    1, GL_FALSE, glm::value_ptr(skyView));
-                glUniformMatrix4fv(glGetUniformLocation(skyboxShader, "projection"),
+                glUniformMatrix4fv(glGetUniformLocation(shaders.skybox, "projection"),
                                    1, GL_FALSE, glm::value_ptr(captureProj));
-                glUniform1i(glGetUniformLocation(skyboxShader, "skybox"), 0);
+                glUniform1i(glGetUniformLocation(shaders.skybox, "skybox"), 0);
 
                 scene->skybox->Draw();
 

@@ -25,6 +25,7 @@ add_executable(Penumbra
         src/rendering/mesh/model.cpp
         src/rendering/effects/water/interactiveWater.cpp
         src/rendering/pathTracing/pathTracer.cpp
+        src/rendering/effects/clouds/worleyNoise.cpp
         src/utils/sceneLoader.cpp
         src/physics/camera/characterControllerComponent.cpp
         dependencies/imgui/imgui.cpp

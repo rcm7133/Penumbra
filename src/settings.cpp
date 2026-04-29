@@ -17,6 +17,16 @@ int PATH_TRACING_GI_BOUNCES = 3;  // Bounces per pixel
 int PATH_TRACING_GI_SAMPLES = 4; // Samples per pixel
 int PATH_TRACING_GI_FACE_SIZE = 16; // Resolution of cubemap
 
+// Clouds
+bool CLOUD_ENABLED = true;
+bool DEBUG_CLOUDS = false;
+int CLOUD_LIGHTING_UPDATE_INTERVAL = 1;
+int CLOUD_RAYMARCH_STEPS = 32;
+int CLOUD_RESOLUTION_SCALE = 1;
+int CLOUD_RAYMARCH_LIGHTING_STEPS = 32;
+float CLOUD_RAYMARCH_LIGHTING_RAY_DEPTH = 1.0f;
+float CLOUD_ABSORPTION = 0.8f;
+
 // SSR
 bool SSR_ENABLED = true;
 bool REFLECTION_PROBE_ENABLED = true;

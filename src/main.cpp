@@ -17,6 +17,8 @@
 #include "physics/camera/characterControllerComponent.h"
 #include "physics/camera/camera.h"
 #include "rendering/effects/reflections/reflectionProbeComponent.h"
+#include "rendering/effects/clouds/cloudVolumeComponent.h"
+#include "rendering/effects/clouds/cloudVolume.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -37,6 +39,7 @@ extern int GI_MODE;
 extern float GI_INTENSITY;
 extern bool DEBUG_PROBES;
 extern bool DEBUG_REFLECTION_PROBES;
+extern bool DEBUG_CLOUDS;
 
 Profiler profiler;
 ParticleSystemManager particleManager;
@@ -116,6 +119,7 @@ int main()
 	scene->Start();
 	scene->LoadSkybox("../assets/textures/skybox");
 	scene->probeGrid.Load();
+	scene->SetMainLight("Sun");
 
 	if (!scene->probeGrid.probes.empty()) {
 		bool anyBaked = false;
@@ -249,6 +253,18 @@ int main()
     		DebugColliders(scene, debugRenderer, camera, projection);
     	}
 
+    	if (DEBUG_CLOUDS && GUI_ENABLED) {
+    		for (auto& obj : scene->objects) {
+    			if (!obj->enabled) continue;
+    			auto cc = obj->GetComponent<CloudVolumeComponent>();
+    			if (!cc) continue;
+    			glm::vec3 center = (cc->volume->min + cc->volume->max) * 0.5f + obj->transform.position;
+    			glm::vec3 half   = (cc->volume->max - cc->volume->min) * 0.5f;
+    			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(0.8f, 0.9f, 1.0f));
+    		}
+    		debugRenderer.Render(camera.GetViewMatrix(), projection);
+    	}
+
     	if (DEBUG_REFLECTION_PROBES && GUI_ENABLED) {
     		for (auto& obj : scene->objects) {
     			if (!obj->enabled) continue;
@@ -272,6 +288,7 @@ int main()
     		}
     		debugRenderer.Render(camera.GetViewMatrix(), projection);
     	}
+
 
     	if (GI_MODE >= 1 && DEBUG_PROBES && GUI_ENABLED) {
     		auto& grid = scene->probeGrid;
@@ -389,6 +406,13 @@ void DebugColliders(std::shared_ptr<Scene> scene, ColliderDebugRenderer& debugRe
 			glm::vec3 half   = (ps->system->boundsMax - ps->system->boundsMin) * 0.5f;
 			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1.0f, 0.5f, 0.0f));
 		}
+
+		auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (cc) {
+			glm::vec3 center = (cc->volume->min + cc->volume->max) * 0.5f + obj->transform.position;
+			glm::vec3 half   = (cc->volume->max - cc->volume->min) * 0.5f;
+			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(0.8f, 0.9f, 1.0f));
+		}
 	}
 	debugRenderer.Render(camera.GetViewMatrix(), projection);
 }
@@ -472,11 +496,24 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	ImGui::End();
 
 
+
 	ImGui::Checkbox("Volumetric Fog", &FOG_ENABLED);
 	if (FOG_ENABLED) {
 		ImGui::SliderInt("Steps", &FOG_STEPS, 4, 64);
 		ImGui::SliderInt("Fog Blur", &FOG_BLUR_KERNEL_SIZE, 1, 9);
 		if (FOG_BLUR_KERNEL_SIZE % 2 == 0) FOG_BLUR_KERNEL_SIZE++;
+	}
+
+	ImGui::Checkbox("Volumetric Clouds", &CLOUD_ENABLED);
+	if (CLOUD_ENABLED) {
+		ImGui::SliderInt("Cloud Steps", &CLOUD_RAYMARCH_STEPS, 4, 128);
+		ImGui::SliderInt("Cloud Resolution Scale", &CLOUD_RESOLUTION_SCALE, 1, 4);
+		ImGui::SliderFloat("Cloud Absorption", &CLOUD_ABSORPTION, 0.1f, 20.0f);
+		ImGui::Separator();
+		ImGui::Text("Cloud Lighting");
+		ImGui::SliderInt("Lighting Steps", &CLOUD_RAYMARCH_LIGHTING_STEPS, 4, 64);
+		ImGui::SliderFloat("Lighting Ray Depth", &CLOUD_RAYMARCH_LIGHTING_RAY_DEPTH, 1.0f, 128.0f);
+		ImGui::SliderInt("Lighting Update Interval", &CLOUD_LIGHTING_UPDATE_INTERVAL, 1, 16);
 	}
 
 	ImGui::Checkbox("SSAO", &SSAO_ENABLED);
@@ -505,6 +542,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	ImGui::Begin("Debug");
 	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
 	ImGui::Checkbox("Show Reflection Probes", &DEBUG_REFLECTION_PROBES);
+	ImGui::Checkbox("Show Cloud Bounds", &DEBUG_CLOUDS);
 	ImGui::SliderFloat("Move Speed", &controller->moveSpeed, 0.1f, 5.0f);
 	ImGui::Checkbox("Free Cam", &FREECAM_ENABLED);
 	if (FREECAM_ENABLED)
@@ -565,7 +603,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     	// Add Component
     	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume",
-    		"Interactive Water", "Reflection Probe"
+    		"Interactive Water", "Reflection Probe", "Cloud Component"
     	};
     	static int selectedComponent = -1;
     	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
@@ -612,6 +650,10 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			case 6: // Reflection Probe
     				if (!obj->GetComponent<ReflectionProbeComponent>())
     					obj->AddComponent<ReflectionProbeComponent>();
+    				break;
+    			case 7: // Cloud Component
+    				if (!obj->GetComponent<CloudVolumeComponent>())
+    					obj->AddComponent<CloudVolumeComponent>();
     				break;
     		}
     		selectedComponent = -1;
@@ -913,6 +955,55 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     			ImGui::TreePop();
     		}
     	}
+
+    	auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (cc) {
+		    if (ImGui::TreeNode("Cloud Volume")) {
+		        ImGui::SeparatorText("Volume Bounds");
+		        ImGui::DragFloat3("Min", &cc->volume->min.x, 0.1f);
+		        ImGui::DragFloat3("Max", &cc->volume->max.x, 0.1f);
+
+		        ImGui::SeparatorText("Appearance");
+		        ImGui::DragFloat("Scale", &cc->volume->scale, 0.01f, 0.01f, 5.0f);
+		        ImGui::DragFloat("Scroll Speed", &cc->volume->scrollSpeed, 0.01f, 0.0f, 1.0f);
+
+		        ImGui::SeparatorText("Channel Weights");
+		        ImGui::DragFloat("R Weight", &cc->volume->rWeight, 0.01f, 0.0f, 2.0f);
+		        ImGui::DragFloat("G Weight", &cc->volume->gWeight, 0.01f, 0.0f, 2.0f);
+		        ImGui::DragFloat("B Weight", &cc->volume->bWeight, 0.01f, 0.0f, 2.0f);
+		        ImGui::DragFloat("A Weight", &cc->volume->aWeight, 0.01f, 0.0f, 2.0f);
+
+		        ImGui::SeparatorText("Lighting Voxel Grid");
+		        ImGui::DragInt("Grid X", &cc->volume->lightingVoxelGridSize.x, 1, 8, 128);
+		        ImGui::DragInt("Grid Y", &cc->volume->lightingVoxelGridSize.y, 1, 8, 64);
+		        ImGui::DragInt("Grid Z", &cc->volume->lightingVoxelGridSize.z, 1, 8, 128);
+		        if (ImGui::Button("Reinitialize Voxel Grid"))
+		            cc->volume->InitializeVoxelGrid();
+
+		        ImGui::SeparatorText("Noise Generation");
+		        ImGui::SliderInt("Texture Resolution", &cc->volume->noiseGenerator.resolution, 32, 128);
+		        ImGui::SliderInt("Density R", &cc->volume->noiseGenerator.voxelResolutionR, 1, 32);
+		        ImGui::SliderInt("Density G", &cc->volume->noiseGenerator.voxelResolutionG, 1, 32);
+		        ImGui::SliderInt("Density B", &cc->volume->noiseGenerator.voxelResolutionB, 1, 32);
+		        ImGui::SliderInt("Density A", &cc->volume->noiseGenerator.voxelResolutionA, 1, 32);
+		        ImGui::Checkbox("Inverted", &cc->volume->noiseGenerator.inverted);
+
+		        if (ImGui::Button("Generate Noise")) {
+		            cc->volume->GenerateNoise();
+		            cc->viewer.Init(cc->volume->noiseGenerator.resolution);
+		        }
+
+		        if (cc->volume->noiseTex && cc->viewer.IsInitialized()) {
+		            ImGui::Separator();
+		            ImGui::Text("Noise Preview");
+		            cc->viewer.DrawGUI(cc->volume->noiseTex);
+		        } else {
+		            ImGui::TextDisabled("No texture generated yet");
+		        }
+
+		        ImGui::TreePop();
+		    }
+		}
     }
 
     ImGui::PopID();

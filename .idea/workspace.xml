@@ -28,26 +28,31 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/assets/textures/moss.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/compute/water/mossDensityCompute.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/compute/water/waterRippleCompute.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/clouds/cloudComposite.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/clouds/cloudFrag.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/clouds/cloudVert.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/common/clouds.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/cloud/lightingVoxelCompute.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/cloud/texturePopulateCompute.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/shaders/compute/cloud/textureSliceView.glsl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudViewer.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolume.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolumeComponent.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/worleyNoise.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/worleyNoise.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/renderTargets.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rendering/shaderLibrary.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/scenes/default.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/default.scene" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/compute/water/waterNormalCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/water/waterNormalCompute.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/water/waterFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/water/waterFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/water/waterVert.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/water/waterVert.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWater.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWaterComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/water/interactiveWaterComponent.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/shaderutils.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/shaderutils.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/shaderutils.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/shaderutils.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -119,7 +124,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;CPPToolchains&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -132,11 +137,11 @@
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nlohmann" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects\clouds" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\mud" />
       <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\brick" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
@@ -149,8 +154,8 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="CMake Application.Penumbra" />
       <item itemvalue="CMake Debug.SSAOProject" />
+      <item itemvalue="CMake Application.Penumbra" />
     </list>
     <recent_temporary>
       <list>
@@ -216,7 +221,16 @@
       <workItem from="1777034885380" duration="11000" />
       <workItem from="1777070301662" duration="1342000" />
       <workItem from="1777084639486" duration="2493000" />
-      <workItem from="1777151945876" duration="2914000" />
+      <workItem from="1777151945876" duration="10362000" />
+      <workItem from="1777177949497" duration="135000" />
+      <workItem from="1777218546329" duration="439000" />
+      <workItem from="1777219156238" duration="9946000" />
+      <workItem from="1777239699009" duration="2199000" />
+      <workItem from="1777242150500" duration="11149000" />
+      <workItem from="1777262852396" duration="34000" />
+      <workItem from="1777336271671" duration="15796000" />
+      <workItem from="1777422899754" duration="792000" />
+      <workItem from="1777425537506" duration="12000" />
     </task>
     <servers />
   </component>
@@ -238,16 +252,5 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/src/utils/sceneLoader.h</url>
-          <line>1</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

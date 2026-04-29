@@ -710,14 +710,14 @@
             "static": false,
             "transform": {
                 "position": [
-                    -1.6599998474121094,
-                    0.19199976325035095,
-                    1.0698691606521606
+                    -1.6599359512329102,
+                    0.19200001657009125,
+                    1.0699936151504517
                 ],
                 "rotation": [
-                    -61.67970275878906,
-                    -26.42439079284668,
-                    -155.7083740234375
+                    -61.722591400146484,
+                    -26.436704635620117,
+                    -155.72035217285156
                 ],
                 "scale": [
                     0.20000000298023224,
@@ -1995,7 +1995,7 @@
                     "type": "Light"
                 }
             ],
-            "enabled": true,
+            "enabled": false,
             "name": "CeilLight",
             "static": true,
             "transform": {
@@ -2217,6 +2217,107 @@
                     2.0,
                     2.0,
                     2.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "aWeight": 1.0,
+                        "bWeight": 1.0,
+                        "gWeight": 1.0,
+                        "inverted": true,
+                        "max": [
+                            5.0,
+                            2.5,
+                            5.0
+                        ],
+                        "min": [
+                            -5.0,
+                            -2.5,
+                            -5.0
+                        ],
+                        "rWeight": 1.0,
+                        "resolution": 64,
+                        "scale": 0.38999998569488525,
+                        "scrollSpeed": 0.10000000149011612,
+                        "voxelGridX": 64,
+                        "voxelGridY": 32,
+                        "voxelGridZ": 64,
+                        "voxelResolutionA": 3,
+                        "voxelResolutionB": 5,
+                        "voxelResolutionG": 7,
+                        "voxelResolutionR": 9
+                    },
+                    "type": "CloudVolume"
+                }
+            ],
+            "enabled": true,
+            "name": "Clouds",
+            "static": false,
+            "transform": {
+                "position": [
+                    -10.119999885559082,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            }
+        },
+        {
+            "class": "GameObject",
+            "components": [
+                {
+                    "data": {
+                        "castsShadow": false,
+                        "color": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ],
+                        "direction": [
+                            0.0,
+                            -1.0,
+                            0.0
+                        ],
+                        "innerCutoffDeg": 12.5,
+                        "intensity": 1.0,
+                        "outerCutoffDeg": 35.5,
+                        "radius": 5.0,
+                        "type": "Directional"
+                    },
+                    "type": "Light"
+                }
+            ],
+            "enabled": true,
+            "name": "Sun",
+            "static": false,
+            "transform": {
+                "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "rotation": [
+                    0.0,
+                    -0.0,
+                    0.0
+                ],
+                "scale": [
+                    1.0,
+                    1.0,
+                    1.0
                 ]
             }
         }

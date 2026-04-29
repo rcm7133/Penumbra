@@ -14,7 +14,18 @@ class Scene
 public:
     std::vector<std::shared_ptr<GameObject>> objects;
     std::shared_ptr<Skybox> skybox;
+    std::shared_ptr<GameObject> mainLight;
     ProbeGrid probeGrid;
+
+    void SetMainLight(const std::string& name) {
+        mainLight = GetObject(name);
+    }
+
+    Light* GetMainLight() const {
+        if (!mainLight) return nullptr;
+        auto lc = mainLight->GetComponent<LightComponent>();
+        return lc ? lc->light.get() : nullptr;
+    }
 
     void LoadSkybox(const std::string& directory) {
         std::vector<std::string> faces = {

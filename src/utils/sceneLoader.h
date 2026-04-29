@@ -15,6 +15,7 @@
 #include "../rendering/mesh/model.h"
 #include "../rendering/effects/reflections/reflectionProbe.h"
 #include "../rendering/effects/reflections/reflectionProbeComponent.h"
+#include "../rendering/effects/clouds/cloudVolumeComponent.h"
 
 class SceneLoader {
 public:
@@ -39,6 +40,7 @@ private:
     static json SerializeRigidBody(const RigidBody& rb);
     static json SerializeFogVolume(const FogVolume& fv);
     static json SerializeReflectionProbe(const ReflectionProbe& rp);
+    static json SerializeCloudVolume(const CloudVolumeComponent& cv);
     static json SerializeInteractiveWater(const InteractiveWaterComponent& iw);
     static json SerializeComponents(const std::shared_ptr<GameObject>& obj);
 

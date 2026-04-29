@@ -12,6 +12,9 @@
 #include "../rendering/effects/water/interactiveWaterComponent.h"
 #include "rendering/pathTracing/pathTracer.h"
 #include "../rendering/effects/reflections/reflectionProbe.h"
+#include "../rendering/effects/clouds/cloudVolumeComponent.h"
+#include "shaderLibrary.h"
+#include "renderTargets.h"
 
 extern float AMBIENT_MULTIPLIER;
 extern bool SKYBOX_ENABLED;
@@ -20,7 +23,7 @@ extern bool SKYBOX_ENABLED;
 extern int GI_MODE;
 extern float GI_INTENSITY;
 
-// PT
+// PATH TRACING
 extern int PATH_TRACING_GI_SAMPLES;
 extern int PATH_TRACING_GI_BOUNCES;
 extern int PATH_TRACING_GI_FACE_SIZE;
@@ -31,6 +34,15 @@ extern bool REFLECTION_PROBE_ENABLED;
 extern float SSR_MIN_STEP_SIZE;
 extern float SSR_MAX_STEP_SIZE;
 extern int SSR_RAYMARCH_STEPS;
+
+// Clouds
+extern bool CLOUD_ENABLED;
+extern int CLOUD_LIGHTING_UPDATE_INTERVAL;
+extern int CLOUD_RAYMARCH_STEPS;
+extern int CLOUD_RESOLUTION_SCALE;
+extern int CLOUD_RAYMARCH_LIGHTING_STEPS;
+extern float CLOUD_RAYMARCH_LIGHTING_RAY_DEPTH;
+extern float CLOUD_ABSORPTION;
 
 // Reflection Probes
 extern int MAX_REFLECTION_PROBES;
@@ -74,7 +86,7 @@ public:
         CreateFBOS();
         LoadShaders();
         CacheUniforms();
-        fogNoiseTexture = GenerateNoiseTexture(64);
+        rt.fogNoiseTexture = GenerateNoiseTexture(64);
     }
     ~Renderer();
 
@@ -84,8 +96,8 @@ public:
 
     void RenderFrame(float deltaTime);
 
-    [[nodiscard]] unsigned int GetGBufferShader()  const { return gBufferShader; }
-    [[nodiscard]] unsigned int GetLightingShader() const { return lightingShader; }
+    [[nodiscard]] unsigned int GetGBufferShader()  const { return shaders.gBuffer; }
+    [[nodiscard]] unsigned int GetLightingShader() const { return shaders.lighting; }
     [[nodiscard]] unsigned int GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const;
 
     void BakeLightProbes();
@@ -103,59 +115,29 @@ private:
     Camera& camera;
     Profiler& profiler;
 
+    RenderTargets rt;
+    ShaderLibrary shaders;
+
     std::vector<std::pair<std::shared_ptr<ReflectionProbe>, glm::vec3>> reflectionProbes;
 
     ScreenQuad quad;
 
-    PTScene ptScene;
-    bool ptSceneBuilt = false;
-
-    // FBOs and textures
-    unsigned int litFBO;
-    unsigned int litTexture;
-    unsigned int fogFBO;
-    unsigned int fogTexture;
-    unsigned int ssaoFBO;
-    unsigned int ssaoTexture;
-    unsigned int ssaoBlurFBO;
-    unsigned int ssaoBlurTexture;
-    unsigned int ssaoNoiseTex;
-    unsigned int fogNoiseTexture;
-    unsigned int fxaaFBO;
-    unsigned int fxaaTexture;
-    unsigned int litDepthRBO;
-    unsigned int ssrFBO;
-    unsigned int ssrTexture;
-    unsigned int ssrCompositeFBO;
-    unsigned int ssrCompositeTexture;
-
-    // Shaders
-    unsigned int gBufferShader;
-    unsigned int lightingShader;
-    unsigned int shadowShader;
-    unsigned int fogShader;
-    unsigned int passthroughShader;
-    unsigned int fogCompositeShader;
-    unsigned int ssaoShader;
-    unsigned int ssaoBlurShader;
-    unsigned int fxaaShader;
-    unsigned int particleLitShader;
-    unsigned int particleUnlitShader;
-    unsigned int pointShadowShader;
-    unsigned int skyboxShader;
-    unsigned int probeBakeShader;
-    unsigned int ssrShader;
-    unsigned int ssrCompositeShader;
+    PTScene ptScene; bool ptSceneBuilt = false;
 
     // SSBO
     unsigned int probeSSBO = 0;
 
     // Geometry shader caches
-    int gBuf_model, gBuf_view, gBuf_projection, gBuf_normalMat;
-    int gBuf_roughness, gBuf_metallic, gBuf_diffuseTex, gBuf_normalMap, gBuf_hasNormalMap;
+    struct GeometryUniforms {
+        int model, view, projection, normalMat;
+        int roughness, metallic, diffuseTex, normalMap, hasNormalMap;
+    } gBuf;
 
-    // Lighting shader caches
-    int light_gPosition, light_gNormal, light_gAlbedo, light_cameraPos, light_ambient;
+    struct LightingUniforms {
+        int gPosition, gNormal, gAlbedo, cameraPos, ambient;
+    } lighting;
+
+    int cloudLightingFrameCounter = 0;
 
     // Init
     void CreateLitFBO();
@@ -163,6 +145,7 @@ private:
     void CreateSSAO();
     void CreateFXAA();
     void CreateSSR();
+    void CreateCloudFBO();
 
     void LoadShaders();
     void CacheUniforms();
@@ -181,6 +164,9 @@ private:
     void ParticlePass(int shadowCount);
     void SkyboxPass();
     void WaterPass(float deltaTime);
+    void CloudPass(CloudVolume& vol, Light* sun);
+    void CloudCompositePass();
+    void CloudLightingPass(CloudVolume& vol, Light* sun);
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix);
 
