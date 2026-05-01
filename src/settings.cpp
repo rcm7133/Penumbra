@@ -7,6 +7,9 @@ bool SKYBOX_ENABLED = true;
 bool FREECAM_ENABLED = false;
 bool GUI_ENABLED = true;
 
+bool RENDER_DEBUG_TEXTURE = false;
+int  DEBUG_TEXTURE_INDEX = 0;
+
 // Global Illumination Settings
 int GI_MODE = 2;
 float GI_INTENSITY = 0.05f;

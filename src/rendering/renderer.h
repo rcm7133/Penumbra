@@ -19,6 +19,9 @@
 extern float AMBIENT_MULTIPLIER;
 extern bool SKYBOX_ENABLED;
 
+extern bool RENDER_DEBUG_TEXTURE;
+extern int  DEBUG_TEXTURE_INDEX;
+
 // GI
 extern int GI_MODE;
 extern float GI_INTENSITY;
@@ -107,6 +110,7 @@ public:
     void CollectReflectionProbes();
     void BakeReflectionProbes();
     bool HasReflectionProbes() const { return !reflectionProbes.empty(); }
+    [[nodiscard]] const RenderTargets& GetRenderTargets() const { return rt; }
 private:
     int w, h;
     glm::mat4 projection;
@@ -167,6 +171,8 @@ private:
     void CloudPass(CloudVolume& vol, Light* sun);
     void CloudCompositePass();
     void CloudLightingPass(CloudVolume& vol, Light* sun);
+
+    void RenderDebugTexture();
 
     void RenderShadowMap(const glm::mat4& lightSpaceMatrix);
 

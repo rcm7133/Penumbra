@@ -28,31 +28,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/shaders/clouds/cloudComposite.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/clouds/cloudFrag.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/clouds/cloudVert.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/common/clouds.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/compute/cloud/lightingVoxelCompute.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/compute/cloud/texturePopulateCompute.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/compute/cloud/textureSliceView.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudViewer.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolume.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolumeComponent.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/worleyNoise.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/worleyNoise.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/renderTargets.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/rendering/shaderLibrary.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/scenes/default.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/default.scene" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/compute/water/waterSimulateCompute.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/scene.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/scene.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/sceneLoader.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sceneLoader.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -153,9 +133,14 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <list>
-      <item itemvalue="CMake Debug.SSAOProject" />
       <item itemvalue="CMake Application.Penumbra" />
+      <item itemvalue="CMake Debug.SSAOProject" />
     </list>
     <recent_temporary>
       <list>

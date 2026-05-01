@@ -540,6 +540,22 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     ImGui::End();
 
 	ImGui::Begin("Debug");
+	ImGui::Separator();
+	ImGui::Checkbox("Debug Texture", &RENDER_DEBUG_TEXTURE);
+	if (RENDER_DEBUG_TEXTURE) {
+		const char* names[] = {
+			"Lit",
+			"Fog",
+			"SSAO",
+			"SSAO Blur",
+			"FXAA",
+			"SSR",
+			"SSR Composite",
+			"Cloud",
+			"Cloud Composite",
+		};
+		ImGui::Combo("Texture", &DEBUG_TEXTURE_INDEX, names, IM_ARRAYSIZE(names));
+	}
 	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
 	ImGui::Checkbox("Show Reflection Probes", &DEBUG_REFLECTION_PROBES);
 	ImGui::Checkbox("Show Cloud Bounds", &DEBUG_CLOUDS);

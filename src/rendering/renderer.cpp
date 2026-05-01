@@ -453,18 +453,35 @@
             }
         }
 
-        if (CLOUD_ENABLED && cv) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(shaders.passthrough);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, rt.cloudTexture); // try switching this to rt.litTexture, rt.cloudTexture, rt.cloudCompositeTexture one at a time
-            glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
-            quad.Draw();
-            return; // skip FXAAPass
-        }
-
         FXAAPass();
+        RenderDebugTexture();
+    }
+
+    void Renderer::RenderDebugTexture()
+    {
+        if (!RENDER_DEBUG_TEXTURE) return;
+
+        const GLuint textures[] = {
+            rt.litTexture,
+            rt.fogTexture,
+            rt.ssaoTexture,
+            rt.ssaoBlurTexture,
+            rt.fxaaTexture,
+            rt.ssrTexture,
+            rt.ssrCompositeTexture,
+            rt.cloudTexture,
+            rt.cloudCompositeTexture,
+        };
+        constexpr int count = sizeof(textures) / sizeof(textures[0]);
+        GLuint tex = textures[glm::clamp(DEBUG_TEXTURE_INDEX, 0, count - 1)];
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(shaders.passthrough);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
+        quad.Draw();
     }
 
     void Renderer::ShadowPass(bool staticOnly)
@@ -890,6 +907,7 @@
 
         quad.Draw();
         glEnable(GL_DEPTH_TEST);
+        glViewport(0, 0, w, h);
         profiler.End("Fog Composite Pass");
     }
 
@@ -932,6 +950,7 @@
 
         quad.Draw();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, w, h);
         profiler.End("Cloud Pass");
     }
 
@@ -1014,6 +1033,7 @@
 
     void Renderer::PassthroughPass()
     {
+        glViewport(0, 0, w, h);
         glBindFramebuffer(GL_FRAMEBUFFER, rt.fxaaFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(shaders.passthrough);
@@ -1025,7 +1045,7 @@
     void Renderer::FXAAPass()
     {
         profiler.Begin("FXAA Pass");
-
+        glViewport(0, 0, w, h);
         glDisable(GL_DEPTH_TEST);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
