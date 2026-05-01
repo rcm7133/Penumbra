@@ -56,6 +56,7 @@
         shaders.cloud= ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/clouds/cloudFrag.glsl");
         shaders.cloudComposite = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl",     "../shaders/clouds/cloudComposite.glsl");
         shaders.cloudLighting = ShaderUtils::LoadComputeShader("../shaders/compute/cloud/lightingVoxelCompute.glsl");
+        shaders.debugChannel = ShaderUtils::MakeShaderProgram("../shaders/lighting/lightingVert.glsl", "../shaders/debug/debugChannelFrag.glsl");
     }
 
     void Renderer::CreateFBOS() {
@@ -461,26 +462,45 @@
     {
         if (!RENDER_DEBUG_TEXTURE) return;
 
-        const GLuint textures[] = {
-            rt.litTexture,
-            rt.fogTexture,
-            rt.ssaoTexture,
-            rt.ssaoBlurTexture,
-            rt.fxaaTexture,
-            rt.ssrTexture,
-            rt.ssrCompositeTexture,
-            rt.cloudTexture,
-            rt.cloudCompositeTexture,
+        struct DebugTex { GLuint tex; int channel; }; // channel -1 = normal RGB
+
+        const DebugTex textures[] = {
+            { gbuffer.gPosition,          -1 },
+            { gbuffer.gNormal,            -1 },
+            { gbuffer.gAlbedo,            -1 },
+            { gbuffer.gEmissive,          -1 },
+            { gbuffer.gNormal,             3 }, // roughness in normal.a
+            { gbuffer.gAlbedo,             3 }, // metallic in albedo.a
+            { rt.litTexture,              -1 },
+            { rt.fogTexture,              -1 },
+            { rt.ssaoTexture,             -1 },
+            { rt.ssaoBlurTexture,         -1 },
+            { rt.fxaaTexture,             -1 },
+            { rt.ssrTexture,              -1 },
+            { rt.ssrCompositeTexture,     -1 },
+            { rt.cloudTexture,            -1 },
+            { rt.cloudCompositeTexture,   -1 },
         };
         constexpr int count = sizeof(textures) / sizeof(textures[0]);
-        GLuint tex = textures[glm::clamp(DEBUG_TEXTURE_INDEX, 0, count - 1)];
+        auto& entry = textures[glm::clamp(DEBUG_TEXTURE_INDEX, 0, count - 1)];
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(shaders.passthrough);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, tex);
-        glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
+        glBindTexture(GL_TEXTURE_2D, entry.tex);
+
+        if (entry.channel == -1)
+        {
+            glUseProgram(shaders.passthrough);
+            glUniform1i(glGetUniformLocation(shaders.passthrough, "litScene"), 0);
+        }
+        else
+        {
+            glUseProgram(shaders.debugChannel);
+            glUniform1i(glGetUniformLocation(shaders.debugChannel, "tex"), 0);
+            glUniform1i(glGetUniformLocation(shaders.debugChannel, "channel"), entry.channel);
+        }
+
         quad.Draw();
     }
 
@@ -1539,37 +1559,6 @@
         return tex;
     }
 
-    // Mode: 0=Position, 1=Normals, 2=Albedo, 3=SSAO, 4=SSAO Blur,
-    //       5=Lighting, 6-8=Shadow Maps, 9=Fog
-
-    unsigned int Renderer::GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const
-    {
-        switch (mode)
-        {
-            case 0: return gbuffer.gPosition;
-            case 1: return gbuffer.gNormal;
-            case 2: return gbuffer.gAlbedo;
-            case 3: return rt.ssaoTexture;
-            case 4: return rt.ssaoBlurTexture;
-            case 5: return rt.litTexture;
-            case 6:
-            case 7:
-            case 8:
-            {
-                int idx = 0;
-                for (auto& obj : scene->objects)
-                {
-                    auto lc = obj->GetComponent<LightComponent>();
-                    if (!lc || !lc->light->castsShadow) continue;
-                    if (idx == mode - 6) return lc->light->shadowMap;
-                    idx++;
-                }
-                return 0;
-            }
-            case 9: return rt.fogTexture;
-            default: return 0;
-        }
-    }
 
     unsigned int Renderer::PathTraceCubemapFromPoint(const glm::vec3& position,
                                                       int faceSize)

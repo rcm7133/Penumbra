@@ -8,6 +8,7 @@ struct ShaderLibrary {
     GLuint skybox, probeBake;
     GLuint ssr, ssrComposite;
     GLuint cloud, cloudComposite, cloudLighting;
+    GLuint debugChannel;
 
     void Load();
     void Destroy();

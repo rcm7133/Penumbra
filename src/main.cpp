@@ -544,6 +544,12 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	ImGui::Checkbox("Debug Texture", &RENDER_DEBUG_TEXTURE);
 	if (RENDER_DEBUG_TEXTURE) {
 		const char* names[] = {
+			"gPosition",
+			"gNormal",
+			"gAlbedo",
+			"gEmissive",
+			"Roughness (gNormal.a)",
+			"Metallic (gAlbedo.a)",
 			"Lit",
 			"Fog",
 			"SSAO",

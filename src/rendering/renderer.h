@@ -101,7 +101,7 @@ public:
 
     [[nodiscard]] unsigned int GetGBufferShader()  const { return shaders.gBuffer; }
     [[nodiscard]] unsigned int GetLightingShader() const { return shaders.lighting; }
-    [[nodiscard]] unsigned int GetDebugTexture(int mode, std::shared_ptr<Scene> scene) const;
+    [[nodiscard]] const RenderTargets& GetRenderTargets() const { return rt; }
 
     void BakeLightProbes();
     void ClearProbes();
@@ -110,7 +110,7 @@ public:
     void CollectReflectionProbes();
     void BakeReflectionProbes();
     bool HasReflectionProbes() const { return !reflectionProbes.empty(); }
-    [[nodiscard]] const RenderTargets& GetRenderTargets() const { return rt; }
+
 private:
     int w, h;
     glm::mat4 projection;
