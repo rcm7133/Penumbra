@@ -1,11 +1,44 @@
 #pragma once
 #include "config.h"
 #include "gameobject.h"
+#include "rendering/effects/particles/particleSystemComponent.h"
+#include "rendering/effects/fog/fogVolumeComponent.h"
+#include "rendering/mesh/meshComponent.h"
+#include "rendering/effects/lights/lightComponent.h"
+#include "rendering/effects/cubemaps/skybox.h"
+#include "rendering/effects/water/interactiveWaterComponent.h"
+#include "rendering/effects/globalIllumination/ProbeGrid.h"
 
 class Scene
 {
 public:
     std::vector<std::shared_ptr<GameObject>> objects;
+    std::shared_ptr<Skybox> skybox;
+    std::shared_ptr<GameObject> mainLight;
+    ProbeGrid probeGrid;
+
+    void SetMainLight(const std::string& name) {
+        mainLight = GetObject(name);
+    }
+
+    Light* GetMainLight() const {
+        if (!mainLight) return nullptr;
+        auto lc = mainLight->GetComponent<LightComponent>();
+        return lc ? lc->light.get() : nullptr;
+    }
+
+    void LoadSkybox(const std::string& directory) {
+        std::vector<std::string> faces = {
+            directory + "/right.jpg",
+            directory + "/left.jpg",
+            directory + "/top.jpg",
+            directory + "/bottom.jpg",
+            directory + "/front.jpg",
+            directory + "/back.jpg",
+        };
+        skybox = std::make_shared<Skybox>();
+        skybox->Load(faces);
+    }
 
     void Add(const std::shared_ptr<GameObject>& obj) {
         objects.push_back(obj);
@@ -20,102 +53,106 @@ public:
 
     void Update(float dt) const {
         for (const std::shared_ptr<GameObject>& obj : objects) {
-            if (obj->enabled)
-                obj->Update(dt);
+            if (!obj->enabled) continue;
+            obj->Update(dt);
+
+            auto ps = obj->GetComponent<ParticleSystemComponent>();
+            if (ps)
+                ps->system->Update(dt, obj->transform.position);
         }
     }
 
-    void Render(unsigned int shader, int modelLoc, int shininessLoc) const {
-        // Lights
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec3> colors;
-        std::vector<float>     intensities;
-
-        for (const std::shared_ptr<GameObject>& obj : objects) {
-            if (!obj->enabled || !obj->light) continue;
-            positions.push_back(obj->transform.position);
-            colors.push_back(obj->light->color);
-            intensities.push_back(obj->light->intensity);
-        }
-
-        int lightCount = positions.size();
-        glUniform1i(glGetUniformLocation(shader, "lightCount"), lightCount);
-
-        for (int i = 0; i < lightCount; i++) {
-            std::string base = "lightPos[" + std::to_string(i) + "]";
-            glUniform3fv(glGetUniformLocation(shader, base.c_str()), 1,
-                glm::value_ptr(positions[i]));
-
-            base = "lightColor[" + std::to_string(i) + "]";
-            glUniform3fv(glGetUniformLocation(shader, base.c_str()), 1,
-                glm::value_ptr(colors[i]));
-
-            base = "lightIntensity[" + std::to_string(i) + "]";
-            glUniform1f(glGetUniformLocation(shader, base.c_str()), intensities[i]);
-        }
-
-        for (const std::shared_ptr<GameObject>& obj : objects) {
-            if (!obj->enabled || !obj->mesh) continue;
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
-                glm::value_ptr(obj->transform.GetMatrix()));
-            glUniform1f(shininessLoc, obj->mesh->GetShininess());
-            obj->mesh->Draw();
-        }
-    }
-
-    void RenderGeometry(unsigned int gBufferShader, int modelLoc, int shininessLoc) const {
-    	int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
+    void RenderGeometry(unsigned int gBufferShader, int modelLoc) const {
+        int roughnessLoc    = glGetUniformLocation(gBufferShader, "roughness");
+        int metallicLoc     = glGetUniformLocation(gBufferShader, "metallic");
+        int hasNormalMapLoc = glGetUniformLocation(gBufferShader, "hasNormalMap");
+        int hasHeightMapLoc = glGetUniformLocation(gBufferShader, "hasHeightMap");
+        int heightScaleLoc  = glGetUniformLocation(gBufferShader, "heightScale");
+        int normalMatLoc    = glGetUniformLocation(gBufferShader, "normalMatrix");
+        int emissiveColorLoc = glGetUniformLocation(gBufferShader, "emissiveColor");
+        int emissiveIntensityLoc = glGetUniformLocation(gBufferShader, "emissiveIntensity");
+        int isStaticLoc = glGetUniformLocation(gBufferShader, "isStatic");
 
         for (const auto& obj : objects) {
-            if (!obj->enabled || !obj->mesh) continue;
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
-                glm::value_ptr(obj->transform.GetMatrix()));
-            glUniform1f(shininessLoc, obj->mesh->GetShininess());
-        	glUniform1i(hasNormalMapLoc, obj->mesh->material.hasNormalMap ? 1 : 0);
-            obj->mesh->Draw();
+            if (!obj->enabled) continue;
+            auto mc = obj->GetComponent<MeshComponent>();
+            if (!mc) continue;
+            if (obj->IsForwardRendered()) continue;
+
+            glm::mat4 modelMat = obj->transform.GetMatrix();
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMat));
+
+            glm::mat3 normalMat = glm::mat3(glm::transpose(glm::inverse(modelMat)));
+            glUniformMatrix3fv(normalMatLoc, 1, GL_FALSE, glm::value_ptr(normalMat));
+            glUniform1f(isStaticLoc, obj->isStatic ? 1.0f : 0.0f);
+            mc->model->Draw(gBufferShader, roughnessLoc, metallicLoc,
+                            hasNormalMapLoc, hasHeightMapLoc, heightScaleLoc, emissiveColorLoc, emissiveIntensityLoc);
         }
     }
 
-    void UploadLights(unsigned int shader) const {
-	    std::vector<glm::vec3> positions, colors, directions;
-	    std::vector<float> intensities, innerCutoffs, outerCutoffs;
-	    std::vector<int> types;
+    void UploadLights(unsigned int shader, bool staticOnly = false) const {
+        std::vector<std::shared_ptr<GameObject>> lightObjects;
 
-	    // Shadow casters
-	    for (const auto& obj : objects) {
-		    if (!obj->enabled || !obj->light || !obj->light->castsShadow) continue;
-		    positions.push_back(obj->transform.position);
-		    colors.push_back(obj->light->color);
-		    intensities.push_back(obj->light->intensity);
-		    directions.push_back(obj->light->direction);
-		    innerCutoffs.push_back(obj->light->innerCutoff);
-		    outerCutoffs.push_back(obj->light->outerCutoff);
-		    types.push_back(static_cast<int>(obj->light->type));
-	    }
-	    // Non shadow lights
-	    for (const auto& obj : objects) {
-		    if (!obj->enabled || !obj->light || obj->light->castsShadow) continue;
-		    positions.push_back(obj->transform.position);
-		    colors.push_back(obj->light->color);
-		    intensities.push_back(obj->light->intensity);
-		    directions.push_back(obj->light->direction);
-		    innerCutoffs.push_back(obj->light->innerCutoff);
-		    outerCutoffs.push_back(obj->light->outerCutoff);
-		    types.push_back(static_cast<int>(obj->light->type));
-	    }
+        for (const auto& obj : objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (!obj->enabled || !lc) continue;
+            if (staticOnly && !obj->isStatic) continue;
+            if (lc->light->castsShadow)
+                lightObjects.push_back(obj);
+        }
+        for (const auto& obj : objects) {
+            auto lc = obj->GetComponent<LightComponent>();
+            if (!obj->enabled || !lc) continue;
+            if (staticOnly && !obj->isStatic) continue;
+            if (!lc->light->castsShadow)
+                lightObjects.push_back(obj);
+        }
 
-	    int count = positions.size();
-	    glUniform1i(glGetUniformLocation(shader, "lightCount"), count);
-	    for (int i = 0; i < count; i++) {
-		    std::string idx = std::to_string(i);
-		    glUniform3fv(glGetUniformLocation(shader, ("lightPos["      + idx + "]").c_str()), 1, glm::value_ptr(positions[i]));
-		    glUniform3fv(glGetUniformLocation(shader, ("lightColor["    + idx + "]").c_str()), 1, glm::value_ptr(colors[i]));
-		    glUniform1f (glGetUniformLocation(shader, ("lightIntensity["+ idx + "]").c_str()), intensities[i]);
-		    glUniform3fv(glGetUniformLocation(shader, ("lightDir["      + idx + "]").c_str()), 1, glm::value_ptr(directions[i]));
-		    glUniform1f (glGetUniformLocation(shader, ("innerCutoff["   + idx + "]").c_str()), innerCutoffs[i]);
-		    glUniform1f (glGetUniformLocation(shader, ("outerCutoff["   + idx + "]").c_str()), outerCutoffs[i]);
-		    glUniform1i (glGetUniformLocation(shader, ("lightType["     + idx + "]").c_str()), types[i]);
-	    }
+        int count = static_cast<int>(lightObjects.size());
+        glUniform1i(glGetUniformLocation(shader, "lightCount"), count);
+
+        for (int i = 0; i < count; i++) {
+            auto& obj = lightObjects[i];
+            auto light = obj->GetComponent<LightComponent>()->light;
+            std::string p = "lights[" + std::to_string(i) + "].";
+
+            glUniform3fv(glGetUniformLocation(shader, (p + "position").c_str()),    1, glm::value_ptr(obj->transform.position));
+            glUniform3fv(glGetUniformLocation(shader, (p + "color").c_str()),       1, glm::value_ptr(light->color));
+            glUniform3fv(glGetUniformLocation(shader, (p + "direction").c_str()),   1, glm::value_ptr(light->direction));
+            glUniform1f (glGetUniformLocation(shader, (p + "intensity").c_str()),   light->intensity);
+            glUniform1f (glGetUniformLocation(shader, (p + "innerCutoff").c_str()), light->innerCutoff);
+            glUniform1f (glGetUniformLocation(shader, (p + "outerCutoff").c_str()), light->outerCutoff);
+            glUniform1i (glGetUniformLocation(shader, (p + "type").c_str()),        static_cast<int>(light->type));
+            glUniform1f (glGetUniformLocation(shader, (p + "radius").c_str()),      light->radius);
+        }
+    }
+
+
+    void UploadFogVolumes(unsigned int shader) const {
+        std::vector<std::shared_ptr<GameObject>> fogObjects;
+
+        for (const auto& obj : objects) {
+            auto fv = obj->GetComponent<FogVolumeComponent>();
+            if (obj->enabled && fv)
+                fogObjects.push_back(obj);
+        }
+
+        int count = static_cast<int>(fogObjects.size());
+        glUniform1i(glGetUniformLocation(shader, "fogVolumeCount"), count);
+
+        for (int i = 0; i < count; i++) {
+            auto fv = fogObjects[i]->GetComponent<FogVolumeComponent>();
+            glm::vec3 offset = fogObjects[i]->transform.position;
+            glm::vec3 worldMin = fv->volume->boundsMin + offset;
+            glm::vec3 worldMax = fv->volume->boundsMax + offset;
+            std::string p = "fogVolumes[" + std::to_string(i) + "].";
+
+            glUniform3fv(glGetUniformLocation(shader, (p + "boundsMin").c_str()), 1, glm::value_ptr(worldMin));
+            glUniform3fv(glGetUniformLocation(shader, (p + "boundsMax").c_str()), 1, glm::value_ptr(worldMax));
+            glUniform1f(glGetUniformLocation(shader,  (p + "density").c_str()),     fv->volume->density);
+            glUniform1f(glGetUniformLocation(shader,  (p + "scale").c_str()),       fv->volume->scale);
+            glUniform1f(glGetUniformLocation(shader,  (p + "scrollSpeed").c_str()), fv->volume->scrollSpeed);
+        }
     }
 
     std::shared_ptr<GameObject> GetObject(const std::string& name) {

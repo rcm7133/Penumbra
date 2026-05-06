@@ -1,0 +1,557 @@
+#include "sceneLoader.h"
+#include <filesystem>
+
+#include "rendering/effects/reflections/reflectionProbe.h"
+#include "rendering/effects/water/interactiveWaterComponent.h"
+
+using json = nlohmann::json;
+
+// --- Prefabs ---
+
+void SceneLoader::SavePrefab(const std::shared_ptr<GameObject>& obj, const std::string& directory) {
+    std::filesystem::create_directories(directory);
+    json root = SerializeGameObject(obj);
+    std::string filename = obj->name;
+    std::replace(filename.begin(), filename.end(), ' ', '_');
+    std::string filepath = directory + filename + ".prefab";
+    std::ofstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "SceneLoader::SavePrefab - Failed to open: " << filepath << std::endl;
+        return;
+    }
+    file << root.dump(4);
+    file.close();
+    std::cout << "Prefab saved to " << filepath << std::endl;
+}
+
+std::shared_ptr<GameObject> SceneLoader::LoadPrefab(const std::string& filepath, ParticleSystemManager& particleManager) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "SceneLoader::LoadPrefab - Failed to open: " << filepath << std::endl;
+        return nullptr;
+    }
+    json root;
+    try { file >> root; }
+    catch (const json::parse_error& e) {
+        std::cerr << "SceneLoader::LoadPrefab - Parse error: " << e.what() << std::endl;
+        return nullptr;
+    }
+    auto obj = DeserializeGameObject(root, particleManager);
+    if (obj) std::cout << "Prefab loaded from " << filepath << std::endl;
+    return obj;
+}
+
+std::vector<std::string> SceneLoader::ListPrefabs(const std::string& directory) {
+    std::vector<std::string> prefabs;
+    if (!std::filesystem::exists(directory)) return prefabs;
+    for (const auto& entry : std::filesystem::directory_iterator(directory))
+        if (entry.path().extension() == ".prefab")
+            prefabs.push_back(entry.path().string());
+    std::sort(prefabs.begin(), prefabs.end());
+    return prefabs;
+}
+
+// --- Serialization helpers ---
+
+json SceneLoader::SerializeVec3(const glm::vec3& v) { return {v.x, v.y, v.z}; }
+json SceneLoader::SerializeVec4(const glm::vec4& v) { return {v.x, v.y, v.z, v.w}; }
+
+json SceneLoader::SerializeTransform(const Transform& t) {
+    return {
+        {"position", SerializeVec3(t.position)},
+        {"rotation", SerializeVec3(t.GetEulerDegrees())},
+        {"scale",    SerializeVec3(t.scale)}
+    };
+}
+
+json SceneLoader::SerializeModel(const Model& m) {
+    json j;
+    j["path"] = m.sourcePath;
+    json matsJson = json::array();
+    for (const auto& mat : m.materials) {
+        json mj;
+        mj["roughness"]   = mat.roughness;
+        mj["metallic"]    = mat.metallic;
+        mj["heightScale"] = mat.heightScale;
+        mj["emissiveColor"] = SerializeVec3(mat.emissiveColor);
+        mj["emissiveIntensity"] = mat.emissiveIntensity;
+
+        // Always save paths — embedded textures don't need saving
+        // but manually assigned ones do
+        if (!mat.texturePath.empty() && mat.texturePath != "(embedded)")
+            mj["albedo"] = mat.texturePath;
+        if (mat.hasNormalMap && mat.normalMapPath != "(embedded)")
+            mj["normalMap"] = mat.normalMapPath;
+        if (mat.hasHeightMap && mat.heightMapPath != "(embedded)")
+            mj["heightMap"] = mat.heightMapPath;
+        if (mat.hasMetallicRoughnessMap && mat.metallicRoughnessMapPath != "(embedded)")
+            mj["metallicRoughnessMap"] = mat.metallicRoughnessMapPath;
+
+        matsJson.push_back(mj);
+    }
+    // Always save materials array, even if paths are empty
+    // (preserves roughness/metallic overrides)
+    j["materials"] = matsJson;
+    return j;
+}
+
+json SceneLoader::SerializeLight(const Light& l) {
+    json j;
+    const char* typeNames[] = {"Directional", "Spot", "Point"};
+    j["type"] = typeNames[static_cast<int>(l.type)];
+    j["color"] = SerializeVec3(l.color);
+    j["intensity"] = l.intensity;
+    j["direction"] = SerializeVec3(l.direction);
+    j["castsShadow"] = l.castsShadow;
+    j["radius"] = l.radius;
+    j["innerCutoffDeg"] = glm::degrees(glm::acos(l.innerCutoff));
+    j["outerCutoffDeg"] = glm::degrees(glm::acos(l.outerCutoff));
+    return j;
+}
+
+json SceneLoader::SerializeParticleSystem(const ParticleSystem& ps) {
+    json j;
+    j["maxParticles"] = ps.maxParticles;
+    j["lit"]         = ps.IsLit();
+    j["boundsMin"]   = SerializeVec3(ps.boundsMin);
+    j["boundsMax"]   = SerializeVec3(ps.boundsMax);
+    j["startColor"]  = SerializeVec4(ps.startColor);
+    j["endColor"]    = SerializeVec4(ps.endColor);
+    j["speed"]       = ps.speed;
+    j["minSize"]     = ps.minSize;
+    j["maxSize"]     = ps.maxSize;
+    j["minLifetime"] = ps.minLifetime;
+    j["maxLifetime"] = ps.maxLifetime;
+    j["fadeInTime"]  = ps.fadeInTime;
+    return j;
+}
+
+json SceneLoader::SerializeRigidBody(const RigidBody& rb) {
+    json j;
+    const char* motionNames[] = {"Static", "Dynamic", "Kinematic"};
+    const char* shapeNames[]  = {"Box", "Sphere", "Mesh", "Capsule"};
+    j["motion"]    = motionNames[static_cast<int>(rb.motion)];
+    j["shape"]     = shapeNames[static_cast<int>(rb.shapeType)];
+    j["halfExtent"] = SerializeVec3(rb.halfExtent);
+    j["radius"]    = rb.radius;
+    j["capsuleHalfHeight"] = rb.capsuleHalfHeight;
+    j["mass"]      = rb.mass;
+    j["friction"]  = rb.friction;
+    j["restitution"] = rb.restitution;
+    return j;
+}
+
+json SceneLoader::SerializeFogVolume(const FogVolume& fv) {
+    json j;
+    j["boundsMin"]   = SerializeVec3(fv.boundsMin);
+    j["boundsMax"]   = SerializeVec3(fv.boundsMax);
+    j["density"]     = fv.density;
+    j["scale"]       = fv.scale;
+    j["scrollSpeed"] = fv.scrollSpeed;
+    return j;
+}
+
+json SceneLoader::SerializeReflectionProbe(const ReflectionProbe& rp) {
+    json j;
+    j["boundsMin"]   = SerializeVec3(rp.boundsMin);
+    j["boundsMax"]   = SerializeVec3(rp.boundsMax);
+    j["blendRadius"] = rp.blendRadius;
+    j["resolution"] = rp.resolution;
+    return j;
+}
+
+json SceneLoader::SerializeInteractiveWater(const InteractiveWaterComponent& iw) {
+    json j;
+    j["resolution"]        = iw.interactiveWater->resolution;
+    j["waveSpeed"]         = iw.interactiveWater->waveSpeed;
+    j["dampening"]         = iw.interactiveWater->dampening;
+    j["rippleStrength"]    = iw.interactiveWater->rippleStrength;
+    j["fresnelPower"]      = iw.interactiveWater->fresnelPower;
+    j["specularStrength"]  = iw.interactiveWater->specularStrength;
+    j["shallowColor"]      = SerializeVec3(iw.interactiveWater->shallowColor);
+    j["deepColor"]         = SerializeVec3(iw.interactiveWater->deepColor);
+    return j;
+}
+
+json SceneLoader::SerializeCloudVolume(const CloudVolumeComponent& cv) {
+    json j;
+    // Noise generator settings
+    j["resolution"]       = cv.volume->noiseGenerator.resolution;
+    j["voxelResolutionR"] = cv.volume->noiseGenerator.voxelResolutionR;
+    j["voxelResolutionG"] = cv.volume->noiseGenerator.voxelResolutionG;
+    j["voxelResolutionB"] = cv.volume->noiseGenerator.voxelResolutionB;
+    j["voxelResolutionA"] = cv.volume->noiseGenerator.voxelResolutionA;
+    j["inverted"]         = cv.volume->noiseGenerator.inverted;
+    // Volume settings
+    j["min"]          = SerializeVec3(cv.volume->min);
+    j["max"]          = SerializeVec3(cv.volume->max);
+    j["scrollSpeed"]  = cv.volume->scrollSpeed;
+    j["scale"]        = cv.volume->scale;
+    j["rWeight"]      = cv.volume->rWeight;
+    j["gWeight"]      = cv.volume->gWeight;
+    j["bWeight"]      = cv.volume->bWeight;
+    j["aWeight"]      = cv.volume->aWeight;
+    // Lighting voxel grid
+    j["voxelGridX"]   = cv.volume->lightingVoxelGridSize.x;
+    j["voxelGridY"]   = cv.volume->lightingVoxelGridSize.y;
+    j["voxelGridZ"]   = cv.volume->lightingVoxelGridSize.z;
+    return j;
+}
+
+json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
+    json comps = json::array();
+
+    for (auto& comp : obj->components) {
+        json c;
+
+        if (auto mc = std::dynamic_pointer_cast<MeshComponent>(comp)) {
+            c["type"] = "Model";
+            c["data"] = SerializeModel(*mc->model);
+        }
+        else if (auto lc = std::dynamic_pointer_cast<LightComponent>(comp)) {
+            c["type"] = "Light";
+            c["data"] = SerializeLight(*lc->light);
+        }
+        else if (auto ps = std::dynamic_pointer_cast<ParticleSystemComponent>(comp)) {
+            c["type"] = "ParticleSystem";
+            c["data"] = SerializeParticleSystem(*ps->system);
+        }
+        else if (auto rb = std::dynamic_pointer_cast<RigidBodyComponent>(comp)) {
+            c["type"] = "RigidBody";
+            c["data"] = SerializeRigidBody(*rb->body);
+        }
+        else if (auto fv = std::dynamic_pointer_cast<FogVolumeComponent>(comp)) {
+            c["type"] = "FogVolume";
+            c["data"] = SerializeFogVolume(*fv->volume);
+        }
+
+        else if (auto iw = std::dynamic_pointer_cast<InteractiveWaterComponent>(comp)) {
+            c["type"] = "InteractiveWater";
+            c["data"] = SerializeInteractiveWater(*iw);
+        }
+
+        else if (auto rpc = std::dynamic_pointer_cast<ReflectionProbeComponent>(comp)) {
+            c["type"] = "ReflectionProbe";
+            c["data"] = SerializeReflectionProbe(*rpc->probe);
+        }
+
+        else if (auto cv = std::dynamic_pointer_cast<CloudVolumeComponent>(comp)) {
+            c["type"] = "CloudVolume";
+            c["data"] = SerializeCloudVolume(*cv);
+        }
+
+        if (!c.empty())
+            comps.push_back(c);
+    }
+
+    return comps;
+}
+
+
+json SceneLoader::SerializeGameObject(const std::shared_ptr<GameObject>& obj) {
+    json j;
+    j["name"]      = obj->name;
+    j["enabled"]   = obj->enabled;
+    j["static"] = obj->isStatic;
+    j["transform"] = SerializeTransform(obj->transform);
+    j["class"]     = "GameObject";
+
+    json comps = SerializeComponents(obj);
+    if (!comps.empty())
+        j["components"] = comps;
+
+    return j;
+}
+
+// --- Scene save ---
+
+void SceneLoader::Save(const std::shared_ptr<Scene>& scene, const std::string& filepath) {
+    json root;
+    root["objects"] = json::array();
+    for (const auto& obj : scene->objects) {
+        if (obj->runtimeOnly) continue;
+        root["objects"].push_back(SerializeGameObject(obj));
+    }
+    // Save probe grid
+    json gridJson;
+    gridJson["boundsMin"] = SerializeVec3(scene->probeGrid.boundsMin);
+    gridJson["boundsMax"] = SerializeVec3(scene->probeGrid.boundsMax);
+    gridJson["countX"] = scene->probeGrid.countX;
+    gridJson["countY"] = scene->probeGrid.countY;
+    gridJson["countZ"] = scene->probeGrid.countZ;
+
+    json probesJson = json::array();
+    for (const auto& probe : scene->probeGrid.probes) {
+        if (!probe.baked) continue;
+        json pj;
+        pj["pos"] = SerializeVec3(probe.position);
+        json shJson = json::array();
+        for (int i = 0; i < 9; i++)
+            shJson.push_back(SerializeVec3(probe.shCoeffs[i]));
+        pj["sh"] = shJson;
+        probesJson.push_back(pj);
+    }
+    gridJson["probes"] = probesJson;
+    root["probeGrid"] = gridJson;
+
+    std::ofstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "SceneLoader::Save - Failed to open: " << filepath << std::endl;
+        return;
+    }
+    file << root.dump(4);
+    file.close();
+    std::cout << "Scene saved to " << filepath << std::endl;
+}
+
+// --- Deserialization ---
+
+glm::vec3 SceneLoader::DeserializeVec3(const json& j) {
+    return glm::vec3(j[0].get<float>(), j[1].get<float>(), j[2].get<float>());
+}
+
+glm::vec4 SceneLoader::DeserializeVec4(const json& j) {
+    return glm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>());
+}
+
+void SceneLoader::DeserializeTransform(const json& j, Transform& t) {
+    t.position = DeserializeVec3(j["position"]);
+    t.SetEulerDegrees(DeserializeVec3(j["rotation"]));
+    t.scale = DeserializeVec3(j["scale"]);
+}
+
+std::shared_ptr<Model> SceneLoader::DeserializeModel(const json& j) {
+    std::string path = j["path"].get<std::string>();
+    auto model = std::make_shared<Model>();
+    if (!model->Load(path)) {
+        std::cerr << "Failed to load model: " << path << std::endl;
+        return nullptr;
+    }
+
+    if (j.contains("materials")) {
+        const auto& matsJson = j["materials"];
+
+        // Create materials if the model has fewer than the scene file expects
+        while ((int)model->materials.size() < (int)matsJson.size()) {
+            model->materials.push_back(Model::DefaultMaterial());
+        }
+
+        // Assign any unassigned sub-meshes to material 0
+        for (auto& sm : model->subMeshes) {
+            if (sm.materialIndex < 0 && !model->materials.empty())
+                sm.materialIndex = 0;
+        }
+
+        for (int i = 0; i < (int)matsJson.size() && i < (int)model->materials.size(); i++) {
+            auto& mj = matsJson[i];
+            model->materials[i].roughness   = mj.value("roughness", 0.5f);
+            model->materials[i].metallic    = mj.value("metallic", 0.0f);
+            model->materials[i].heightScale = mj.value("heightScale", 0.05f);
+            model->materials[i].emissiveColor =
+                mj.contains("emissiveColor") ? DeserializeVec3(mj["emissiveColor"]) : glm::vec3(0.0f);
+            model->materials[i].emissiveIntensity =
+                mj.value("emissiveIntensity", 0.0f);
+
+            std::string albedo = mj.value("albedo", "");
+            std::string normal = mj.value("normalMap", "");
+            std::string height = mj.value("heightMap", "");
+            std::string mr     = mj.value("metallicRoughnessMap", "");
+
+            bool hasOverrides = !albedo.empty() || !normal.empty() ||
+                                !height.empty() || !mr.empty();
+            if (hasOverrides) {
+                model->ApplyTexturePaths(i, albedo, normal, height, mr);
+            }
+        }
+    }
+    return model;
+}
+
+std::shared_ptr<Light> SceneLoader::DeserializeLight(const json& j) {
+    auto light = std::make_shared<Light>();
+    std::string typeStr = j["type"].get<std::string>();
+    if (typeStr == "Directional")  light->type = LightType::Directional;
+    else if (typeStr == "Spot")    light->type = LightType::Spot;
+    else if (typeStr == "Point")   light->type = LightType::Point;
+    light->color = DeserializeVec3(j["color"]);
+    light->intensity = j["intensity"].get<float>();
+    light->direction = DeserializeVec3(j["direction"]);
+    light->castsShadow = j["castsShadow"].get<bool>();
+    if (j.contains("radius"))        light->radius = j["radius"].get<float>();
+    if (j.contains("innerCutoffDeg")) light->innerCutoff = glm::cos(glm::radians(j["innerCutoffDeg"].get<float>()));
+    if (j.contains("outerCutoffDeg")) light->outerCutoff = glm::cos(glm::radians(j["outerCutoffDeg"].get<float>()));
+    return light;
+}
+
+void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObject>& obj, ParticleSystemManager& particleManager) {
+    for (const auto& compJson : j) {
+        std::string type = compJson["type"].get<std::string>();
+        const json& data = compJson["data"];
+
+        if (type == "Model" || type == "Mesh") {
+            auto model = DeserializeModel(data);
+            if (model) obj->AddComponent<MeshComponent>(model);
+        }
+        else if (type == "Light") {
+            auto light = DeserializeLight(data);
+            obj->AddComponent<LightComponent>(light);
+        }
+        else if (type == "ParticleSystem") {
+            int maxParticles = data.value("maxParticles", 10000);
+            bool lit = data.value("lit", true);
+            auto comp = obj->AddComponent<ParticleSystemComponent>(maxParticles, lit);
+            auto& ps = comp->system;
+            ps->boundsMin   = DeserializeVec3(data["boundsMin"]);
+            ps->boundsMax   = DeserializeVec3(data["boundsMax"]);
+            ps->startColor  = DeserializeVec4(data["startColor"]);
+            ps->endColor    = DeserializeVec4(data["endColor"]);
+            ps->speed       = data["speed"].get<float>();
+            ps->minSize     = data["minSize"].get<float>();
+            ps->maxSize     = data["maxSize"].get<float>();
+            ps->minLifetime = data["minLifetime"].get<float>();
+            ps->maxLifetime = data["maxLifetime"].get<float>();
+            ps->fadeInTime  = data.value("fadeInTime", 0.0f);
+            particleManager.Register(ps);
+        }
+        else if (type == "RigidBody") {
+            auto comp = obj->AddComponent<RigidBodyComponent>();
+            auto& rb = comp->body;
+            std::string motionStr = data.value("motion", "Static");
+            if (motionStr == "Dynamic")        rb->motion = BodyMotion::Dynamic;
+            else if (motionStr == "Kinematic")  rb->motion = BodyMotion::Kinematic;
+            else                                rb->motion = BodyMotion::Static;
+            std::string shapeStr = data.value("shape", "Box");
+            if (shapeStr == "Sphere")       rb->shapeType = RigidBody::Sphere;
+            else if (shapeStr == "Capsule") rb->shapeType = RigidBody::Capsule;
+            else if (shapeStr == "Mesh")    rb->shapeType = RigidBody::Mesh;
+            else                            rb->shapeType = RigidBody::Box;
+            if (data.contains("halfExtent")) rb->halfExtent = DeserializeVec3(data["halfExtent"]);
+            rb->radius            = data.value("radius", 0.5f);
+            rb->capsuleHalfHeight = data.value("capsuleHalfHeight", 0.5f);
+            rb->mass              = data.value("mass", 1.0f);
+            rb->friction          = data.value("friction", 0.5f);
+            rb->restitution       = data.value("restitution", 0.3f);
+        }
+        else if (type == "FogVolume") {
+            auto comp = obj->AddComponent<FogVolumeComponent>();
+            auto& fv = comp->volume;
+            fv->boundsMin   = DeserializeVec3(data["boundsMin"]);
+            fv->boundsMax   = DeserializeVec3(data["boundsMax"]);
+            fv->density     = data.value("density", 0.5f);
+            fv->scale       = data.value("scale", 0.5f);
+            fv->scrollSpeed = data.value("scrollSpeed", 0.1f);
+        }
+
+        else if (type == "InteractiveWater") {
+            int res = data.value("resolution", 256);
+            float speed = data.value("waveSpeed", 2.0f);
+            auto iw = obj->AddComponent<InteractiveWaterComponent>();
+            iw->interactiveWater->dampening        = data.value("dampening", 0.995f);
+            iw->interactiveWater->rippleStrength   = data.value("rippleStrength", 0.5f);
+            iw->interactiveWater->fresnelPower     = data.value("fresnelPower", 3.0f);
+            iw->interactiveWater->specularStrength = data.value("specularStrength", 1.0f);
+            iw->interactiveWater->shallowColor     = DeserializeVec3(data["shallowColor"]);
+            iw->interactiveWater->deepColor         = DeserializeVec3(data["deepColor"]);
+        }
+
+        else if (type == "ReflectionProbe") {
+            auto comp = obj->AddComponent<ReflectionProbeComponent>();
+            comp->probe->boundsMin = DeserializeVec3(data["boundsMin"]);
+            comp->probe->boundsMax = DeserializeVec3(data["boundsMax"]);
+            comp->probe->blendRadius = data.value("blendRadius", 1.0f);
+            comp->probe->resolution = data.value("resolution", 128);
+            comp->probe->baked = false; // always needs rebaking on load
+        }
+
+        else if (type == "CloudVolume") {
+            auto comp = obj->AddComponent<CloudVolumeComponent>();
+            auto& vol = comp->volume;
+
+            vol->noiseGenerator.resolution       = data.value("resolution", 64);
+            vol->noiseGenerator.voxelResolutionR = data.value("voxelResolutionR", 4);
+            vol->noiseGenerator.voxelResolutionG = data.value("voxelResolutionG", 4);
+            vol->noiseGenerator.voxelResolutionB = data.value("voxelResolutionB", 4);
+            vol->noiseGenerator.voxelResolutionA = data.value("voxelResolutionA", 4);
+            vol->noiseGenerator.inverted         = data.value("inverted", true);
+
+            if (data.contains("min")) vol->min = DeserializeVec3(data["min"]);
+            if (data.contains("max")) vol->max = DeserializeVec3(data["max"]);
+            vol->scrollSpeed = data.value("scrollSpeed", 0.1f);
+            vol->scale       = data.value("scale", 0.5f);
+            vol->rWeight     = data.value("rWeight", 1.0f);
+            vol->gWeight     = data.value("gWeight", 1.0f);
+            vol->bWeight     = data.value("bWeight", 1.0f);
+            vol->aWeight     = data.value("aWeight", 1.0f);
+
+            vol->lightingVoxelGridSize.x = data.value("voxelGridX", 64);
+            vol->lightingVoxelGridSize.y = data.value("voxelGridY", 32);
+            vol->lightingVoxelGridSize.z = data.value("voxelGridZ", 64);
+
+            vol->GenerateNoise();
+            vol->InitializeVoxelGrid();
+        }
+    }
+}
+
+std::shared_ptr<GameObject> SceneLoader::DeserializeGameObject(const json& j, ParticleSystemManager& particleManager) {
+    std::string name = j["name"].get<std::string>();
+    auto obj = std::make_shared<GameObject>(name);
+    obj->enabled = j.value("enabled", true);
+    obj->isStatic = j.value("static", true);
+
+    if (j.contains("transform"))
+        DeserializeTransform(j["transform"], obj->transform);
+
+    if (j.contains("components"))
+        DeserializeComponents(j["components"], obj, particleManager);
+
+    return obj;
+}
+
+// --- Scene load ---
+
+std::shared_ptr<Scene> SceneLoader::Load(const std::string& filepath, ParticleSystemManager& particleManager) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "SceneLoader::Load - Failed to open: " << filepath << std::endl;
+        return nullptr;
+    }
+    json root;
+    try { file >> root; }
+    catch (const json::parse_error& e) {
+        std::cerr << "SceneLoader::Load - Parse error: " << e.what() << std::endl;
+        return nullptr;
+    }
+    auto scene = std::make_shared<Scene>();
+    if (root.contains("objects"))
+        for (const auto& objJson : root["objects"])
+            if (auto obj = DeserializeGameObject(objJson, particleManager))
+                scene->Add(obj);
+    // Load probe grid
+    if (root.contains("probeGrid")) {
+        auto& gj = root["probeGrid"];
+        scene->probeGrid.boundsMin = DeserializeVec3(gj["boundsMin"]);
+        scene->probeGrid.boundsMax = DeserializeVec3(gj["boundsMax"]);
+        scene->probeGrid.countX = gj["countX"].get<int>();
+        scene->probeGrid.countY = gj["countY"].get<int>();
+        scene->probeGrid.countZ = gj["countZ"].get<int>();
+        scene->probeGrid.Init();
+
+        if (gj.contains("probes")) {
+            int idx = 0;
+            for (const auto& pj : gj["probes"]) {
+                if (idx >= (int)scene->probeGrid.probes.size()) break;
+                auto& probe = scene->probeGrid.probes[idx];
+                probe.position = DeserializeVec3(pj["pos"]);
+                for (int i = 0; i < 9; i++)
+                    probe.shCoeffs[i] = DeserializeVec3(pj["sh"][i]);
+                probe.baked = true;
+                idx++;
+            }
+        }
+    }
+
+    std::cout << "Scene loaded from " << filepath
+              << " (" << scene->objects.size() << " objects)" << std::endl;
+    return scene;
+}

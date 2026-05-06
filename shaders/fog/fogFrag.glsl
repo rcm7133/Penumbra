@@ -1,30 +1,13 @@
-#version 330 core
+#version 430 core
+#include "../common/lights.glsl"
+#include "../common/fog.glsl"
 
 in vec2 fragUV;
 out vec4 screenColor;
 
-#define MAX_TOTAL_LIGHTS 16
-#define MAX_SHADOW_LIGHTS 3
-#define LIGHT_DIRECTIONAL 0
-#define LIGHT_SPOT        1
-
 uniform sampler2D litScene;
 uniform sampler2D gPosition;
 uniform sampler3D noiseTexture;
-
-uniform int lightCount;
-uniform vec3 lightPos[MAX_TOTAL_LIGHTS];
-uniform vec3 lightColor[MAX_TOTAL_LIGHTS];
-uniform float lightIntensity[MAX_TOTAL_LIGHTS];
-uniform vec3 lightDir[MAX_TOTAL_LIGHTS];
-uniform int lightType[MAX_TOTAL_LIGHTS];
-
-uniform int shadowLightCount;
-uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
-uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
-
-uniform float innerCutoff[MAX_TOTAL_LIGHTS];
-uniform float outerCutoff[MAX_TOTAL_LIGHTS];
 
 uniform vec3  cameraPos;
 uniform float time;
@@ -34,14 +17,12 @@ uniform int steps;
 uniform float fogScale;
 uniform float fogScrollSpeed;
 
-// Sample realtime shadow map
-float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
+float SampleShadowMapFog(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
 {
     vec4 fragPosLightSpace = lsm * vec4(fragPos, 1.0);
     vec3 proj = fragPosLightSpace.xyz / fragPosLightSpace.w;
     proj = proj * 0.5 + 0.5;
 
-    // Outside frustum treat as shadowed
     if (proj.z > 1.0 || proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0)
     return 1.0;
 
@@ -50,63 +31,108 @@ float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, float bias)
     return currentDepth - bias > closestDepth ? 1.0 : 0.0;
 }
 
+bool RayAABB(vec3 rayOrigin, vec3 rayDir, vec3 bmin, vec3 bmax,
+out float tNear, out float tFar)
+{
+    vec3 invDir = 1.0 / rayDir;
+    vec3 t1 = (bmin - rayOrigin) * invDir;
+    vec3 t2 = (bmax - rayOrigin) * invDir;
+
+    vec3 tMin = min(t1, t2);
+    vec3 tMax = max(t1, t2);
+
+    tNear = max(max(tMin.x, tMin.y), tMin.z);
+    tFar  = min(min(tMax.x, tMax.y), tMax.z);
+
+    tNear = max(tNear, 0.0);
+    return tNear < tFar;
+}
+
+vec3 ComputeLighting(vec3 samplePos)
+{
+    vec3 lighting = vec3(0.0);
+    for (int i = 0; i < lightCount; i++)
+    {
+        float atten = 1.0;
+
+        if (lights[i].type == LIGHT_DIRECTIONAL)
+        {
+            atten = 1.0;
+        }
+        else if (lights[i].type == LIGHT_POINT)
+        {
+            float dist = length(lights[i].position - samplePos);
+            atten = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+            atten *= 1.0 - smoothstep(lights[i].radius * 0.75, lights[i].radius, dist);
+        }
+        else // SPOT
+        {
+            vec3 toLight = lights[i].position - samplePos;
+            float dist = length(toLight);
+            atten = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+
+            vec3 lightDir_i = normalize(toLight);
+            float theta = dot(lightDir_i, normalize(-lights[i].direction));
+            float epsilon = lights[i].innerCutoff - lights[i].outerCutoff;
+            float spotEffect = clamp((theta - lights[i].outerCutoff) / epsilon, 0.0, 1.0);
+            atten *= spotEffect;
+        }
+
+        float shadow = 0.0;
+        if (i < shadowLightCount)
+        {
+            if (lights[i].type == LIGHT_POINT)
+            shadow = SamplePointShadow(shadowCubeMap[i], samplePos, lights[i].position, lightFarPlane[i]);
+            else
+            shadow = SampleShadowMapFog(shadowMap[i], lightSpaceMatrix[i], samplePos, 0.0001);
+        }
+
+        lighting += lights[i].color * lights[i].intensity * atten * (1.0 - shadow);
+    }
+    return lighting;
+}
+
 vec3 Raymarch(vec3 rayStart, vec3 rayEnd, out float finalTransmittance)
 {
-    finalTransmittance = 1.0;
-    vec3 rayDir = rayEnd - rayStart;
-    float rayLength = length(rayDir);
-
-    vec3 stepVec = rayDir / float(steps);
-    float stepSize = rayLength / float(steps);
-
     vec3 fogAccum = vec3(0.0);
     float transmittance = 1.0;
 
-    for (int s = 0; s < steps; s++)
+    vec3 rayDir = normalize(rayEnd - rayStart);
+    float maxDist = length(rayEnd - rayStart);
+
+    for (int v = 0; v < fogVolumeCount; v++)
     {
-        vec3 samplePos = rayStart + stepVec * (float(s) + 0.5);
-        float noise = texture(noiseTexture, samplePos * fogScale + time * fogScrollSpeed).r;
-        float density = fogDensity * noise;
+        float tNear, tFar;
+        if (!RayAABB(rayStart, rayDir, fogVolumes[v].boundsMin, fogVolumes[v].boundsMax, tNear, tFar))
+        continue;
 
-        // Accumulate light contribution at this sample point
-        vec3 lighting = vec3(0.0);
-        for (int i = 0; i < lightCount; i++)
+        tFar = min(tFar, maxDist);
+        if (tNear >= tFar) continue;
+
+        float stepSize = (tFar - tNear) / float(steps);
+
+        for (int s = 0; s < steps; s++)
         {
-            float atten = 1.0;
-            float spotEffect = 1.0;
+            float t = tNear + (float(s) + 0.5) * stepSize;
+            vec3 samplePos = rayStart + rayDir * t;
 
-            if (lightType[i] == LIGHT_DIRECTIONAL)
-            {
-                atten = 1.0;
-                spotEffect = 1.0;
-            }
-            else // Spotlight
-            {
-                vec3 toLight = lightPos[i] - samplePos;
-                float dist = length(toLight);
-                atten = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+            float noise = texture(noiseTexture, samplePos * fogVolumes[v].scale
+            + time * fogVolumes[v].scrollSpeed).r;
+            float density = fogVolumes[v].density * noise;
 
-                vec3 lightDir_i = normalize(toLight);
-                float theta = dot(lightDir_i, normalize(-lightDir[i]));
-                float epsilon = innerCutoff[i] - outerCutoff[i];
-                spotEffect = clamp((theta - outerCutoff[i]) / epsilon, 0.0, 1.0);
-                atten *= spotEffect;
-            }
+            vec3 lighting = ComputeLighting(samplePos);
 
-            float shadow = 0.0;
-            if (i < shadowLightCount)
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], samplePos, 0.0001);
+            float extinction = exp(-density * stepSize);
+            fogAccum += transmittance * (1.0 - extinction) * lighting;
+            transmittance *= extinction;
 
-            lighting += lightColor[i] * lightIntensity[i] * atten * (1.0 - shadow);
+            if (transmittance < 0.01) break;
         }
-
-        float extinction = exp(-density * stepSize);
-        fogAccum += transmittance * (1.0 - extinction) * lighting;
-        transmittance *= extinction;
-        finalTransmittance = transmittance;
 
         if (transmittance < 0.01) break;
     }
+
+    finalTransmittance = transmittance;
     return fogAccum;
 }
 
@@ -115,10 +141,9 @@ void main()
     vec3 sceneColor = texture(litScene, fragUV).rgb;
     vec3 fragPos = texture(gPosition, fragUV).rgb;
 
-    // No geometry, full fog
     if (fragPos == vec3(0.0))
     {
-        screenColor = vec4(0.0, 0.0, 0.0, 1.0); // no fog light, full transmittance
+        screenColor = vec4(0.0, 0.0, 0.0, 1.0);
         return;
     }
 

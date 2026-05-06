@@ -22,22 +22,66 @@
   </component>
   <component name="CMakeSettings" AUTO_RELOAD="true">
     <configurations>
-      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" GENERATION_OPTIONS="&quot;C:\Program Files\JetBrains\CLion 2025.2.1\bin\cmake\win\x64\bin\cmake.exe&quot; `   -DCMAKE_BUILD_TYPE=Release `   &quot;-DCMAKE_MAKE_PROGRAM=C:/Program Files/JetBrains/CLion 2025.2.1/bin/ninja/win/x64/ninja.exe&quot; `   -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake `   -G Ninja `   -S C:\Users\m16ga\code\Penumbra `   -B C:\Users\m16ga\code\Penumbra\cmake-build-release" />
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" GENERATION_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=C:/Users/m16ga/vcpkg/scripts/buildsystems/vcpkg.cmake" />
       <configuration PROFILE_NAME="Release" ENABLED="true" CONFIG_NAME="Release" />
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/dependencies/stb_image_write.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/shaders/fxaa/fxaaFrag.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/renderer.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/renderer.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/bricknone.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/bricknormalmap.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/brickparallaxmap.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/final.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fog1.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fog2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fogoff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fogon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fxaaoff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fxaaon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/giambient.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/gioff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/gion.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/giprobe.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/giprobegrid.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/pbr.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/renderer.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssaooff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssaoon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssroff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssron.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/lighting/lightingFrag.glsl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/shaders/ssao/ssaoFrag.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/ssao/ssaoFrag.glsl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/beanbag.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/bowl.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/candle.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/carpet.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/factory.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/house.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/BoxCollider.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Bricks.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Ceiling.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/CornellBoxWall.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Door.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/FloorCollider.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/New_GameObject.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Point_Light.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/RedWall.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Wall.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/WallCollider.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/WallLamp.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Wood_Floor.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/scenes/default.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/default.scene" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/moss.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/common/reflectionProbes.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/common/reflectionProbes.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolume.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolume.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/pathTracing/pathTracer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/pathTracing/pathTracer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,25 +92,25 @@
     <option name="formatViaClangd" value="false" />
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="shader-template" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/src/camera.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/config.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/gameobject.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/gbuffer.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/glad.c" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/light.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/main.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/material.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/mesh.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/mesh.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/quad.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/renderer.cpp" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/renderer.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/physics/camera/characterControllerComponent.cpp" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/physics/camera/characterControllerComponent.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/rendering/effects/cubemaps/skybox.h" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/src/rendering/effects/globalIllumination/ProbeGrid.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/scene.h" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/settings.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/transform.h" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectApplicationVersion">
@@ -101,9 +145,9 @@
     &quot;RunOnceActivity.west.config.association.type.startup.service&quot;: &quot;true&quot;,
     &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/dependencies&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/assets/demos&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -115,25 +159,25 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\demos" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
+      <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nanoRT" />
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\normals" />
-      <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\Penumbra\dependencies" />
-      <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\SSAO\models" />
-      <recent name="\\wsl.localhost\Ubuntu\home\firefly\code\SSAO" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\demos" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\brick" />
+      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects\clouds" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
-    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="SSAOProject" type="CMakeListConfigurationType" factoryName="CMakeListConfigurationFactory" temporary="true">
       <method v="2" />
     </configuration>
-    <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" WORKING_DIR="file://$PROJECT_DIR$/cmake-build-release/" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
+    <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -165,13 +209,63 @@
       <workItem from="1774233118112" duration="5446000" />
       <workItem from="1774273015335" duration="14468000" />
       <workItem from="1774651515319" duration="929000" />
-      <workItem from="1774753197608" duration="4668000" />
-      <workItem from="1774803468078" duration="5358000" />
-      <workItem from="1774808908253" duration="2238000" />
-      <workItem from="1774925239543" duration="1904000" />
-      <workItem from="1775009958434" duration="605000" />
-      <workItem from="1775015179323" duration="1644000" />
-      <workItem from="1775079751860" duration="12482000" />
+      <workItem from="1775105357276" duration="1054000" />
+      <workItem from="1775180114387" duration="1036000" />
+      <workItem from="1775181263725" duration="431000" />
+      <workItem from="1775229983874" duration="35604000" />
+      <workItem from="1775275148169" duration="662000" />
+      <workItem from="1775349901004" duration="10337000" />
+      <workItem from="1775425716067" duration="7036000" />
+      <workItem from="1775487327437" duration="7614000" />
+      <workItem from="1775512724663" duration="308000" />
+      <workItem from="1775611594001" duration="6112000" />
+      <workItem from="1775684124910" duration="367000" />
+      <workItem from="1775701003970" duration="7723000" />
+      <workItem from="1775869002409" duration="15639000" />
+      <workItem from="1775909661979" duration="10719000" />
+      <workItem from="1775920816233" duration="1930000" />
+      <workItem from="1775936233991" duration="2587000" />
+      <workItem from="1776027021581" duration="14058000" />
+      <workItem from="1776115072522" duration="6896000" />
+      <workItem from="1776130524070" duration="9907000" />
+      <workItem from="1776213899885" duration="3933000" />
+      <workItem from="1776396442158" duration="6735000" />
+      <workItem from="1776430271151" duration="24341000" />
+      <workItem from="1776464421524" duration="3810000" />
+      <workItem from="1776475277997" duration="1126000" />
+      <workItem from="1776476748762" duration="863000" />
+      <workItem from="1776563791335" duration="375000" />
+      <workItem from="1776564199872" duration="7103000" />
+      <workItem from="1776604427346" duration="4794000" />
+      <workItem from="1776649276218" duration="3085000" />
+      <workItem from="1776692000603" duration="1147000" />
+      <workItem from="1776708330611" duration="1322000" />
+      <workItem from="1776722072029" duration="3165000" />
+      <workItem from="1776727151854" duration="1319000" />
+      <workItem from="1776826704542" duration="643000" />
+      <workItem from="1776905086361" duration="7017000" />
+      <workItem from="1776919129994" duration="2231000" />
+      <workItem from="1776989174203" duration="9093000" />
+      <workItem from="1777005449083" duration="4797000" />
+      <workItem from="1777034885380" duration="11000" />
+      <workItem from="1777070301662" duration="1342000" />
+      <workItem from="1777084639486" duration="2493000" />
+      <workItem from="1777151945876" duration="10362000" />
+      <workItem from="1777177949497" duration="135000" />
+      <workItem from="1777218546329" duration="439000" />
+      <workItem from="1777219156238" duration="9946000" />
+      <workItem from="1777239699009" duration="2199000" />
+      <workItem from="1777242150500" duration="11149000" />
+      <workItem from="1777262852396" duration="34000" />
+      <workItem from="1777336271671" duration="15796000" />
+      <workItem from="1777422899754" duration="792000" />
+      <workItem from="1777425537506" duration="12000" />
+      <workItem from="1777659538943" duration="10000" />
+      <workItem from="1777906687618" duration="11404000" />
+      <workItem from="1777929382160" duration="2842000" />
+      <workItem from="1777941716364" duration="1997000" />
+      <workItem from="1777952787016" duration="7646000" />
+      <workItem from="1778033699347" duration="7877000" />
     </task>
     <servers />
   </component>
@@ -182,5 +276,27 @@
     <isAutomaticCheckingOnLaunch value="false" />
     <isAutomaticFoundErrors value="true" />
     <isAutomaticReloadCMake value="true" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/rendering/renderer.cpp</url>
+          <line>427</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

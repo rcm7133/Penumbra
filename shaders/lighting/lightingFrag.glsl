@@ -1,135 +1,166 @@
-#version 330 core
+#version 430 core
+#include "../common/lights.glsl"
+
+const float PI = 3.14159265359;
+
 in vec2 fragUV;
 out vec4 screenColor;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedo;
+uniform sampler2D gEmissive;
 uniform vec3  cameraPos;
-uniform float ambientMultiplier;
 
-#define MAX_TOTAL_LIGHTS 16
-#define MAX_SHADOW_LIGHTS 3
+//---------------------------
+// PBR Functions
+//---------------------------
 
-#define LIGHT_DIRECTIONAL 0
-#define LIGHT_SPOT        1
-
-// All lights
-uniform int lightCount;
-uniform vec3 lightPos[MAX_TOTAL_LIGHTS];
-uniform vec3 lightColor[MAX_TOTAL_LIGHTS];
-uniform float lightIntensity[MAX_TOTAL_LIGHTS];
-uniform vec3  lightDir[MAX_TOTAL_LIGHTS];
-uniform float innerCutoff[MAX_TOTAL_LIGHTS];
-uniform float outerCutoff[MAX_TOTAL_LIGHTS];
-uniform int   lightType[MAX_TOTAL_LIGHTS];
-// Realtime Shadow Lights
-uniform int shadowLightCount;
-uniform sampler2D shadowMap[MAX_SHADOW_LIGHTS];
-uniform mat4 lightSpaceMatrix[MAX_SHADOW_LIGHTS];
-
-uniform float shadowNormalOffset;
-uniform float shadowBias;
-
-// PCF
-uniform int pcfKernelSize;
-uniform int pcfEnabled;
-// SSAO
-uniform sampler2D ssaoTexture;
-uniform bool ssaoEnabled;
-
-// Sample realtime shadow map
-float SampleShadowMap(sampler2D map, mat4 lsm, vec3 fragPos, vec3 normal, vec3 toLight)
+// Normal Distribution Function (GGX)
+float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
-    float nDotL = dot(normal, toLight);
-    vec3 offsetPos = fragPos + normal * (shadowNormalOffset * (1.0 - nDotL));
-    vec4 fragPosLightSpace = lsm * vec4(offsetPos, 1.0);
-    vec3 proj = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    proj = proj * 0.5 + 0.5;
-    if (proj.z > 1.0) return 0.0;
+    float a = roughness * roughness;
+    float NdotH = max(dot(N,H), 0.0);
+    float NdotH2 = NdotH * NdotH;
 
-    float currentDepth = proj.z;
-    float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(map, 0);
+    float denom = NdotH2 * (a - 1.0) + 1.0;
+    denom = PI * denom * denom;
 
-    if (pcfEnabled == 0)
-    {
-        float closestDepth = texture(map, proj.xy).r;
-        return currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
-    }
-
-    // Sample a kernel and average the closest depth
-    // Percentage Closer Filtering
-    int halfKernel = pcfKernelSize / 2;
-    int sampleCount = 0;
-    for (int x = -halfKernel; x <= halfKernel; x++)
-    {
-        for (int y = -halfKernel; y <= halfKernel; y++)
-        {
-            float closestDepth = texture(map, proj.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - shadowBias > closestDepth ? 1.0 : 0.0;
-            sampleCount++;
-        }
-    }
-
-    return shadow / float(sampleCount);
+    return a / max(denom, 0.0001);
 }
+
+// Geometry Function Schlick-GGX
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = roughness + 1.0;
+    float k = (r * r) / 8.0;
+    return NdotV / (NdotV * (1.0 - k) + k);
+}
+
+// Smith's method, combines masking and shadowing
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
+}
+
+// Fresnel effect
+vec3 FresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 
 void main()
 {
     vec3 fragPos = texture(gPosition, fragUV).rgb;
-    vec3 normal  = texture(gNormal,   fragUV).rgb;
-    vec3 albedo  = texture(gAlbedo,   fragUV).rgb;
-    float shine  = texture(gAlbedo,   fragUV).a * 512.0;
+    vec3 N = normalize(texture(gNormal, fragUV).rgb);
+    float roughness = texture(gNormal, fragUV).a;
+    vec3 albedo = texture(gAlbedo, fragUV).rgb;
+    float metallic = texture(gAlbedo, fragUV).a;
 
-    vec3 viewDir = normalize(cameraPos - fragPos);
+    // view direction
+    vec3 V = normalize(cameraPos - fragPos);
 
-    // SSAO
+    // F0 = reflectance at normal incidence
+    // Dielectrics reflect about 4% gray, metals reflect their albedo color
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+
     vec2 screenUV = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
     float ao = ssaoEnabled ? texture(ssaoTexture, screenUV).r : 1.0;
 
-    vec3 result = ambientMultiplier * albedo * ao;
+    float isStatic = texture(gEmissive, fragUV).a;
+
+    // Ambient / GI
+    vec3 ambient;
+    if (giMode >= 1 && isStatic > 0.5) {
+        vec3 indirect = SampleProbeGrid(fragPos, N);
+        // Probes capture full irradiance including albedo of surrounding surfaces,
+        // but we still need to modulate by this surface's albedo
+        ambient = indirect * albedo * giIntensity * ao;
+    } else {
+        // Dynamic objects (or GI off) use flat ambient
+        ambient = ambientMultiplier * albedo * ao;
+    }
+
+    // Emission
+    vec3 Lo = texture(gEmissive, fragUV).rgb;
 
     for (int i = 0; i < lightCount; i++)
     {
-        vec3  lightDir_i;
+        vec3  L;
         float attenuation = 1.0;
         float spotEffect  = 1.0;
 
-        if (lightType[i] == LIGHT_DIRECTIONAL)
+        if (lights[i].type == LIGHT_DIRECTIONAL)
         {
-            lightDir_i  = normalize(-lightDir[i]);
-            attenuation = 1.0;
+            L = normalize(-lights[i].direction);
+        }
+        else if (lights[i].type == LIGHT_POINT)
+        {
+            L = normalize(lights[i].position - fragPos);
+            float dist = length(lights[i].position - fragPos);
+            attenuation = 1.0 / (dist * dist);  // inverse square
+            attenuation *= 1.0 - smoothstep(lights[i].radius * 0.75, lights[i].radius, dist);
         }
         else // SPOT
         {
-            lightDir_i = normalize(lightPos[i] - fragPos);
-            float dist = length(lightPos[i] - fragPos);
-            // Quadradic attenuation curve (inverse square)
-            // https://wiki.ogre3d.org/tiki-index.php?page=-Point+Light+Attenuation
-            attenuation = 1.0 / (1.0 + 0.09 * dist + 0.032 * dist * dist);
+            L = normalize(lights[i].position - fragPos);
+            float dist = length(lights[i].position - fragPos);
+            attenuation = 1.0 / (dist * dist);
 
-            float theta = dot(lightDir_i, normalize(-lightDir[i]));
-            float epsilon = innerCutoff[i] - outerCutoff[i];
-            spotEffect = clamp((theta - outerCutoff[i]) / epsilon, 0.0, 1.0);
+            float theta = dot(L, normalize(-lights[i].direction));
+            float epsilon = lights[i].innerCutoff - lights[i].outerCutoff;
+            spotEffect = clamp((theta - lights[i].outerCutoff) / epsilon, 0.0, 1.0);
         }
 
-        vec3  halfwayDir = normalize(lightDir_i + viewDir);
-        float lambert = max(dot(normal, lightDir_i), 0.0);
-        vec3  diffuse = lambert * lightColor[i] * lightIntensity[i] * albedo * attenuation * spotEffect;
+        vec3 H = normalize(V + L);
+        float NdotL = max(dot(N, L), 0.0);
 
-        float spec = pow(max(dot(normal, halfwayDir), 0.0), shine);
-        vec3  specular = spec * lightColor[i] * lightIntensity[i] * attenuation * spotEffect;
+        // Radiance arriving from this light
+        vec3 radiance = lights[i].color * lights[i].intensity * attenuation * spotEffect;
 
+        // Cook-Torrance specular
+        float D = DistributionGGX(N, H, roughness);
+        vec3  F = FresnelSchlick(max(dot(H, V), 0.0), F0);
+        float G = GeometrySmith(N, V, L, roughness);
+
+        float NdotV = max(dot(N, V), 0.001);
+        vec3 numerator = D * F * G;
+        float denominator = 4.0 * NdotV * NdotL + 0.0001;
+        vec3 specular = numerator / denominator;
+
+        // Diffuse
+        // kS = Fresnel = fraction of light that reflects
+        // kD = fraction that refracts
+        vec3 kS = F;
+        vec3 kD = (1.0 - kS) * (1.0 - metallic);
+
+        vec3 diffuse = kD * albedo / PI;
+
+        // Shadows
         float shadow = 0.0;
+        /*
         if (i < shadowLightCount)
         {
-            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, normal, lightDir_i);
+            if (lights[i].type == LIGHT_POINT)
+            shadow = SamplePointShadow(shadowCubeMap[i], fragPos, lights[i].position, lightFarPlane[i]);
+            else
+            shadow = SampleShadowMap(shadowMap[i], lightSpaceMatrix[i], fragPos, N, L);
         }
+        */
+        // Accumulate
+        Lo += (1.0 - shadow) * (diffuse + specular) * radiance * NdotL;
 
-        result += (1.0 - shadow) * (diffuse + specular);
     }
 
-    result = clamp(result, 0.0, 1.0);
-    screenColor = vec4(result, 1.0);
+    vec3 color = ambient + Lo;
+
+    // HDR tonemapping (Reinhard)
+    color = color / (color + vec3(1.0));
+    // Gamma correction
+    color = pow(color, vec3(1.0 / 2.2));
+
+    screenColor = vec4(color, 1.0);
 }

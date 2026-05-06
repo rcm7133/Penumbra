@@ -1,12 +1,24 @@
 #include "config.h"
-#include "mesh.h"
 #include "scene.h"
-#include "camera.h"
-#include "renderer.h"
-#include "profiler.h"
+#include "rendering/renderer.h"
+#include "utils/profiler.h"
+#include "rendering/effects/particles/particleSystem.h"
+#include "rendering/effects/particles/particleSystemManager.h"
+#include "utils/sceneLoader.h"
+#include "rendering/debug/colliderDebugRenderer.h"
+#include "physics/physicsSystem.h"
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
+#include "physics/rigidbodyComponent.h"
+#include "rendering/effects/lights/lightComponent.h"
+#include "rendering/mesh/meshComponent.h"
+#include "rendering/effects/water/interactiveWaterComponent.h"
+#include "physics/camera/characterControllerComponent.h"
+#include "physics/camera/camera.h"
+#include "rendering/effects/reflections/reflectionProbeComponent.h"
+#include "rendering/effects/clouds/cloudVolumeComponent.h"
+#include "rendering/effects/clouds/cloudVolume.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -16,10 +28,28 @@ float sensitivityY = 5.0f;
 bool firstMouse  = true;
 bool cursorEnabled = false;
 bool tabWasPressed = false;
+bool fWasPressed = false;
+bool tWasPressed = false;
+
+extern bool DEBUG_COLLIDERS;
+extern bool FREECAM_ENABLED;
+extern bool GUI_ENABLED;
+extern std::string CURRENT_SCENE;
+extern int GI_MODE;
+extern float GI_INTENSITY;
+extern bool DEBUG_PROBES;
+extern bool DEBUG_REFLECTION_PROBES;
+extern bool DEBUG_CLOUDS;
+
+Profiler profiler;
+ParticleSystemManager particleManager;
 
 std::shared_ptr<Scene> CreateScene();
-void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer);
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics, std::shared_ptr<CharacterControllerComponent> controller);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
+void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer, ParticleSystemManager& particleManager, PhysicsWorld& physics);
+void DebugColliders(std::shared_ptr<Scene> scene, ColliderDebugRenderer& debugRenderer, Camera& camera, glm::mat4& projection);
+void MovePlayerAndCamera(std::shared_ptr<Scene> scene, Camera& camera, GLFWwindow* window);
 
 int main()
 {
@@ -35,6 +65,10 @@ int main()
 
     lastMouseX = mode->width  / 2.0f;
     lastMouseY = mode->height / 2.0f;
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     window = glfwCreateWindow(mode->width, mode->height, "Penumbra", monitor, NULL);
     glfwMakeContextCurrent(window);
@@ -54,13 +88,13 @@ int main()
         100.0f
     );
 
-    Camera camera(glm::vec3(0.5, 1, 3));
-    camera.transform.rotation.y = 250.0f;
+    Camera camera(glm::vec3(0, 1, 0));
+	camera.yaw   = 0.0f;
+	camera.pitch = 0.0f;
     gCamera = &camera;
 
-    Profiler profiler;
 
-    // Lock cursor
+    // Lock cursor7
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, MouseCallback);
 
@@ -75,17 +109,62 @@ int main()
     glViewport(0, 0, w, h);
     glEnable(GL_DEPTH_TEST);
 
+	//--------------------------
     // Create renderer and scene
-    Renderer renderer(w, h, projection);
+	// -------------------------
+	std::shared_ptr<Scene> scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
+	Renderer renderer(w, h, projection, scene, camera, profiler);
 
-    std::shared_ptr<Scene> scene = CreateScene();
-    renderer.AssignDefaultShader(scene);
-    scene->Start();
+    renderer.AssignDefaultShader();
+	scene->Start();
+	scene->LoadSkybox("../assets/textures/skybox");
+	scene->probeGrid.Load();
+	scene->SetMainLight("Sun");
+
+	// Generate cloud noise for any cloud volumes in the scene
+	for (auto& obj : scene->objects) {
+		auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (!cc) continue;
+		if (cc->volume->noiseTex == 0)
+			cc->volume->GenerateNoise();
+		cc->viewer.Init(cc->volume->noiseGenerator.resolution);
+	}
+
+	if (!scene->probeGrid.probes.empty()) {
+		bool anyBaked = false;
+		for (auto& p : scene->probeGrid.probes)
+			if (p.baked) { anyBaked = true; break; }
+		if (anyBaked)
+			renderer.UploadProbeData(scene->probeGrid);
+	}
+
     renderer.InitShadowMaps(scene);
+	// Create collider debug renderer
+	ColliderDebugRenderer debugRenderer;
+	debugRenderer.Init();
+
+	// Physics System
+	PhysicsWorld physics;
+	physics.Init();
+	physics.RegisterScene(scene);
+
+	// Create Player
+	auto playerObj = std::make_shared<GameObject>("Player");
+	playerObj->transform.position = glm::vec3(0, 0.56f, 0); // spawn position
+	auto controller = playerObj->AddComponent<CharacterControllerComponent>();
+	controller->Init(physics);
+	controller->moveSpeed = 1.5f;
+	playerObj->runtimeOnly = true;
+	scene->Add(playerObj);
+
+	renderer.BakeReflectionProbes();
 
     double lastTime = glfwGetTime();
     int frameCount = 0;
     float lastFrame = 0.0f;
+
+	std::string title = "Penumbra";
+	glfwSetWindowTitle(window, title.c_str());
 
     while (!glfwWindowShouldClose(window))
     {
@@ -97,14 +176,32 @@ int main()
 
         if (currentTime - lastTime >= 1.0)
         {
-            std::string title = "Penumbra | FPS: " + std::to_string(frameCount);
-            glfwSetWindowTitle(window, title.c_str());
             frameCount = 0;
             lastTime   = currentTime;
         }
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
+
+    	bool fPressed = glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
+
+    	if (fPressed && !fWasPressed) {
+    		FREECAM_ENABLED = !FREECAM_ENABLED;
+    	}
+    	fWasPressed = fPressed;
+
+    	bool tPressed = glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS;
+
+    	if (tPressed && !tWasPressed) {
+    		GUI_ENABLED = !GUI_ENABLED;
+    	}
+    	tWasPressed = tPressed;
+
+    	static bool gWasPressed = false;
+    	bool gPressed = glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS;
+    	if (gPressed && !gWasPressed)
+    		GI_MODE = (GI_MODE + 1) % 3;
+    	gWasPressed = gPressed;
 
         bool tabPressed = glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS;
         if (tabPressed && !tabWasPressed)
@@ -120,29 +217,219 @@ int main()
         }
         tabWasPressed = tabPressed;
 
-        if (!cursorEnabled)
-            camera.ProcessKeyboard(window, deltaTime);
+    	if (!cursorEnabled)
+    	{
+    		if (FREECAM_ENABLED)
+    		{
+    			camera.ProcessKeyboard(window, deltaTime);
+    		}
+    		else
+    		{
+    			glm::vec3 forward = camera.transform.Forward();
+    			glm::vec3 right   = camera.transform.Right();
+    			forward.y = 0.0f;
+    			right.y   = 0.0f;
+    			if (glm::length(forward) > 0.001f) forward = glm::normalize(forward);
+    			if (glm::length(right)   > 0.001f) right   = glm::normalize(right);
+
+    			glm::vec3 moveDir(0.0f);
+    			if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir += forward;
+    			if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= forward;
+    			if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= right;
+    			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += right;
+    			if (glm::length(moveDir) > 0.001f) moveDir = glm::normalize(moveDir);
+
+    			bool jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+    			controller->SetMoveInput(moveDir, jump);
+    		}
+    	}
 
         glfwPollEvents();
+    	// Update scene
         scene->Update(deltaTime);
+    	physics.Update(deltaTime);
+    	physics.SyncTransforms(scene);
 
-        renderer.RenderFrame(camera, scene, profiler);
+    	if (!FREECAM_ENABLED)
+    	{
+    		camera.transform.position = playerObj->transform.position
+									  + glm::vec3(0, controller->eyeHeight, 0);
+    	}
 
-        GUI(scene, deltaTime, profiler, renderer);
+		// Render
+        renderer.RenderFrame(deltaTime);
+    	if (DEBUG_COLLIDERS && GUI_ENABLED) {
+    		DebugColliders(scene, debugRenderer, camera, projection);
+    	}
+
+    	if (DEBUG_CLOUDS && GUI_ENABLED) {
+    		for (auto& obj : scene->objects) {
+    			if (!obj->enabled) continue;
+    			auto cc = obj->GetComponent<CloudVolumeComponent>();
+    			if (!cc) continue;
+    			glm::vec3 center = (cc->volume->min + cc->volume->max) * 0.5f + obj->transform.position;
+    			glm::vec3 half   = (cc->volume->max - cc->volume->min) * 0.5f;
+    			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(0.8f, 0.9f, 1.0f));
+    		}
+    		debugRenderer.Render(camera.GetViewMatrix(), projection);
+    	}
+
+    	if (DEBUG_REFLECTION_PROBES && GUI_ENABLED) {
+    		for (auto& obj : scene->objects) {
+    			if (!obj->enabled) continue;
+    			auto rp = obj->GetComponent<ReflectionProbeComponent>();
+    			if (!rp) continue;
+
+    			glm::vec3 probePos = obj->transform.position;
+    			glm::vec3 worldMin = rp->probe->boundsMin + probePos;
+    			glm::vec3 worldMax = rp->probe->boundsMax + probePos;
+    			glm::vec3 boundsCenter = (worldMin + worldMax) * 0.5f;
+    			glm::vec3 boundsHalf   = (worldMax - worldMin) * 0.5f;
+
+    			// Origin sphere
+    			glm::vec3 sphereColor = rp->probe->baked ? glm::vec3(0.0f, 1.0f, 0.2f)
+														  : glm::vec3(1.0f, 0.1f, 0.1f);
+    			debugRenderer.AddSphere(probePos, 0.12f, sphereColor);
+
+    			// Bounds box
+    			debugRenderer.AddBox(boundsCenter, glm::quat(1, 0, 0, 0), boundsHalf,
+									 glm::vec3(0.0f, 0.8f, 1.0f));
+    		}
+    		debugRenderer.Render(camera.GetViewMatrix(), projection);
+    	}
+
+
+    	if (GI_MODE >= 1 && DEBUG_PROBES && GUI_ENABLED) {
+    		auto& grid = scene->probeGrid;
+
+    		// Draw the bounding box
+    		glm::vec3 center = (grid.boundsMin + grid.boundsMax) * 0.5f;
+    		glm::vec3 half = (grid.boundsMax - grid.boundsMin) * 0.5f;
+    		debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1, 1, 0));
+
+    		// Draw grid cell wireframes
+    		glm::vec3 cellSize = (grid.boundsMax - grid.boundsMin) /
+				glm::vec3(glm::max(grid.countX - 1, 1),
+						  glm::max(grid.countY - 1, 1),
+						  glm::max(grid.countZ - 1, 1));
+
+    		glm::vec3 cellHalf = cellSize * 0.5f;
+
+    		for (int z = 0; z < grid.countZ - 1; z++) {
+    			for (int y = 0; y < grid.countY - 1; y++) {
+    				for (int x = 0; x < grid.countX - 1; x++) {
+    					glm::vec3 cellMin = grid.boundsMin + glm::vec3(x, y, z) * cellSize;
+    					glm::vec3 cellCenter = cellMin + cellHalf;
+    					debugRenderer.AddBox(cellCenter, glm::quat(1, 0, 0, 0), cellHalf,
+											 glm::vec3(0.3f, 0.3f, 0.15f));
+    				}
+    			}
+    		}
+
+    		// Draw probes as spheres
+    		for (const auto& probe : grid.probes) {
+    			glm::vec3 color = probe.baked ? glm::vec3(0, 1, 0.5) : glm::vec3(0.5, 0.5, 0.5);
+    			debugRenderer.AddSphere(probe.position, 0.08f, color);
+    		}
+    	}
+
+    	if (GUI_ENABLED)
+			GUI(scene, deltaTime, profiler, renderer, physics, controller);
         glfwSwapBuffers(window);
     }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
+	physics.Shutdown();
     glfwTerminate();
 
     return 0;
 }
 
-void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer)
+void MovePlayerAndCamera(std::shared_ptr<Scene> scene, Camera& camera, GLFWwindow* window) {
+	auto playerObj  = scene->GetObject("Player");
+	auto controller = playerObj->GetComponent<CharacterControllerComponent>();
+
+	if (!cursorEnabled && controller) {
+		// Build world-space move direction from camera facing
+		glm::vec3 forward = camera.transform.Forward();
+		glm::vec3 right   = camera.transform.Right();
+		forward.y = 0;  right.y = 0;  // flatten to XZ
+		if (glm::length(forward) > 0) forward = glm::normalize(forward);
+		if (glm::length(right)   > 0) right   = glm::normalize(right);
+
+		glm::vec3 moveDir(0);
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) moveDir += forward;
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) moveDir -= forward;
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) moveDir -= right;
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) moveDir += right;
+		if (glm::length(moveDir) > 0) moveDir = glm::normalize(moveDir);
+
+		bool jump = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+		controller->SetMoveInput(moveDir, jump);
+	}
+
+	// After scene->Update() and physics.Update(), snap camera to player eye position:
+	if (playerObj) {
+		auto ctrl = playerObj->GetComponent<CharacterControllerComponent>();
+		camera.transform.position = playerObj->transform.position
+								  + glm::vec3(0, ctrl->eyeHeight, 0);
+	}
+}
+
+void DebugColliders(std::shared_ptr<Scene> scene, ColliderDebugRenderer& debugRenderer, Camera& camera, glm::mat4& projection) {
+	glm::vec3 green(0, 1, 0);
+	glm::vec3 blue(0, 0.5, 1);
+	for (const auto& obj : scene->objects)
+	{
+		auto rb = obj->GetComponent<RigidBodyComponent>();
+		if (rb) {
+			auto& t = obj->transform;
+			switch (rb->body->shapeType)
+			{
+				case RigidBody::Box:
+					debugRenderer.AddBox(t.position, t.rotation, rb->body->halfExtent, green);
+					break;
+				case RigidBody::Sphere:
+					debugRenderer.AddSphere(t.position, rb->body->radius, green);
+					break;
+				case RigidBody::Capsule:
+					debugRenderer.AddCapsule(t.position, t.rotation, rb->body->capsuleHalfHeight, rb->body->radius, green);
+					break;
+			}
+		}
+
+		auto fv = obj->GetComponent<FogVolumeComponent>();
+		if (fv) {
+			glm::vec3 offset = obj->transform.position;
+			glm::vec3 center = (fv->volume->boundsMin + fv->volume->boundsMax) * 0.5f + offset;
+			glm::vec3 half   = (fv->volume->boundsMax - fv->volume->boundsMin) * 0.5f;
+			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, blue);
+		}
+
+		auto ps = obj->GetComponent<ParticleSystemComponent>();
+		if (ps) {
+			glm::vec3 offset = obj->transform.position;
+			glm::vec3 center = (ps->system->boundsMin + ps->system->boundsMax) * 0.5f + offset;
+			glm::vec3 half   = (ps->system->boundsMax - ps->system->boundsMin) * 0.5f;
+			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(1.0f, 0.5f, 0.0f));
+		}
+
+		auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (cc) {
+			glm::vec3 center = (cc->volume->min + cc->volume->max) * 0.5f + obj->transform.position;
+			glm::vec3 half   = (cc->volume->max - cc->volume->min) * 0.5f;
+			debugRenderer.AddBox(center, glm::quat(1, 0, 0, 0), half, glm::vec3(0.8f, 0.9f, 1.0f));
+		}
+	}
+	debugRenderer.Render(camera.GetViewMatrix(), projection);
+}
+
+void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Renderer& renderer, PhysicsWorld& physics, std::shared_ptr<CharacterControllerComponent> controller)
 {
+	static std::vector<std::shared_ptr<GameObject>> deleteQueue;
+
     // Start ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -158,16 +445,80 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     // Graphics Settings
     ImGui::Begin("Graphics Settings");
-    ImGui::Checkbox("Volumetric Fog", &FOG_ENABLED);
-    if (FOG_ENABLED) {
-	ImGui::SliderFloat("Density", &FOG_DENSITY, 0.0f, 2.0f);
-	ImGui::SliderInt("Steps", &FOG_STEPS, 4, 64);
-	ImGui::SliderFloat("Scale", &FOG_SCALE, 0.01f, 2.0f);
-	ImGui::SliderFloat("Scroll Speed", &FOG_SCROLL_SPEED, 0.01f, 2.0f);
-	ImGui::SliderInt("Fog Blur", &FOG_BLUR_KERNEL_SIZE, 1, 9);
-	if (FOG_BLUR_KERNEL_SIZE % 2 == 0) FOG_BLUR_KERNEL_SIZE++;
-    }
 
+	ImGui::Begin("Scene Settings");
+
+	ImGui::SliderFloat("Ambient Light", &AMBIENT_MULTIPLIER, 0.0f, 1.0f);
+
+	if (scene->skybox) {
+		ImGui::Checkbox("Skybox", &SKYBOX_ENABLED);
+	}
+
+	if (GI_MODE >= 1) {
+		ImGui::Checkbox("Debug Probe Grid", &DEBUG_PROBES);
+		ImGui::SliderFloat("GI Intensity", &GI_INTENSITY, 0.0f, 3.0f);
+		ImGui::Separator();
+		ImGui::Text("Probe Grid");
+
+		auto& grid = scene->probeGrid;
+
+		bool gridChanged = false;
+		gridChanged |= ImGui::DragFloat3("Grid Min", &grid.boundsMin.x, 0.1f);
+		gridChanged |= ImGui::DragFloat3("Grid Max", &grid.boundsMax.x, 0.1f);
+		gridChanged |= ImGui::DragInt("Probes X", &grid.countX, 1, 2, 32);
+		gridChanged |= ImGui::DragInt("Probes Y", &grid.countY, 1, 2, 16);
+		gridChanged |= ImGui::DragInt("Probes Z", &grid.countZ, 1, 2, 32);
+
+		if (gridChanged)
+			grid.Init();
+
+		ImGui::Text("Total probes: %d", grid.TotalProbes());
+
+		int bakedCount = 0;
+		for (auto& p : grid.probes)
+			if (p.baked) bakedCount++;
+		ImGui::Text("Baked: %d / %d", bakedCount, grid.TotalProbes());
+
+		if (GI_MODE == 1) {
+			if (ImGui::Button("Bake (Rasterized)"))
+				renderer.BakeLightProbes();
+		} else if (GI_MODE == 2) {
+			ImGui::DragInt("Bounces", &PATH_TRACING_GI_BOUNCES, 1, 1, 5);
+			ImGui::DragInt("Samples", &PATH_TRACING_GI_SAMPLES, 1, 1, 32);
+			ImGui::DragInt("Face Size", &PATH_TRACING_GI_FACE_SIZE, 1, 1, 64);
+			if (ImGui::Button("Bake (Path Traced)"))
+				renderer.BakeLightProbes();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear Bake")) {
+			grid.Init();
+			renderer.ClearProbes();
+		}
+	}
+
+	ImGui::End();
+
+
+
+	ImGui::Checkbox("Volumetric Fog", &FOG_ENABLED);
+	if (FOG_ENABLED) {
+		ImGui::SliderInt("Steps", &FOG_STEPS, 4, 64);
+		ImGui::SliderInt("Fog Blur", &FOG_BLUR_KERNEL_SIZE, 1, 9);
+		if (FOG_BLUR_KERNEL_SIZE % 2 == 0) FOG_BLUR_KERNEL_SIZE++;
+	}
+	/*
+	ImGui::Checkbox("Volumetric Clouds", &CLOUD_ENABLED);
+	if (CLOUD_ENABLED) {
+		ImGui::SliderInt("Cloud Steps", &CLOUD_RAYMARCH_STEPS, 4, 128);
+		ImGui::SliderInt("Cloud Resolution Scale", &CLOUD_RESOLUTION_SCALE, 1, 4);
+		ImGui::SliderFloat("Cloud Absorption", &CLOUD_ABSORPTION, 0.1f, 20.0f);
+		ImGui::Separator();
+		ImGui::Text("Cloud Lighting");
+		ImGui::SliderInt("Lighting Steps", &CLOUD_RAYMARCH_LIGHTING_STEPS, 4, 64);
+		ImGui::SliderFloat("Lighting Ray Depth", &CLOUD_RAYMARCH_LIGHTING_RAY_DEPTH, 1.0f, 128.0f);
+		ImGui::SliderInt("Lighting Update Interval", &CLOUD_LIGHTING_UPDATE_INTERVAL, 1, 16);
+	}
+	*/
 	ImGui::Checkbox("SSAO", &SSAO_ENABLED);
 	if (SSAO_ENABLED) {
 		ImGui::SliderFloat("SSAO Radius", &SSAO_RADIUS, 0.1f, 2.0f);
@@ -175,138 +526,546 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::SliderInt("SSAO Samples", &SSAO_KERNEL_SIZE, 8, 64);
 	}
 
-	ImGui::Checkbox("FXAA", &FXAA_ENABLED);
+	ImGui::Checkbox("SSR", &SSR_ENABLED);
+	ImGui::SliderInt("SSR Steps", &SSR_RAYMARCH_STEPS, 1, 64);
+	ImGui::SliderFloat("SSR Max Step Size", &SSR_MAX_STEP_SIZE, 0.01f, 0.5f);
+	ImGui::SliderFloat("SSR Min Step Size", &SSR_MIN_STEP_SIZE, 0.001f, 0.05f);
 
+	ImGui::Checkbox("FXAA", &FXAA_ENABLED);
+	/*
     ImGui::Checkbox("PCF shadows", &PCF_ENABLED);
     if (PCF_ENABLED)
         ImGui::SliderInt("PCF Kernel Size", &PCF_KERNEL_SIZE, 1, 9);
+	*/
+	ImGui::SliderFloat("Point Shadow Far Plane", &POINT_SHADOW_FAR_PLANE, 1.0f, 3000.0f);
 
     ImGui::End();
 
-
-	ImGui::Begin("Buffer Preview");
-	{
-    	static int selected = -1;
-    	const char* buffers[] = {
-    		"Position", "Normals", "Diffuse",
-			"SSAO", "SSAO Blurred",
-			"Lighting",
-			"Shadow Map 0", "Shadow Map 1", "Shadow Map 2",
-			"Fog"
+	ImGui::Begin("Debug");
+	ImGui::Separator();
+	ImGui::Checkbox("Debug Texture", &RENDER_DEBUG_TEXTURE);
+	if (RENDER_DEBUG_TEXTURE) {
+		const char* names[] = {
+			"gPosition",
+			"gNormal",
+			"gAlbedo",
+			"gEmissive",
+			"Roughness (gNormal.a)",
+			"Metallic (gAlbedo.a)",
+			"Lit",
+			"Fog",
+			"SSAO",
+			"SSAO Blur",
+			"FXAA",
+			"SSR",
+			"SSR Composite",
+			"Cloud",
+			"Cloud Composite",
 		};
-    	ImGui::Combo("Buffer", &selected, buffers, IM_ARRAYSIZE(buffers));
-
-    	if (selected >= 0)
-    	{
-    		unsigned int tex = renderer.GetDebugTexture(selected, scene);
-    		if (tex != 0)
-    		{
-    			float previewWidth = ImGui::GetContentRegionAvail().x;
-    			float aspect = 9.0f / 16.0f;
-    			ImVec2 size(previewWidth, previewWidth * aspect);
-    			// Flip Y since OpenGL textures are bottom-up
-    			ImVec2 pos = ImGui::GetCursorScreenPos();
-    			ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(0, 0, 0, 255));
-    			ImGui::Image((ImTextureID)(intptr_t)tex, size, ImVec2(0, 1), ImVec2(1, 0));
-    		}
-    		else
-    		{
-    			ImGui::TextDisabled("Buffer not available");
-    		}
-    	}
+		ImGui::Combo("Texture", &DEBUG_TEXTURE_INDEX, names, IM_ARRAYSIZE(names));
 	}
+	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
+	ImGui::SliderFloat("Move Speed", &controller->moveSpeed, 0.1f, 5.0f);
+	ImGui::Checkbox("Free Cam", &FREECAM_ENABLED);
+	if (FREECAM_ENABLED)
+		ImGui::SliderFloat("Camera Speed", &CAMERA_SPEED, 0.1f, 10.0f);
 	ImGui::End();
 
     // Scene editor
     ImGui::Begin("Scene");
-    ImGuiIO& io = ImGui::GetIO();
-    for (std::shared_ptr<GameObject> obj : scene->objects) {
-        ImGui::Checkbox(obj->name.c_str(), &obj->enabled);
+	if (ImGui::Button("Save Scene"))
+		SceneLoader::Save(scene, "../assets/scenes/" + CURRENT_SCENE);
+	ImGui::SameLine();
+	if (ImGui::Button("Reload Scene"))
+		ReloadScene(scene, renderer, particleManager, physics);
+	ImGui::SameLine();
+	if (ImGui::Button("Add Empty GameObject")) {
+		auto obj = std::make_shared<GameObject>("New GameObject");
+		scene->Add(obj);
+	}
+	ImGui::Separator();
+
+	// Prefab spawner
+	ImGui::Separator();
+	static std::vector<std::string> prefabList = SceneLoader::ListPrefabs();
+	if (ImGui::Button("Refresh"))
+		prefabList = SceneLoader::ListPrefabs();
+	ImGui::SameLine();
+	static int selectedPrefab = -1;
+	std::vector<std::string> prefabNames;
+	for (const auto& p : prefabList)
+		prefabNames.push_back(std::filesystem::path(p).stem().string());
+
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
+	if (ImGui::BeginCombo("##Prefabs", selectedPrefab >= 0 ? prefabNames[selectedPrefab].c_str() : "Add Prefab...")) {
+		for (int i = 0; i < (int)prefabNames.size(); i++) {
+			if (ImGui::Selectable(prefabNames[i].c_str(), selectedPrefab == i))
+				selectedPrefab = i;
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Add") && selectedPrefab >= 0 && selectedPrefab < (int)prefabList.size()) {
+		auto obj = SceneLoader::LoadPrefab(prefabList[selectedPrefab], particleManager);
+		if (obj) {
+			scene->Add(obj);
+			renderer.AssignDefaultShader();
+			renderer.InitShadowMaps(scene);
+		}
+	}
+	ImGui::Separator();
+
+    for (int i = 0; i < (int)scene->objects.size(); i++) {
+        auto& obj = scene->objects[i];
+        ImGui::PushID(i);
+
+    if (ImGui::CollapsingHeader(obj->name.c_str())) {
+        ImGui::Checkbox("Enabled", &obj->enabled);
+    	ImGui::Checkbox("Is Static", &obj->isStatic);
+
+    	// Add Component
+    	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume",
+    		"Interactive Water", "Reflection Probe", "Cloud Component"
+    	};
+    	static int selectedComponent = -1;
+    	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
+    	if (ImGui::BeginCombo("##AddComponent", "Add Component...")) {
+    		for (int c = 0; c < IM_ARRAYSIZE(componentTypes); c++) {
+    			if (ImGui::Selectable(componentTypes[c])) {
+    				selectedComponent = c;
+    			}
+    		}
+    		ImGui::EndCombo();
+    	}
+
+    	if (selectedComponent >= 0) {
+    		switch (selectedComponent) {
+    			case 0: // Model
+    				if (!obj->GetComponent<MeshComponent>()) {
+    					auto model = std::make_shared<Model>();
+    					model->Load("../assets/models/plane.glb");
+    					obj->AddComponent<MeshComponent>(model);
+    				}
+    				break;
+    			case 1: // Light
+    				if (!obj->GetComponent<LightComponent>())
+    					obj->AddComponent<LightComponent>();
+    				break;
+    			case 2: // Particle System
+    				if (!obj->GetComponent<ParticleSystemComponent>()) {
+    					auto comp = obj->AddComponent<ParticleSystemComponent>(10000, true);
+    					particleManager.Register(comp->system);
+    				}
+    				break;
+    			case 3: // Rigid Body
+    				if (!obj->GetComponent<RigidBodyComponent>())
+    					obj->AddComponent<RigidBodyComponent>();
+    				break;
+    			case 4: // Fog Volume
+    				if (!obj->GetComponent<FogVolumeComponent>())
+    					obj->AddComponent<FogVolumeComponent>();
+    				break;
+    			case 5: // Interactive Water
+    				if (!obj->GetComponent<InteractiveWaterComponent>())
+    					obj->AddComponent<InteractiveWaterComponent>();
+    				break;
+    				/*
+    			case 6: // Reflection Probe
+    				if (!obj->GetComponent<ReflectionProbeComponent>())
+    					obj->AddComponent<ReflectionProbeComponent>();
+    				break;
+    				*/
+    				/*
+    			case 7: // Cloud Component
+    				if (!obj->GetComponent<CloudVolumeComponent>())
+    					obj->AddComponent<CloudVolumeComponent>();
+    				break;
+    				*/
+    		}
+    		selectedComponent = -1;
+    	}
+
+    	static int editingIndex = -1;
+    	static char renameBuffer[128];
+    	if (editingIndex != i) {
+    		ImGui::Text("Name: %s", obj->name.c_str());
+    		ImGui::SameLine();
+    		if (ImGui::Button("Rename")) {
+    			editingIndex = i;
+    			strncpy(renameBuffer, obj->name.c_str(), sizeof(renameBuffer) - 1);
+    			renameBuffer[sizeof(renameBuffer) - 1] = '\0';
+    		}
+    	} else {
+    		ImGui::SetNextItemWidth(200);
+    		ImGui::InputText("Name", renameBuffer, sizeof(renameBuffer));
+    		ImGui::SameLine();
+    		if (ImGui::Button("Apply")) {
+    			obj->name = renameBuffer;
+    			editingIndex = -1;
+    		}
+    		ImGui::SameLine();
+    		if (ImGui::Button("Cancel"))
+    			editingIndex = -1;
+    	}
+
+    	// Save as prefab
+    	if (ImGui::Button("Save as Prefab")) {
+    		SceneLoader::SavePrefab(obj);
+    		prefabList = SceneLoader::ListPrefabs();
+    	}
+
+    	ImGui::SameLine();
+    	if (ImGui::Button("Delete"))
+    		deleteQueue.push_back(obj);
+
+        // Transform (always present)
+    	if (ImGui::TreeNode("Transform")) {
+    		ImGui::DragFloat3("Position", &obj->transform.position.x, 0.01f);
+
+    		glm::vec3 euler = obj->transform.GetEulerDegrees();
+    		if (ImGui::DragFloat3("Rotation", &euler.x, 0.1f))
+    			obj->transform.SetEulerDegrees(euler);
+
+    		ImGui::DragFloat3("Scale", &obj->transform.scale.x, 0.01f);
+    		ImGui::TreePop();
+    	}
+
+    	auto mc = obj->GetComponent<MeshComponent>();
+		if (mc && mc->model) {
+		    if (ImGui::TreeNode("Model")) {
+		        static char modelPathBuf[256];
+		        static int editingModelIndex = -1;
+
+		        if (editingModelIndex != i) {
+		            ImGui::Text("Path: %s", mc->model->sourcePath.c_str());
+		            ImGui::Text("Sub-meshes: %d", (int)mc->model->subMeshes.size());
+		            ImGui::Text("Materials: %d", (int)mc->model->materials.size());
+
+		            if (ImGui::Button("Change Model")) {
+		                editingModelIndex = i;
+		                strncpy(modelPathBuf, mc->model->sourcePath.c_str(), sizeof(modelPathBuf) - 1);
+		                modelPathBuf[sizeof(modelPathBuf) - 1] = '\0';
+		            }
+		        } else {
+		            ImGui::InputText("Model Path", modelPathBuf, sizeof(modelPathBuf));
+		            if (ImGui::Button("Load")) {
+		                auto newModel = std::make_shared<Model>();
+		                if (newModel->Load(std::string(modelPathBuf))) {
+		                    mc->model = newModel;
+		                    renderer.AssignDefaultShader();
+		                    renderer.InitShadowMaps(scene);
+		                }
+		                editingModelIndex = -1;
+		            }
+		            ImGui::SameLine();
+		            if (ImGui::Button("Cancel"))
+		                editingModelIndex = -1;
+		        }
+
+		    	if (mc->model->materials.empty()) {
+		    		if (ImGui::Button("Add Material")) {
+		    			mc->model->materials.push_back(Model::DefaultMaterial());
+		    			for (auto& sm : mc->model->subMeshes)
+		    				if (sm.materialIndex < 0)
+		    					sm.materialIndex = 0;
+		    		}
+		    	} else {
+		    		if (ImGui::Button("Add Material")) {
+		    			mc->model->materials.push_back(Model::DefaultMaterial());
+		    		}
+		    	}
+
+		        for (int m = 0; m < (int)mc->model->materials.size(); m++) {
+		            auto& mat = mc->model->materials[m];
+		            ImGui::PushID(m);
+		            std::string label = "Material " + std::to_string(m);
+		            if (ImGui::TreeNode(label.c_str())) {
+		                // Texture path editing
+		                static char albedoBuf[256];
+		                static char normalBuf[256];
+		                static char heightBuf[256];
+		                static char mrBuf[256];
+		                static int editingTexMat = -1;
+		                int texEditId = i * 1000 + m;
+
+		                if (editingTexMat != texEditId) {
+		                    ImGui::Text("Albedo: %s", mat.texturePath.empty() ? "None" : mat.texturePath.c_str());
+		                    ImGui::Text("Normal: %s", mat.hasNormalMap ? mat.normalMapPath.c_str() : "None");
+		                    ImGui::Text("Height: %s", mat.hasHeightMap ? mat.heightMapPath.c_str() : "None");
+		                    ImGui::Text("Met/Rough: %s", mat.hasMetallicRoughnessMap
+		                        ? mat.metallicRoughnessMapPath.c_str() : "None");
+
+		                    if (ImGui::Button("Edit Textures")) {
+		                        editingTexMat = texEditId;
+		                        strncpy(albedoBuf, mat.texturePath.c_str(), sizeof(albedoBuf) - 1);
+		                        strncpy(normalBuf, mat.hasNormalMap ? mat.normalMapPath.c_str() : "", sizeof(normalBuf) - 1);
+		                        strncpy(heightBuf, mat.hasHeightMap ? mat.heightMapPath.c_str() : "", sizeof(heightBuf) - 1);
+		                        strncpy(mrBuf, mat.hasMetallicRoughnessMap ? mat.metallicRoughnessMapPath.c_str() : "", sizeof(mrBuf) - 1);
+		                    }
+		                } else {
+		                    ImGui::InputText("Albedo", albedoBuf, sizeof(albedoBuf));
+		                    ImGui::InputText("Normal Map", normalBuf, sizeof(normalBuf));
+		                    ImGui::InputText("Height Map", heightBuf, sizeof(heightBuf));
+		                    ImGui::InputText("Met/Rough Map", mrBuf, sizeof(mrBuf));
+
+		                    if (ImGui::Button("Apply Textures")) {
+		                        mc->model->ApplyTexturePaths(m,
+		                            std::string(albedoBuf),
+		                            std::string(normalBuf),
+		                            std::string(heightBuf),
+		                            std::string(mrBuf));
+		                        editingTexMat = -1;
+		                    }
+		                    ImGui::SameLine();
+		                    if (ImGui::Button("Cancel##tex"))
+		                        editingTexMat = -1;
+		                }
+
+		                ImGui::Separator();
+		                ImGui::DragFloat("Roughness", &mat.roughness, 0.01f, 0.05f, 1.0f);
+		                ImGui::DragFloat("Metallic",  &mat.metallic,  0.01f, 0.0f, 1.0f);
+		            	ImGui::Text("Emissive");
+		            	ImGui::ColorEdit3("Emissive Color", &mat.emissiveColor.x);
+		            	ImGui::DragFloat("Emissive Intensity", &mat.emissiveIntensity, 0.05f, 0.0f, 50.0f);
+		                if (mat.hasHeightMap)
+		                    ImGui::DragFloat("Height Scale", &mat.heightScale, 0.005f, 0.0f, 0.3f);
+
+		                ImGui::TreePop();
+		            }
+		            ImGui::PopID();
+		        }
+
+		        ImGui::TreePop();
+		    }
+		}
+        // Light
+    	auto lc = obj->GetComponent<LightComponent>();
+    	if (lc) {
+    		if (ImGui::TreeNode("Light")) {
+    			ImGui::ColorEdit3("Color", &lc->light->color.x);
+    			ImGui::DragFloat("Intensity", &lc->light->intensity, 0.01f, 0.0f, 10.0f);
+    			ImGui::DragFloat3("Direction", &lc->light->direction.x, 0.01f);
+    			ImGui::Checkbox("Casts Shadow", &lc->light->castsShadow);
+
+    			const char* types[] = { "Directional", "Spot", "Point" };
+    			int current = static_cast<int>(lc->light->type);
+    			if (ImGui::Combo("Type", &current, types, IM_ARRAYSIZE(types)))
+    				lc->light->type = static_cast<LightType>(current);
+
+    			if (lc->light->type == LightType::Spot) {
+    				float innerDeg = glm::degrees(glm::acos(lc->light->innerCutoff));
+    				float outerDeg = glm::degrees(glm::acos(lc->light->outerCutoff));
+    				if (ImGui::DragFloat("Inner Cutoff", &innerDeg, 0.1f, 0.0f, 90.0f))
+    					lc->light->innerCutoff = glm::cos(glm::radians(innerDeg));
+    				if (ImGui::DragFloat("Outer Cutoff", &outerDeg, 0.1f, 0.0f, 90.0f))
+    					lc->light->outerCutoff = glm::cos(glm::radians(outerDeg));
+    			}
+    			if (lc->light->type == LightType::Point) {
+    				ImGui::DragFloat("Radius", &lc->light->radius, 0.1f, 0.1f, 100.0f);
+    			}
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto ps = obj->GetComponent<ParticleSystemComponent>();
+        // Particle System
+        if (ps) {
+            if (ImGui::TreeNode("Particle System")) {
+                ImGui::DragFloat3("Bounds Min", &ps->system->boundsMin.x, 0.1f);
+                ImGui::DragFloat3("Bounds Max", &ps->system->boundsMax.x, 0.1f);
+                ImGui::ColorEdit4("Start Color", &ps->system->startColor.x);
+                ImGui::ColorEdit4("End Color", &ps->system->endColor.x);
+                ImGui::DragFloat("Speed", &ps->system->speed, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Min Size", &ps->system->minSize, 0.01f, 0.001f, 50.0f);
+                ImGui::DragFloat("Max Size", &ps->system->maxSize, 0.01f, 0.001f, 50.0f);
+                ImGui::DragFloat("Min Lifetime", &ps->system->minLifetime, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Max Lifetime", &ps->system->maxLifetime, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Fade In Time", &ps->system->fadeInTime, 0.1f, 0.0f, 10.0f);
+                ImGui::Text("Particles: %d", ps->system->GetCount());
+                ImGui::TreePop();
+            }
+        }
+
+    	auto fv = obj->GetComponent<FogVolumeComponent>();
+    	if (fv) {
+    		if (ImGui::TreeNode("Fog Volume##component")) {
+    			ImGui::DragFloat3("Bounds Min", &fv->volume->boundsMin.x, 0.1f);
+    			ImGui::DragFloat3("Bounds Max", &fv->volume->boundsMax.x, 0.1f);
+    			ImGui::DragFloat("Density", &fv->volume->density, 0.01f, 0.0f, 2.0f);
+    			ImGui::DragFloat("Scale", &fv->volume->scale, 0.01f, 0.01f, 2.0f);
+    			ImGui::DragFloat("Scroll Speed", &fv->volume->scrollSpeed, 0.01f, 0.0f, 2.0f);
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto rb = obj->GetComponent<RigidBodyComponent>();
+    	if (rb) {
+    		if (ImGui::TreeNode("Rigid Body")) {
+    			const char* motions[] = { "Static", "Dynamic", "Kinematic" };
+    			int curMotion = static_cast<int>(rb->body->motion);
+    			if (ImGui::Combo("Motion", &curMotion, motions, IM_ARRAYSIZE(motions)))
+    				rb->body->motion = static_cast<BodyMotion>(curMotion);
+
+    			const char* shapes[] = { "Box", "Sphere", "Mesh", "Capsule" };
+    			int curShape = static_cast<int>(rb->body->shapeType);
+    			if (ImGui::Combo("Shape", &curShape, shapes, IM_ARRAYSIZE(shapes)))
+    				rb->body->shapeType = static_cast<RigidBody::ShapeType>(curShape);
+
+    			if (rb->body->shapeType == RigidBody::Box)
+    				ImGui::DragFloat3("Half Extent", &rb->body->halfExtent.x, 0.01f, 0.01f, 100.0f);
+    			if (rb->body->shapeType == RigidBody::Sphere || rb->body->shapeType == RigidBody::Capsule)
+    				ImGui::DragFloat("Radius", &rb->body->radius, 0.01f, 0.01f, 50.0f);
+    			if (rb->body->shapeType == RigidBody::Capsule)
+    				ImGui::DragFloat("Half Height", &rb->body->capsuleHalfHeight, 0.01f, 0.01f, 50.0f);
+
+    			ImGui::DragFloat("Mass", &rb->body->mass, 0.1f, 0.01f, 1000.0f);
+    			ImGui::DragFloat("Friction", &rb->body->friction, 0.01f, 0.0f, 1.0f);
+    			ImGui::DragFloat("Restitution", &rb->body->restitution, 0.01f, 0.0f, 1.0f);
+
+    			if (ImGui::Button("Apply Changes")) {
+    				physics.RemoveBody(rb->body);
+    				rb->body->bodyID = JPH::BodyID();
+    				physics.AddBody(obj);
+    			}
+
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto iw = obj->GetComponent<InteractiveWaterComponent>();
+    	if (iw) {
+    		if (ImGui::TreeNode("Interactive Water")) {
+    			ImGui::DragInt("Resolution", &iw->interactiveWater->resolution, 2, 64, 1024);
+    			ImGui::DragFloat("Wave Speed", &iw->interactiveWater->waveSpeed, 0.1f, 0.1f, 4.0f);
+    			ImGui::DragFloat("Ripple Strength", &iw->interactiveWater->rippleStrength, 0.1f, 0.1f, 1.0f);
+    			ImGui::DragFloat("Fresnel Power", &iw->interactiveWater->fresnelPower, 0.1f, 0.1f, 10.0f);
+    			ImGui::DragFloat3("Shallow Color", &iw->interactiveWater->shallowColor.x, 0.01f, 0.01f, 1.0f);
+    			ImGui::DragFloat3("Deep Color", &iw->interactiveWater->deepColor.x, 0.01f, 0.01f, 1.0f);
+
+    			ImGui::Separator();
+    			ImGui::Text("Height Map Debug");
+
+    			// Display size — small enough to fit in the panel
+    			ImVec2 texSize(128, 128);
+
+    			// GetHeightMapPing/Pong need to be exposed — see note below
+    			ImGui::Text("Ping"); ImGui::SameLine();
+    			ImGui::Text("Pong");
+
+    			ImGui::Image(
+					(ImTextureID)(intptr_t)iw->interactiveWater->GetHeightMapPing(),
+					texSize, ImVec2(0,1), ImVec2(1,0)  // flipped UVs — OpenGL origin is bottom-left
+				);
+    			ImGui::SameLine();
+    			ImGui::Image(
+					(ImTextureID)(intptr_t)iw->interactiveWater->GetHeightMapPong(),
+					texSize, ImVec2(0,1), ImVec2(1,0)
+				);
+
+    			// Show which one is currently active
+    			bool ping = iw->interactiveWater->IsPing();
+    			ImGui::Text("Active: %s", ping ? "Ping" : "Pong");
+
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto rp = obj->GetComponent<ReflectionProbeComponent>();
+    	if (rp) {
+    		if (ImGui::TreeNode("Reflection Probe")) {
+    			ImGui::DragInt("Resolution", &rp->probe->resolution, 1, 32, 512);
+    			ImGui::DragFloat3("Bounds Min", &rp->probe->boundsMin.x, 0.1f);
+    			ImGui::DragFloat3("Bounds Max", &rp->probe->boundsMax.x, 0.1f);
+    			ImGui::DragFloat("Blend Radius", &rp->probe->blendRadius, 0.1f, 0.0f, 1.0f);
+
+    			ImGui::TreePop();
+    		}
+    	}
+
+    	auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (cc) {
+		    if (ImGui::TreeNode("Cloud Volume")) {
+		        ImGui::SeparatorText("Volume Bounds");
+		        ImGui::DragFloat3("Min", &cc->volume->min.x, 0.1f);
+		        ImGui::DragFloat3("Max", &cc->volume->max.x, 0.1f);
+
+		        ImGui::SeparatorText("Appearance");
+		        ImGui::DragFloat("Scale", &cc->volume->scale, 0.01f, 0.01f, 5.0f);
+		        ImGui::DragFloat("Scroll Speed", &cc->volume->scrollSpeed, 0.01f, 0.0f, 1.0f);
+
+		        ImGui::SeparatorText("Channel Weights");
+		        ImGui::DragFloat("R Weight", &cc->volume->rWeight, 0.01f, 0.0f, 2.0f);
+		        ImGui::DragFloat("G Weight", &cc->volume->gWeight, 0.01f, 0.0f, 2.0f);
+		        ImGui::DragFloat("B Weight", &cc->volume->bWeight, 0.01f, 0.0f, 2.0f);
+		        ImGui::DragFloat("A Weight", &cc->volume->aWeight, 0.01f, 0.0f, 2.0f);
+
+		        ImGui::SeparatorText("Lighting Voxel Grid");
+		        ImGui::DragInt("Grid X", &cc->volume->lightingVoxelGridSize.x, 1, 8, 128);
+		        ImGui::DragInt("Grid Y", &cc->volume->lightingVoxelGridSize.y, 1, 8, 64);
+		        ImGui::DragInt("Grid Z", &cc->volume->lightingVoxelGridSize.z, 1, 8, 128);
+		        if (ImGui::Button("Reinitialize Voxel Grid"))
+		            cc->volume->InitializeVoxelGrid();
+
+		        ImGui::SeparatorText("Noise Generation");
+		        ImGui::SliderInt("Texture Resolution", &cc->volume->noiseGenerator.resolution, 32, 128);
+		        ImGui::SliderInt("Density R", &cc->volume->noiseGenerator.voxelResolutionR, 1, 32);
+		        ImGui::SliderInt("Density G", &cc->volume->noiseGenerator.voxelResolutionG, 1, 32);
+		        ImGui::SliderInt("Density B", &cc->volume->noiseGenerator.voxelResolutionB, 1, 32);
+		        ImGui::SliderInt("Density A", &cc->volume->noiseGenerator.voxelResolutionA, 1, 32);
+		        ImGui::Checkbox("Inverted", &cc->volume->noiseGenerator.inverted);
+
+		        if (ImGui::Button("Generate Noise")) {
+		            cc->volume->GenerateNoise();
+		            cc->viewer.Init(cc->volume->noiseGenerator.resolution);
+		        }
+
+		        if (cc->volume->noiseTex && cc->viewer.IsInitialized()) {
+		            ImGui::Separator();
+		            ImGui::Text("Noise Preview");
+		            cc->viewer.DrawGUI(cc->volume->noiseTex);
+		        } else {
+		            ImGui::TextDisabled("No texture generated yet");
+		        }
+
+		        ImGui::TreePop();
+		    }
+		}
     }
+
+    ImGui::PopID();
+}
     ImGui::Separator();
     ImGui::End();
+
+	// Process deletions
+	for (auto& obj : deleteQueue) {
+		scene->objects.erase(
+			std::remove(scene->objects.begin(), scene->objects.end(), obj),
+			scene->objects.end());
+	}
+	deleteQueue.clear();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-std::shared_ptr<Scene> CreateScene()
+void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer,
+				 ParticleSystemManager& particleManager, PhysicsWorld& physics)
 {
-    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+	particleManager.Reset();
+	scene = SceneLoader::Load("../assets/scenes/" + CURRENT_SCENE, particleManager);
+	renderer.AssignDefaultShader();
+	scene->Start();
+	renderer.InitShadowMaps(scene);
+	physics.RegisterScene(scene);
 
-
-	std::shared_ptr<GameObject> corridor = std::make_shared<GameObject>("Corridor");
-	corridor->mesh = std::make_shared<Mesh>(
-		"../assets/models/corridor.obj",
-		"../assets/textures/corridor.jpg",
-		0,
-		"../assets/textures/normals/corridorNormal.jpg"
-		);
-	scene->Add(corridor);
-
-	std::shared_ptr<GameObject> cables = std::make_shared<GameObject>("Cables");
-	cables->mesh = std::make_shared<Mesh>(
-		"../assets/models/cables.obj",
-		"../assets/textures/rubber.jpg",
-		32,
-		"../assets/textures/normals/rubberNormal.jpg"
-		);
-	scene->Add(cables);
-
-	std::shared_ptr<GameObject> cableHolder = std::make_shared<GameObject>("Cable Holder");
-	cableHolder->mesh = std::make_shared<Mesh>(
-		"../assets/models/cableholder.obj",
-		"../assets/textures/metal.jpg",
-		12,
-		"../assets/textures/normals/metalNormal.jpg"
-		);
-	scene->Add(cableHolder);
-
-	std::shared_ptr<GameObject> barrels = std::make_shared<GameObject>("Barrels");
-	barrels->mesh = std::make_shared<Mesh>(
-		"../assets/models/barrels.obj",
-		"../assets/textures/barrel.png",
-		12,
-		"../assets/textures/normals/barrelNormal.png"
-		);
-	scene->Add(barrels);
-
-	std::shared_ptr<GameObject> debris = std::make_shared<GameObject>("Debris");
-	debris->mesh = std::make_shared<Mesh>(
-		"../assets/models/debris.obj",
-		"../assets/textures/barrel.png",
-		12,
-		"../assets/textures/normals/metalNormal.jpg"
-		);
-	scene->Add(debris);
-
-	std::shared_ptr<Orbiter> light = std::make_shared<Orbiter>("Red Light");
-	light->light = std::make_shared<Light>();
-	//light->rotationSpeed = 30.0f;
-	light->light->color = glm::vec3(1.0f, 0.0f, 0.0f);
-	light->light->intensity = 1.0f;
-	light->light->type = LightType::Spot;
-	light->light->castsShadow = true;
-	light->light->direction = glm::vec3(-1.0f, 0.0f, 0.0f);
-	light->transform.position = glm::vec3(-6.0f, 0.25f, -0.015f);
-	light->orbitCenter = glm::vec3(-6.0f, 0.25f, -0.015f);
-	light->orbitRadius = 0.2f;
-	scene->Add(light);
-
-	std::shared_ptr<Orbiter> light2 = std::make_shared<Orbiter>("Green Light");
-	light2->light = std::make_shared<Light>();
-	//light->rotationSpeed = 30.0f;
-	light2->light->color = glm::vec3(0.0f, 1.0f, 0.0f);
-	light2->light->intensity = 1.0f;
-	light2->light->type = LightType::Spot;
-	light2->light->castsShadow = true;
-	light2->light->direction = glm::vec3(1.0f, 0.0f, 0.0f);
-	light2->transform.position = glm::vec3(-12.0f, 0.4f, -0.03f);
-	light2->orbitCenter = glm::vec3(-15.0f, 0.25f, -0.03f);
-	light2->orbitRadius = 0.2f;
-	scene->Add(light2);
-
-    return scene;
+	for (auto& obj : scene->objects) {
+		auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (!cc) continue;
+		if (cc->volume->noiseTex == 0)
+			cc->volume->GenerateNoise();
+		cc->viewer.Init(cc->volume->noiseGenerator.resolution);
+	}
 }
 
 void MouseCallback(GLFWwindow* window, double xpos, double ypos)

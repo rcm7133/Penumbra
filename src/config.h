@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <omp.h>
 
 #include <fstream>
 #include <sstream>
@@ -14,4 +15,7 @@
 #include <algorithm>
 #include <memory>
 #include <vector>
+#include <random>
+#include <fstream>
+#include <string>
 #include <random>

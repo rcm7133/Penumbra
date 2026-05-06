@@ -1,0 +1,57 @@
+#pragma once
+#include "../config.h"
+#include "../scene.h"
+#include "../gameobject.h"
+#include "../physics/rigidbody.h"
+#include "../rendering/effects/particles/particleSystemManager.h"
+#include "../../dependencies/nlohmann/json.hpp"
+#include "../rendering/effects/fog/fogVolume.h"
+#include "../rendering/effects/particles/particleSystemComponent.h"
+#include "../physics/rigidbodyComponent.h"
+#include "../rendering/effects/fog/fogVolumeComponent.h"
+#include "../rendering/mesh/meshComponent.h"
+#include "../rendering/effects/lights/lightComponent.h"
+#include "../rendering/effects/water/interactiveWaterComponent.h"
+#include "../rendering/mesh/model.h"
+#include "../rendering/effects/reflections/reflectionProbe.h"
+#include "../rendering/effects/reflections/reflectionProbeComponent.h"
+#include "../rendering/effects/clouds/cloudVolumeComponent.h"
+
+class SceneLoader {
+public:
+    static std::shared_ptr<Scene> Load(const std::string& filePath, ParticleSystemManager& particleManager);
+    static void Save(const std::shared_ptr<Scene>& scene, const std::string& filePath);
+
+    static void SavePrefab(const std::shared_ptr<GameObject>& obj, const std::string& directory = "../assets/prefabs/");
+    static std::shared_ptr<GameObject> LoadPrefab(const std::string& filepath, ParticleSystemManager& particleManager);
+    static std::vector<std::string> ListPrefabs(const std::string& directory = "../assets/prefabs/");
+
+private:
+    using json = nlohmann::json;
+
+    // Serialization Helper Functions
+    static json SerializeVec3(const glm::vec3& v);
+    static json SerializeVec4(const glm::vec4& v);
+    static json SerializeTransform(const Transform& t);
+    static json SerializeModel(const Model& m);
+    static json SerializeLight(const Light& l);
+    static json SerializeParticleSystem(const ParticleSystem& ps);
+    static json SerializeGameObject(const std::shared_ptr<GameObject>& obj);
+    static json SerializeRigidBody(const RigidBody& rb);
+    static json SerializeFogVolume(const FogVolume& fv);
+    static json SerializeReflectionProbe(const ReflectionProbe& rp);
+    static json SerializeCloudVolume(const CloudVolumeComponent& cv);
+    static json SerializeInteractiveWater(const InteractiveWaterComponent& iw);
+    static json SerializeComponents(const std::shared_ptr<GameObject>& obj);
+
+    static glm::vec3 DeserializeVec3(const json& j);
+    static glm::vec4 DeserializeVec4(const json& j);
+    static void DeserializeTransform(const json& j, Transform& t);
+    static std::shared_ptr<Model> DeserializeModel(const json& j);
+    static std::shared_ptr<Light> DeserializeLight(const json& j);
+    static std::shared_ptr<ParticleSystem> DeserializeParticleSystem(const json& j, const glm::vec3& ownerPos, ParticleSystemManager& particleManager);
+    static std::shared_ptr<GameObject> DeserializeGameObject(const json& j, ParticleSystemManager& particleManager);
+    static void DeserializeComponents(const json& j, std::shared_ptr<GameObject>& obj, ParticleSystemManager& particleManager);
+    static std::shared_ptr<RigidBody> DeserializeRigidBody(const json& j);
+    static std::shared_ptr<FogVolume> DeserializeFogVolume(const json& j);
+};
