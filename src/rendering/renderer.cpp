@@ -435,11 +435,16 @@
         WaterPass(deltaTime);
 
         std::shared_ptr<CloudVolumeComponent> cv = nullptr;
+        glm::vec3 cloudWorldPos = glm::vec3(0.0f);
         for (auto& obj : scene->objects)
         {
             cv = obj->GetComponent<CloudVolumeComponent>();
-            if (cv)
+            if (cv) {
+                cloudWorldPos = obj->transform.position;
+                cv->volume->worldMin = cv->volume->min + cloudWorldPos;
+                cv->volume->worldMax = cv->volume->max + cloudWorldPos;
                 break;
+            }
         }
 
         if (FOG_ENABLED) FogPass(shadowCount);
@@ -946,8 +951,8 @@
         glActiveTexture(GL_TEXTURE1); glBindTexture(GL_TEXTURE_3D, vol.noiseTex);
         glUniform1i(glGetUniformLocation(shaders.cloud, "noiseTex"), 1);
 
-        glUniform3fv(glGetUniformLocation(shaders.cloud, "cloudMin"), 1, glm::value_ptr(vol.min));
-        glUniform3fv(glGetUniformLocation(shaders.cloud, "cloudMax"), 1, glm::value_ptr(vol.max));
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "cloudMin"), 1, glm::value_ptr(vol.worldMin));
+        glUniform3fv(glGetUniformLocation(shaders.cloud, "cloudMax"), 1, glm::value_ptr(vol.worldMax));
         glUniform1f(glGetUniformLocation(shaders.cloud, "cloudScale"), vol.scale);
         glUniform1f(glGetUniformLocation(shaders.cloud, "cloudScrollSpeed"), vol.scrollSpeed);
 
@@ -964,9 +969,6 @@
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_3D, vol.voxelLightTexture);
         glUniform1i(glGetUniformLocation(shaders.cloud, "voxelLightTex"), 2);
-        std::cout << "CloudPass vol.min: " << vol.min.x << " " << vol.min.y << " " << vol.min.z << std::endl;
-        std::cout << "CloudPass vol.max: " << vol.max.x << " " << vol.max.y << " " << vol.max.z << std::endl;
-        std::cout << "CloudPass noiseTex: " << vol.noiseTex << " voxelLightTex: " << vol.voxelLightTexture << std::endl;
 
         quad.Draw();
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1009,8 +1011,8 @@
         glBindImageTexture(0, vol.voxelLightTexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA16F);
         glUniform1i(glGetUniformLocation(shaders.cloudLighting, "voxelOutput"), 0);
 
-        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "cloudMin"), 1, glm::value_ptr(vol.min));
-        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "cloudMax"), 1, glm::value_ptr(vol.max));
+        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "cloudMin"), 1, glm::value_ptr(vol.worldMin));
+        glUniform3fv(glGetUniformLocation(shaders.cloudLighting, "cloudMax"), 1, glm::value_ptr(vol.worldMax));
         glUniform3i(glGetUniformLocation(shaders.cloudLighting, "voxelResolution"),
             vol.lightingVoxelGridSize.x, vol.lightingVoxelGridSize.y, vol.lightingVoxelGridSize.z);
 

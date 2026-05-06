@@ -16,16 +16,12 @@ vec3 BoxProjectReflection(vec3 reflDir, vec3 fragPos, vec3 probePos, vec3 bMin, 
     vec3 tMin = (bMin - fragPos) * invDir;
     vec3 tMax = (bMax - fragPos) * invDir;
 
-    // For each axis get the far intersection
     vec3 tFar = max(tMin, tMax);
-
-    // Smallest far intersection = exit point
     float t = min(min(tFar.x, tFar.y), tFar.z);
-
-    // Only use positive t (ray goes forward)
     t = max(t, 0.0);
 
     vec3 hitPos = fragPos + reflDir * t;
+
     return normalize(hitPos - probePos);
 }
 
@@ -47,11 +43,11 @@ vec3 SampleReflectionProbes(vec3 reflDir, vec3 fragPos, float roughness)
         any(greaterThan(fragPos, probeBoundsMax[i])))
         continue;
 
-        // Force probe to bounds center
-        vec3 forcedProbePos = (probeBoundsMin[i] + probeBoundsMax[i]) * 0.5;
-
-        vec3 sampleDir = BoxProjectReflection(reflDir, fragPos, forcedProbePos,
-        probeBoundsMin[i], probeBoundsMax[i]);
+        vec3 sampleDir = BoxProjectReflection(
+        reflDir, fragPos,
+        probePositions[i],
+        probeBoundsMin[i], probeBoundsMax[i]
+        );
         return textureLod(reflectionProbes[i], sampleDir, lod).rgb;
     }
 

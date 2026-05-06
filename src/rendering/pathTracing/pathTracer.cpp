@@ -134,7 +134,7 @@ std::vector<PTLight> ExtractLights(std::shared_ptr<Scene> scene)
     std::vector<PTLight> lights;
     for (auto& obj : scene->objects)
     {
-        if (!obj->enabled || !obj->isStatic) continue;
+        if (!obj->enabled) continue;
         auto lc = obj->GetComponent<LightComponent>();
         if (!lc) continue;
 

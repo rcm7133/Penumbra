@@ -21,7 +21,7 @@ int PATH_TRACING_GI_SAMPLES = 4; // Samples per pixel
 int PATH_TRACING_GI_FACE_SIZE = 16; // Resolution of cubemap
 
 // Clouds
-bool CLOUD_ENABLED = true;
+bool CLOUD_ENABLED = false;
 bool DEBUG_CLOUDS = false;
 int CLOUD_LIGHTING_UPDATE_INTERVAL = 1;
 int CLOUD_RAYMARCH_STEPS = 32;
@@ -32,7 +32,7 @@ float CLOUD_ABSORPTION = 0.8f;
 
 // SSR
 bool SSR_ENABLED = true;
-bool REFLECTION_PROBE_ENABLED = true;
+bool REFLECTION_PROBE_ENABLED = false;
 int SSR_RAYMARCH_STEPS = 40;
 float SSR_MAX_STEP_SIZE = 0.5;
 float SSR_MIN_STEP_SIZE = 0.0025;

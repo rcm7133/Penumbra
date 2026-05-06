@@ -28,10 +28,60 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ffa70535-d4a7-4f64-811a-986951cc3684" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/assets/demos/bricknone.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/bricknormalmap.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/brickparallaxmap.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/final.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fog1.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fog2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fogoff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fogon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fxaaoff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/fxaaon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/giambient.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/gioff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/gion.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/giprobe.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/giprobegrid.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/pbr.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/renderer.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssaooff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssaoon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssroff.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/demos/ssron.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/beanbag.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/bowl.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/candle.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/carpet.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/factory.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/house.glb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/BoxCollider.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Bricks.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Ceiling.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/CornellBoxWall.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Door.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/FloorCollider.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/New_GameObject.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Point_Light.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/RedWall.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Wall.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/WallCollider.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/WallLamp.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/prefabs/Wood_Floor.prefab" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/scenes/default.scene" beforeDir="false" afterPath="$PROJECT_DIR$/assets/scenes/default.scene" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/albedo.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/disp.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/normal.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/textures/materials/brick/rough.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/textures/moss.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/shaders/common/reflectionProbes.glsl" beforeDir="false" afterPath="$PROJECT_DIR$/shaders/common/reflectionProbes.glsl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolume.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/effects/clouds/cloudVolume.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rendering/pathTracing/pathTracer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/pathTracing/pathTracer.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rendering/renderer.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rendering/renderer.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/rendering/renderer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/settings.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -97,7 +147,7 @@
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/assets/models&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/m16ga/code/Penumbra/assets/demos&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -109,18 +159,18 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\demos" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nanoRT" />
       <recent name="C:\Users\m16ga\code\Penumbra\dependencies" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
-      <recent name="C:\Users\m16ga\code\Penumbra\dependencies\nlohmann" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\demos" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
+      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\brick" />
       <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects\clouds" />
       <recent name="C:\Users\m16ga\code\Penumbra\assets\textures" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\models" />
-      <recent name="C:\Users\m16ga\code\Penumbra\assets\textures\materials\mud" />
-      <recent name="C:\Users\m16ga\code\Penumbra\src\rendering\effects" />
     </key>
   </component>
   <component name="RunManager" selected="CMake Application.Penumbra">
@@ -128,11 +178,6 @@
       <method v="2" />
     </configuration>
     <configuration name="Penumbra" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Penumbra" TARGET_NAME="Penumbra" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Penumbra" RUN_TARGET_NAME="Penumbra">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -215,6 +260,12 @@
       <workItem from="1777336271671" duration="15796000" />
       <workItem from="1777422899754" duration="792000" />
       <workItem from="1777425537506" duration="12000" />
+      <workItem from="1777659538943" duration="10000" />
+      <workItem from="1777906687618" duration="11404000" />
+      <workItem from="1777929382160" duration="2842000" />
+      <workItem from="1777941716364" duration="1997000" />
+      <workItem from="1777952787016" duration="7646000" />
+      <workItem from="1778033699347" duration="7877000" />
     </task>
     <servers />
   </component>
@@ -236,5 +287,16 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/rendering/renderer.cpp</url>
+          <line>427</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

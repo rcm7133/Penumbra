@@ -121,6 +121,15 @@ int main()
 	scene->probeGrid.Load();
 	scene->SetMainLight("Sun");
 
+	// Generate cloud noise for any cloud volumes in the scene
+	for (auto& obj : scene->objects) {
+		auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (!cc) continue;
+		if (cc->volume->noiseTex == 0)
+			cc->volume->GenerateNoise();
+		cc->viewer.Init(cc->volume->noiseGenerator.resolution);
+	}
+
 	if (!scene->probeGrid.probes.empty()) {
 		bool anyBaked = false;
 		for (auto& p : scene->probeGrid.probes)
@@ -174,14 +183,14 @@ int main()
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
 
-    	bool fPressed = glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS;
+    	bool fPressed = glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
 
     	if (fPressed && !fWasPressed) {
     		FREECAM_ENABLED = !FREECAM_ENABLED;
     	}
     	fWasPressed = fPressed;
 
-    	bool tPressed = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
+    	bool tPressed = glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS;
 
     	if (tPressed && !tWasPressed) {
     		GUI_ENABLED = !GUI_ENABLED;
@@ -189,7 +198,7 @@ int main()
     	tWasPressed = tPressed;
 
     	static bool gWasPressed = false;
-    	bool gPressed = glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
+    	bool gPressed = glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS;
     	if (gPressed && !gWasPressed)
     		GI_MODE = (GI_MODE + 1) % 3;
     	gWasPressed = gPressed;
@@ -445,12 +454,6 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::Checkbox("Skybox", &SKYBOX_ENABLED);
 	}
 
-	if (renderer.HasReflectionProbes()) {
-		if (ImGui::Button("Bake Reflection Probes")) {
-			renderer.BakeReflectionProbes();
-		}
-	}
-
 	if (GI_MODE >= 1) {
 		ImGui::Checkbox("Debug Probe Grid", &DEBUG_PROBES);
 		ImGui::SliderFloat("GI Intensity", &GI_INTENSITY, 0.0f, 3.0f);
@@ -503,7 +506,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::SliderInt("Fog Blur", &FOG_BLUR_KERNEL_SIZE, 1, 9);
 		if (FOG_BLUR_KERNEL_SIZE % 2 == 0) FOG_BLUR_KERNEL_SIZE++;
 	}
-
+	/*
 	ImGui::Checkbox("Volumetric Clouds", &CLOUD_ENABLED);
 	if (CLOUD_ENABLED) {
 		ImGui::SliderInt("Cloud Steps", &CLOUD_RAYMARCH_STEPS, 4, 128);
@@ -515,7 +518,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::SliderFloat("Lighting Ray Depth", &CLOUD_RAYMARCH_LIGHTING_RAY_DEPTH, 1.0f, 128.0f);
 		ImGui::SliderInt("Lighting Update Interval", &CLOUD_LIGHTING_UPDATE_INTERVAL, 1, 16);
 	}
-
+	*/
 	ImGui::Checkbox("SSAO", &SSAO_ENABLED);
 	if (SSAO_ENABLED) {
 		ImGui::SliderFloat("SSAO Radius", &SSAO_RADIUS, 0.1f, 2.0f);
@@ -524,17 +527,16 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 	}
 
 	ImGui::Checkbox("SSR", &SSR_ENABLED);
-	ImGui::Checkbox("Reflection Probes ", &REFLECTION_PROBE_ENABLED);
 	ImGui::SliderInt("SSR Steps", &SSR_RAYMARCH_STEPS, 1, 64);
 	ImGui::SliderFloat("SSR Max Step Size", &SSR_MAX_STEP_SIZE, 0.01f, 0.5f);
 	ImGui::SliderFloat("SSR Min Step Size", &SSR_MIN_STEP_SIZE, 0.001f, 0.05f);
 
 	ImGui::Checkbox("FXAA", &FXAA_ENABLED);
-
+	/*
     ImGui::Checkbox("PCF shadows", &PCF_ENABLED);
     if (PCF_ENABLED)
         ImGui::SliderInt("PCF Kernel Size", &PCF_KERNEL_SIZE, 1, 9);
-
+	*/
 	ImGui::SliderFloat("Point Shadow Far Plane", &POINT_SHADOW_FAR_PLANE, 1.0f, 3000.0f);
 
     ImGui::End();
@@ -563,8 +565,6 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		ImGui::Combo("Texture", &DEBUG_TEXTURE_INDEX, names, IM_ARRAYSIZE(names));
 	}
 	ImGui::Checkbox("Show Colliders", &DEBUG_COLLIDERS);
-	ImGui::Checkbox("Show Reflection Probes", &DEBUG_REFLECTION_PROBES);
-	ImGui::Checkbox("Show Cloud Bounds", &DEBUG_CLOUDS);
 	ImGui::SliderFloat("Move Speed", &controller->moveSpeed, 0.1f, 5.0f);
 	ImGui::Checkbox("Free Cam", &FREECAM_ENABLED);
 	if (FREECAM_ENABLED)
@@ -669,14 +669,18 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     				if (!obj->GetComponent<InteractiveWaterComponent>())
     					obj->AddComponent<InteractiveWaterComponent>();
     				break;
+    				/*
     			case 6: // Reflection Probe
     				if (!obj->GetComponent<ReflectionProbeComponent>())
     					obj->AddComponent<ReflectionProbeComponent>();
     				break;
+    				*/
+    				/*
     			case 7: // Cloud Component
     				if (!obj->GetComponent<CloudVolumeComponent>())
     					obj->AddComponent<CloudVolumeComponent>();
     				break;
+    				*/
     		}
     		selectedComponent = -1;
     	}
@@ -1054,6 +1058,14 @@ void ReloadScene(std::shared_ptr<Scene>& scene, Renderer& renderer,
 	scene->Start();
 	renderer.InitShadowMaps(scene);
 	physics.RegisterScene(scene);
+
+	for (auto& obj : scene->objects) {
+		auto cc = obj->GetComponent<CloudVolumeComponent>();
+		if (!cc) continue;
+		if (cc->volume->noiseTex == 0)
+			cc->volume->GenerateNoise();
+		cc->viewer.Init(cc->volume->noiseGenerator.resolution);
+	}
 }
 
 void MouseCallback(GLFWwindow* window, double xpos, double ypos)

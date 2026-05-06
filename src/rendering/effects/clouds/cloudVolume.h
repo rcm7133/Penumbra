@@ -8,6 +8,8 @@ public:
     // General Settings
     glm::vec3 min = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 max = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 worldMin = glm::vec3(0.0f);
+    glm::vec3 worldMax = glm::vec3(0.0f);
     float scrollSpeed = 0.1f;
     float scale = 0.5f;
     // Weights
