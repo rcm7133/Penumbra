@@ -198,6 +198,13 @@ json SceneLoader::SerializeCloudVolume(const CloudVolumeComponent& cv) {
     return j;
 }
 
+json SceneLoader::SerializeScript(const ScriptComponent& sc) {
+    json j;
+    j["scriptName"] = sc.GetScriptName();
+    j["data"]       = sc.Serialize();
+    return j;
+}
+
 json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
     json comps = json::array();
 
@@ -238,6 +245,11 @@ json SceneLoader::SerializeComponents(const std::shared_ptr<GameObject>& obj) {
         else if (auto cv = std::dynamic_pointer_cast<CloudVolumeComponent>(comp)) {
             c["type"] = "CloudVolume";
             c["data"] = SerializeCloudVolume(*cv);
+        }
+
+        else if (auto sc = std::dynamic_pointer_cast<ScriptComponent>(comp)) {
+            c["type"] = "Script";
+            c["data"] = SerializeScript(*sc);
         }
 
         if (!c.empty())
@@ -489,6 +501,19 @@ void SceneLoader::DeserializeComponents(const json& j, std::shared_ptr<GameObjec
 
             vol->GenerateNoise();
             vol->InitializeVoxelGrid();
+        }
+
+        else if (type == "Script") {
+            std::string scriptName = data.value("scriptName", "");
+            auto sc = ScriptRegistry::Get().Create(scriptName);
+            if (sc) {
+                if (data.contains("data"))
+                    sc->Deserialize(data["data"]);
+                sc->owner = obj.get();
+                obj->components.push_back(sc);
+            } else {
+                std::cerr << "SceneLoader: unknown script '" << scriptName << "'\n";
+            }
         }
     }
 }

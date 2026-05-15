@@ -19,3 +19,5 @@
 #include <fstream>
 #include <string>
 #include <random>
+#include <functional>
+#include <unordered_map>

@@ -16,6 +16,8 @@
 #include "../rendering/effects/reflections/reflectionProbe.h"
 #include "../rendering/effects/reflections/reflectionProbeComponent.h"
 #include "../rendering/effects/clouds/cloudVolumeComponent.h"
+#include "scripting/core/ScriptComponent.h"
+#include "scripting/core/scriptRegistry.h"
 
 class SceneLoader {
 public:
@@ -43,6 +45,7 @@ private:
     static json SerializeCloudVolume(const CloudVolumeComponent& cv);
     static json SerializeInteractiveWater(const InteractiveWaterComponent& iw);
     static json SerializeComponents(const std::shared_ptr<GameObject>& obj);
+    static json SerializeScript(const ScriptComponent& sc);
 
     static glm::vec3 DeserializeVec3(const json& j);
     static glm::vec4 DeserializeVec4(const json& j);

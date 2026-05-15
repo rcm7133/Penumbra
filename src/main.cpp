@@ -1,24 +1,33 @@
 #include "config.h"
 #include "scene.h"
-#include "rendering/renderer.h"
+// Utils
 #include "utils/profiler.h"
-#include "rendering/effects/particles/particleSystem.h"
-#include "rendering/effects/particles/particleSystemManager.h"
 #include "utils/sceneLoader.h"
-#include "rendering/debug/colliderDebugRenderer.h"
-#include "physics/physicsSystem.h"
+//Dependencies
 #include "../dependencies/imgui/imgui.h"
 #include "../dependencies/imgui/imgui_impl_glfw.h"
 #include "../dependencies/imgui/imgui_impl_opengl3.h"
+// Physics
 #include "physics/rigidbodyComponent.h"
+#include "physics/camera/characterControllerComponent.h"
+#include "physics/camera/camera.h"
+#include "physics/physicsSystem.h"
+// Rendering
+#include "rendering/renderer.h"
 #include "rendering/effects/lights/lightComponent.h"
 #include "rendering/mesh/meshComponent.h"
 #include "rendering/effects/water/interactiveWaterComponent.h"
-#include "physics/camera/characterControllerComponent.h"
-#include "physics/camera/camera.h"
 #include "rendering/effects/reflections/reflectionProbeComponent.h"
 #include "rendering/effects/clouds/cloudVolumeComponent.h"
 #include "rendering/effects/clouds/cloudVolume.h"
+#include "rendering/effects/particles/particleSystem.h"
+#include "rendering/effects/particles/particleSystemManager.h"
+#include "rendering/debug/colliderDebugRenderer.h"
+// Scripting core
+#include "scripting/core/ScriptComponent.h"
+#include "scripting/core/scriptRegistry.h"
+// Scripts
+#include "scripting/orbiterScript.h"
 
 Camera* gCamera = nullptr;
 float lastMouseX = 960.0f;
@@ -183,14 +192,14 @@ int main()
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
 
-    	bool fPressed = glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
+    	bool fPressed = glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS;
 
     	if (fPressed && !fWasPressed) {
     		FREECAM_ENABLED = !FREECAM_ENABLED;
     	}
     	fWasPressed = fPressed;
 
-    	bool tPressed = glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS;
+    	bool tPressed = glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS;
 
     	if (tPressed && !tWasPressed) {
     		GUI_ENABLED = !GUI_ENABLED;
@@ -198,7 +207,7 @@ int main()
     	tWasPressed = tPressed;
 
     	static bool gWasPressed = false;
-    	bool gPressed = glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS;
+    	bool gPressed = glfwGetKey(window, GLFW_KEY_SLASH) == GLFW_PRESS;
     	if (gPressed && !gWasPressed)
     		GI_MODE = (GI_MODE + 1) % 3;
     	gWasPressed = gPressed;
@@ -625,7 +634,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 
     	// Add Component
     	const char* componentTypes[] = { "Mesh", "Light", "Particle System", "Rigid Body", "Fog Volume",
-    		"Interactive Water", "Reflection Probe", "Cloud Component"
+    		"Interactive Water", "Reflection Probe", "Cloud Component", "Script"
     	};
     	static int selectedComponent = -1;
     	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 80);
@@ -669,6 +678,18 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     				if (!obj->GetComponent<InteractiveWaterComponent>())
     					obj->AddComponent<InteractiveWaterComponent>();
     				break;
+    			case 8: // Script
+    				auto& all = ScriptRegistry::Get().GetAll();
+    				if (!all.empty()) {
+    					auto script = all.begin()->second();
+    					auto s = ScriptRegistry::Get().Create(all.begin()->first);
+    					if (s) {
+    						s->owner = obj.get();
+    						obj->components.push_back(s);
+    					}
+    				}
+    				break;
+
     				/*
     			case 6: // Reflection Probe
     				if (!obj->GetComponent<ReflectionProbeComponent>())
@@ -681,6 +702,7 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
     					obj->AddComponent<CloudVolumeComponent>();
     				break;
     				*/
+
     		}
     		selectedComponent = -1;
     	}
@@ -1030,6 +1052,26 @@ void GUI(std::shared_ptr<Scene> scene, float deltaTime, Profiler& profiler, Rend
 		        ImGui::TreePop();
 		    }
 		}
+
+    	for (auto& comp : obj->components) {
+    		auto sc = std::dynamic_pointer_cast<ScriptComponent>(comp);
+    		if (!sc) continue;
+
+    		std::string nodeLabel = std::string("Script: ") + sc->GetScriptName();
+    		if (ImGui::TreeNode(nodeLabel.c_str())) {
+    			ImGui::Checkbox("Enabled", &sc->enabled);
+
+    			// OrbiterScript-specific controls
+    			if (auto orb = std::dynamic_pointer_cast<OrbiterScript>(sc)) {
+    				ImGui::DragFloat3("Center",        &orb->center.x,       0.05f);
+    				ImGui::DragFloat ("Radius",        &orb->radius,         0.05f, 0.01f, 100.0f);
+    				ImGui::DragFloat ("Speed (rad/s)", &orb->speed,          0.01f, -20.0f, 20.0f);
+    				ImGui::DragFloat ("Height Offset", &orb->heightOffset,   0.05f);
+    			}
+
+    			ImGui::TreePop();
+    		}
+    	}
     }
 
     ImGui::PopID();
