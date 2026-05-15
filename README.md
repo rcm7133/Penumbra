@@ -208,9 +208,9 @@ This project is configured for **CLion** on Windows. To build:
 # Usage
 
 - **Shift + F10** to run
-- 1 to Toggle Free Cam
-- 2 to Toggle GUI
-- 3 to Toggle GI Modes
+- , to Toggle Free Cam
+- . to Toggle GUI
+- / to Toggle GI Modes
 
 ## Dependencies
 
