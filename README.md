@@ -78,7 +78,7 @@ each material is defined by:
 
 - **Albedo** - base color of the surface
 - **Roughness** - how rough or smooth the surface is, affecting the randomness of dispersion for incoming light
-- **Metallic** — whether the surface is a metal or non-metal. Metals absorb
+- **Metallic** - whether the surface is a metal or non-metal. Metals absorb
   the diffuse term and tint their reflections with the albedo color, while
   non-metals reflect a flat ~4% of light
 
