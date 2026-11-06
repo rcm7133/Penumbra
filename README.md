@@ -114,7 +114,7 @@ Modes 2 and 3 use a 3D grid of probes to store baked light data:
 At each point in the grid stores the surrounding light data. My initial thought was to store a light probe as a cube map. A single 128x128 RGB cube
 map with an 8-bit color channel is roughly 300 KB. Considering there may be hundreds or thousands of probes in a scene this is far too much
 memory to keep on the GPU. While researching baked GI methods I came across a way of storing this data in an extremely compact
-format using **Spherical Harmonics (SH)**. While not intuitive, I was able to us SH thanks to some fantastic resources: 
+format using **Spherical Harmonics (SH)**. While not intuitive, I was able to use SH thanks to some fantastic resources: 
 
 [Great Conceptual Explanation](https://www.youtube.com/watch?v=cddCr95fnvI)
 
